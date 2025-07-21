@@ -1,0 +1,1 @@
+app-wide service layer e.g. authorisation, notifications etc.

@@ -1,0 +1,1 @@
+app level navigation config e.g. app navigator, routes
