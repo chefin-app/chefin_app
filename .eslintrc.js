@@ -20,6 +20,8 @@ module.exports = {
     // 'no-unused-vars': 'warn', // Warn about unused variables
     // 'prettier/prettier': 'error', // Report Prettier issues as errors
     // You might want to adjust some React Native specific rules or TypeScript rules later
+    '@typescript-eslint/no-require-imports': 'warn', // turned it off
+    '@typescript-eslint/no-unused-vars': 'warn',
   },
   env: {
     node: true,
