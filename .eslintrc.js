@@ -3,14 +3,16 @@ module.exports = {
   root: true, // This tells ESLint to stop looking for config files in parent directories
   extends: [
     'eslint:recommended', // ESLint's recommended rules
-    '@react-native',     // Recommended rules for React Native from @react-native/eslint-config
+    '@react-native', // Recommended rules for React Native from @react-native/eslint-config
     'plugin:@typescript-eslint/recommended', // TypeScript recommended rules
     'plugin:prettier/recommended', // Integrates Prettier with ESLint
+    'plugin:jest/recommended',
   ],
   parser: '@typescript-eslint/parser', // Specifies the ESLint parser for TypeScript
   plugins: [
     '@typescript-eslint', // ESLint plugin for TypeScript
-    'prettier',           // ESLint plugin for Prettier
+    'prettier', // ESLint plugin for Prettier
+    'jest',
   ],
   rules: {
     // Customize your rules here
@@ -21,6 +23,7 @@ module.exports = {
   },
   env: {
     node: true,
-    jest: true,
+    //jest: true,
+    'jest/globals': true,
   },
 };
