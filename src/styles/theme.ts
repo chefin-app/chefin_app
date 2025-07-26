@@ -1,14 +1,14 @@
 const theme = {
   colors: {
-    primary: "#4ade80", // green-400
+    primary: '#4ade80', // green-400
     // secondary: ,
-    background: "#ffffff", // white
-    surface: "#f3f4f6", // gray-100
-    text: "#111827", // gray-900
-    subtext: "#6b7280", // gray-600
-    border: "#d1d5db", // gray-300
-    success: "#22c55e", // green-600
-    error: "#ef4444", // red-600
+    background: '#ffffff', // white
+    surface: '#f3f4f6', // gray-100
+    text: '#111827', // gray-900
+    subtext: '#6b7280', // gray-600
+    border: '#d1d5db', // gray-300
+    success: '#22c55e', // green-600
+    error: '#ef4444', // red-600
   },
 
   spacing: {
@@ -17,11 +17,11 @@ const theme = {
     md: 16, // 1rem
     lg: 24, // 1.5rem
     xl: 32, // 2rem
-    "2xl": 40, // 2.5rem
-    "3xl": 48, // 3rem
-    "4xl": 64, // 4rem
-    "5xl": 80, // 5rem
-    "6xl": 96, // 6rem
+    '2xl': 40, // 2.5rem
+    '3xl': 48, // 3rem
+    '4xl': 64, // 4rem
+    '5xl': 80, // 5rem
+    '6xl': 96, // 6rem
   },
 
   fontSizes: {
@@ -32,18 +32,18 @@ const theme = {
     lg: 22,
     xl: 28,
     xxl: 36,
-    "2xl": 24, // 1.5rem
-    "3xl": 30, // 1.875rem
-    "4xl": 36, // 2.25rem
-    "5xl": 48, // 3rem
-    "6xl": 60, // 3.75rem
+    '2xl': 24, // 1.5rem
+    '3xl': 30, // 1.875rem
+    '4xl': 36, // 2.25rem
+    '5xl': 48, // 3rem
+    '6xl': 60, // 3.75rem
   },
 
   fonts: {
-    regular: "Montseerrat_Regular",
-    medium: "Montserrat_Medium",
-    semibold: "Montserrat_SemiBold",
-    bold: "Montserrat_Bold",
+    regular: 'Montseerrat_Regular',
+    medium: 'Montserrat_Medium',
+    semibold: 'Montserrat_SemiBold',
+    bold: 'Montserrat_Bold',
   },
 
   radii: {
@@ -55,7 +55,7 @@ const theme = {
 
   shadows: {
     default: {
-      shadowColor: "#000",
+      shadowColor: '#000',
       shadowOffset: {
         width: 0,
         height: 2,
