@@ -24,7 +24,8 @@ export default function AccountScreen() {
       try {
         const { data, error } = await supabase.auth.getUser();
         if (error) throw error;
-        setUser(user);
+        setUser(data.user);
+        // console.log(user);
       } catch (error: unknown) {
         if (error instanceof Error) {
           console.error('Error getting user:', error);
@@ -36,6 +37,7 @@ export default function AccountScreen() {
     };
 
     getUserInfo();
+
     // console.log('Account screen mounted - fetching user info');
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
