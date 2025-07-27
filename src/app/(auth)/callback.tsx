@@ -10,7 +10,7 @@ export default function AuthCallback() {
   useEffect(() => {
     const handleAuthCallback = async () => {
       try {
-        console.log('Auth callback params:', params);
+        // console.log('Auth callback params:', params);
 
         // Handle OAuth callback
         const { access_token, refresh_token, error, error_description } = params;

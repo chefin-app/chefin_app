@@ -63,7 +63,7 @@ export default function ExploreScreen() {
       setUser(user);
     } catch (error) {
       // Silently handle auth errors - user simply isn't logged in
-      console.log('User not authenticated (this is normal if not logged in)');
+      // console.log('User not authenticated (this is normal if not logged in)');
       setUser(null);
     }
   };

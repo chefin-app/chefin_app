@@ -1,86 +1,98 @@
 import { Tabs, useRouter } from 'expo-router';
 import { useEffect, useState, useCallback } from 'react';
-import { supabase } from '../../utils/supabase';
-import { Session } from '@supabase/supabase-js';
 import { Ionicons } from '@expo/vector-icons';
+import { Session } from '@supabase/supabase-js';
+import { supabase } from '../../utils/supabase';
+
+const TAB_CONFIG = {
+  activeTintColor: '#4CAF50',
+  inactiveTintColor: '#999',
+  backgroundColor: '#fff',
+  borderColor: '#E0E0E0',
+  height: 84,
+  fontSize: 12,
+};
 
 export default function TabLayout() {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
-  // Handle login tab press
   const handleLoginPress = useCallback(() => {
     console.log('Login tab pressed - navigating to auth');
     router.push('/(auth)/login');
   }, [router]);
 
   useEffect(() => {
-    // Get initial session
-    const getSession = async () => {
+    let isMounted = true;
+
+    const initializeAuth = async () => {
       try {
         const {
           data: { session: initialSession },
         } = await supabase.auth.getSession();
-        setSession(initialSession);
-        setLoading(false);
 
-        console.log('Tab Layout - Session loaded:', {
-          isLoggedIn: !!initialSession?.user,
-          userId: initialSession?.user?.id || 'none',
-        });
+        if (isMounted) {
+          setSession(initialSession);
+          setLoading(false);
+
+          console.log('Tab Layout - Session loaded:', {
+            isLoggedIn: !!initialSession?.user,
+            userId: initialSession?.user?.id || 'none',
+          });
+        }
       } catch (error) {
         console.error('Session error:', error);
-        setSession(null);
-        setLoading(false);
+        if (isMounted) {
+          setSession(null);
+          setLoading(false);
+        }
       }
     };
 
-    getSession();
+    initializeAuth();
 
-    // Listen for auth changes
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, newSession) => {
-      setSession(newSession);
-      console.log('Tab Layout - Auth changed:', {
-        isLoggedIn: !!newSession?.user,
-        userId: newSession?.user?.id || 'none',
-      });
+      if (isMounted) {
+        setSession(newSession);
+      }
     });
 
-    return () => subscription.unsubscribe();
-  }, []);
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading) {
-    return null; // Show nothing while loading
+    return null;
   }
 
   const isLoggedIn = !!session?.user;
-  console.log('Tab Layout - Rendering tabs, isLoggedIn:', isLoggedIn);
 
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#4CAF50',
-        tabBarInactiveTintColor: '#999',
+        tabBarActiveTintColor: TAB_CONFIG.activeTintColor,
+        tabBarInactiveTintColor: TAB_CONFIG.inactiveTintColor,
         tabBarStyle: {
-          backgroundColor: '#fff',
-          borderTopColor: '#E0E0E0',
+          backgroundColor: TAB_CONFIG.backgroundColor,
+          borderTopColor: TAB_CONFIG.borderColor,
           borderTopWidth: 1,
           paddingBottom: 8,
           paddingTop: 8,
-          height: 84,
+          height: TAB_CONFIG.height,
         },
         tabBarLabelStyle: {
-          fontSize: 12,
+          fontSize: TAB_CONFIG.fontSize,
           fontWeight: '500',
           marginTop: 4,
         },
       }}
     >
-      {/* EXPLORE TAB - Always visible */}
       <Tabs.Screen
         name="explore"
         options={{
@@ -91,7 +103,6 @@ export default function TabLayout() {
         }}
       />
 
-      {/* SEARCH TAB - Always visible */}
       <Tabs.Screen
         name="search"
         options={{
@@ -102,7 +113,6 @@ export default function TabLayout() {
         }}
       />
 
-      {/* ACCOUNT TAB - Only show when logged in */}
       <Tabs.Screen
         name="account"
         options={{
@@ -110,12 +120,10 @@ export default function TabLayout() {
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="person-outline" size={size} color={color} />
           ),
-          // Hide this tab when not logged in
           href: isLoggedIn ? undefined : null,
         }}
       />
 
-      {/* LOGIN TAB - Only show when not logged in */}
       <Tabs.Screen
         name="log"
         options={{
@@ -123,22 +131,20 @@ export default function TabLayout() {
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="log-in-outline" size={size} color={color} />
           ),
-          // Hide this tab when logged in
           href: !isLoggedIn ? undefined : null,
         }}
         listeners={{
           tabPress: e => {
-            e.preventDefault(); // Prevent default navigation
-            handleLoginPress(); // Navigate to auth login
+            e.preventDefault();
+            handleLoginPress();
           },
         }}
       />
 
-      {/* HIDDEN SCREENS */}
       <Tabs.Screen
         name="index"
         options={{
-          href: null, // Always hidden
+          href: null,
         }}
       />
     </Tabs>

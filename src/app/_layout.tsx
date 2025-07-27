@@ -65,8 +65,7 @@ export default function RootLayout() {
           setSession(session); // Set the session (null if not logged in)
           setIsLoading(false); // Auth check is complete
           setIsInitialized(true); // Mark as fully initialized
-          console.log('Raw session response:', data?.session);
-          console.log('Session user:', data?.session?.user);
+          // console.log('RUNNNN');
         }
       } catch (error) {
         console.warn('Failed to get session:', error);
@@ -74,6 +73,7 @@ export default function RootLayout() {
           setSession(null); // No session available
           setIsLoading(false);
           setIsInitialized(true);
+          // console.log('FAILLL');
         }
       }
     };
@@ -85,7 +85,6 @@ export default function RootLayout() {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       if (mounted) {
-        console.log('Auth state changed:', session);
         setSession(session); // Update session when auth state changes
         setIsLoading(false);
       }
@@ -96,7 +95,7 @@ export default function RootLayout() {
       mounted = false;
       subscription?.unsubscribe();
     };
-  }, [session]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // This effect handles where to navigate based on authentication state
   useEffect(() => {

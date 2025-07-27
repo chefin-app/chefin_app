@@ -21,26 +21,23 @@ export default function AccountScreen() {
 
   useEffect(() => {
     const getUserInfo = async () => {
-      // your function logic here
+      try {
+        const { data, error } = await supabase.auth.getUser();
+        if (error) throw error;
+        setUser(user);
+      } catch (error: unknown) {
+        if (error instanceof Error) {
+          console.error('Error getting user:', error);
+          Alert.alert('Error', 'Failed to load user information');
+        }
+      } finally {
+        setIsLoading(false);
+      }
     };
 
     getUserInfo();
-  }, []);
-
-  const getUserInfo = async () => {
-    try {
-      const { data, error } = await supabase.auth.getUser();
-      if (error) throw error;
-      setUser(user);
-    } catch (error: unknown) {
-      if (error instanceof Error) {
-        console.error('Error getting user:', error);
-        Alert.alert('Error', 'Failed to load user information');
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    // console.log('Account screen mounted - fetching user info');
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSignOut = async () => {
     Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
