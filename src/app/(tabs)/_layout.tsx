@@ -64,7 +64,7 @@ export default function TabLayout() {
       isMounted = false;
       subscription.unsubscribe();
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   if (loading) {
     return null;

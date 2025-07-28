@@ -39,7 +39,7 @@ export default function AccountScreen() {
     getUserInfo();
 
     // console.log('Account screen mounted - fetching user info');
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleSignOut = async () => {
     Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
