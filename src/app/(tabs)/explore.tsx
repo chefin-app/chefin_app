@@ -116,7 +116,7 @@ export default function ExploreScreen() {
           {!user && (
             <TouchableOpacity
               style={styles.joinButton}
-              onPress={() => router.push('/(auth)/login')}
+              onPress={() => router.push('/(user)/login')}
             >
               <Text style={styles.joinButtonText}>Join the Community</Text>
               <Ionicons name="arrow-forward" size={16} color="#fff" />

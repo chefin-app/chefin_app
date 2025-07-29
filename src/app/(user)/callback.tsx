@@ -17,7 +17,7 @@ export default function AuthCallback() {
 
         if (error) {
           console.error('OAuth error:', error, error_description);
-          router.replace('/(auth)/login');
+          router.replace('/(user)/login');
           return;
         }
 
@@ -29,7 +29,7 @@ export default function AuthCallback() {
 
           if (sessionError) {
             console.error('Session error:', sessionError);
-            router.replace('/(auth)/login');
+            router.replace('/(user)/login');
             return;
           }
 
@@ -37,11 +37,11 @@ export default function AuthCallback() {
           router.replace('/(tabs)');
         } else {
           // No tokens received, redirect back to login
-          router.replace('/(auth)/login');
+          router.replace('/(user)/login');
         }
       } catch (error) {
         console.error('Auth callback error:', error);
-        router.replace('/(auth)/login');
+        router.replace('/(user)/login');
       }
     };
 

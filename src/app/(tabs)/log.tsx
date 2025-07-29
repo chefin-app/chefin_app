@@ -8,7 +8,7 @@ export default function LogScreen() {
   useEffect(() => {
     // Navigate to login screen after a short delay
     const timer = setTimeout(() => {
-      router.replace('/(auth)/login');
+      router.replace('/(user)/login');
     }, 500);
 
     return () => clearTimeout(timer);

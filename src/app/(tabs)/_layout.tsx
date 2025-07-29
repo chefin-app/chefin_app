@@ -20,7 +20,7 @@ export default function TabLayout() {
 
   const handleLoginPress = useCallback(() => {
     console.log('Login tab pressed - navigating to auth');
-    router.push('/(auth)/login');
+    router.push('/(user)/login');
   }, [router]);
 
   useEffect(() => {

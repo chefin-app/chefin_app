@@ -107,7 +107,7 @@ export default function RootLayout() {
     }
 
     // Check if user is currently on an auth page (login, register, etc.)
-    const inAuthGroup = segments[0] === '(auth)';
+    const inAuthGroup = segments[0] === '(user)';
 
     if (session && inAuthGroup) {
       // USER IS LOGGED IN + ON AUTH PAGE
@@ -133,7 +133,7 @@ function RootLayoutNav() {
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+      <Stack.Screen name="(user)" options={{ headerShown: false }} />
     </Stack>
   );
 }
