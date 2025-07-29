@@ -1,4 +1,4 @@
-// src/app/(tabs)/search.tsx
+// src/app/(user)/search.tsx
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 

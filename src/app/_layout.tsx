@@ -16,7 +16,7 @@ export {
 
 export const unstable_settings = {
   // Ensure that reloading on `/modal` keeps a back button present.
-  initialRouteName: '(tabs)',
+  initialRouteName: '(user)',
 };
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
@@ -35,7 +35,7 @@ export default function RootLayout() {
   const [isLoading, setIsLoading] = useState(true); // Tracks if we're still checking auth status
   const [isInitialized, setIsInitialized] = useState(false); // Ensures auth is fully set up before navigation
 
-  const segments = useSegments(); // Gets current route segments (e.g., ['(tabs)', 'explore'])
+  const segments = useSegments(); // Gets current route segments (e.g., ['(user)', 'explore'])
   const router = useRouter(); // For programmatic navigation
 
   useEffect(() => {
@@ -107,17 +107,17 @@ export default function RootLayout() {
     }
 
     // Check if user is currently on an auth page (login, register, etc.)
-    const inAuthGroup = segments[0] === '(user)';
+    const inAuthGroup = segments[0] === '(auth)';
 
     if (session && inAuthGroup) {
       // USER IS LOGGED IN + ON AUTH PAGE
       // Redirect logged-in users away from auth pages to explore
-      router.replace('/(tabs)/explore');
+      router.replace('/(user)/explore');
     } else if (!session && !inAuthGroup) {
       // USER IS NOT LOGGED IN + ON PROTECTED PAGE
       // Allow users to browse explore and search without logging in
       // Only redirect to auth when they try to access account features
-      router.replace('/(tabs)/explore');
+      router.replace('/(user)/explore');
     }
   }, [session, segments, isLoading, isInitialized, router, loaded]);
 
@@ -132,8 +132,8 @@ export default function RootLayout() {
 function RootLayoutNav() {
   return (
     <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="(user)" options={{ headerShown: false }} />
+      <Stack.Screen name="(auth)" options={{ headerShown: false }} />
     </Stack>
   );
 }

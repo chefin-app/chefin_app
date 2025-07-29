@@ -17,7 +17,7 @@ export default function AuthCallback() {
 
         if (error) {
           console.error('OAuth error:', error, error_description);
-          router.replace('/(user)/login');
+          router.replace('/(auth)/login');
           return;
         }
 
@@ -29,19 +29,19 @@ export default function AuthCallback() {
 
           if (sessionError) {
             console.error('Session error:', sessionError);
-            router.replace('/(user)/login');
+            router.replace('/(auth)/login');
             return;
           }
 
           // Successfully authenticated, redirect to main app
-          router.replace('/(tabs)');
+          router.replace('/(user)');
         } else {
           // No tokens received, redirect back to login
-          router.replace('/(user)/login');
+          router.replace('/(auth)/login');
         }
       } catch (error) {
         console.error('Auth callback error:', error);
-        router.replace('/(user)/login');
+        router.replace('/(auth)/login');
       }
     };
 

@@ -25,7 +25,7 @@ export default function AccountScreen() {
         const { data, error } = await supabase.auth.getUser();
         if (error) throw error;
         setUser(data.user);
-        // console.log(user);
+        // console.log(auth);
       } catch (error: unknown) {
         if (error instanceof Error) {
           console.error('Error getting user:', error);

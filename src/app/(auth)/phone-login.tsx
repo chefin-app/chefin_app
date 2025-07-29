@@ -501,7 +501,7 @@ export default function PhoneSignupStep1() {
 
       // Navigate to OTP verification screen
       router.push({
-        pathname: '/(user)/phone-verify',
+        pathname: '/(auth)/phone-verify',
         params: {
           phoneNumber: fullPhoneNumber,
           displayNumber: `${selectedCountry.flag} ${selectedCountry.code} ${phoneNumber}`,

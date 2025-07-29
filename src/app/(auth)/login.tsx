@@ -96,12 +96,12 @@ export default function LoginScreen() {
 
   const handleEmailLogin = () => {
     // Navigate to email login form or handle email login
-    router.push('/(user)/email-login');
+    router.push('/(auth)/email-login');
   };
 
   const handlePhoneLogin = () => {
     // Navigate to phone login form
-    router.push('/(user)/phone-login');
+    router.push('/(auth)/phone-login');
   };
 
   return (

@@ -52,7 +52,7 @@ export default function SetupPasswordStep3() {
       Alert.alert('Setup Complete!', 'Your account has been successfully created.', [
         {
           text: 'Continue',
-          onPress: () => router.replace('/(tabs)'),
+          onPress: () => router.replace('/(user)'),
         },
       ]);
     } catch (error) {
