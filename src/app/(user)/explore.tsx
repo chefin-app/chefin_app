@@ -14,6 +14,7 @@ import { supabase } from '../../utils/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import { createShadowStyle } from '../../utils/platform-utils';
 import type { User } from '@supabase/supabase-js';
+import SearchBar from '../../components/filters/SearchBar';
 
 // Sample data for food categories
 const FOOD_CATEGORIES = [
@@ -86,6 +87,8 @@ export default function ExploreScreen() {
     );
   };
 
+  const [query, setQuery] = useState(''); // for search bar querying
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
@@ -100,6 +103,13 @@ export default function ExploreScreen() {
             {user && <View style={styles.notificationDot} />}
           </TouchableOpacity>
         </View>
+
+        {/* Search Bar*/}
+        <SafeAreaView style={styles.container}>
+          <View style={{ paddingVertical: 10, paddingHorizontal: 16 }}>
+              <SearchBar value={query} onChangeText={setQuery} />
+          </View>
+        </SafeAreaView>
 
         {/* Welcome Card */}
         <View style={styles.welcomeCard}>
