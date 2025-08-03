@@ -13,15 +13,15 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { supabase } from '../../utils/supabase';
-import { AuthError } from '@supabase/supabase-js';
+import { useAuth } from '../../utils/auth-context';
 
 export default function EmailLoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
+
+  const { signUp, signIn, resetPassword, loading } = useAuth();
 
   const handleEmailAuth = async () => {
     if (!email || !password) {
@@ -29,14 +29,9 @@ export default function EmailLoginScreen() {
       return;
     }
 
-    setIsLoading(true);
-
     try {
       if (isSignUp) {
-        const { error } = await supabase.auth.signUp({
-          email: email.toLowerCase().trim(),
-          password,
-        });
+        const { error } = await signUp(email, password);
 
         if (error) throw error;
 
@@ -54,18 +49,12 @@ export default function EmailLoginScreen() {
           ]
         );
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
-          email: email.toLowerCase().trim(),
-          password,
-        });
+        const { error } = await signIn(email, password);
 
         if (error) throw error;
       }
-    } catch (error) {
-      const authError = error as AuthError;
-      Alert.alert('Error', authError.message);
-    } finally {
-      setIsLoading(false);
+    } catch (error: any) {
+      Alert.alert('Error', error.message);
     }
   };
 
@@ -76,14 +65,13 @@ export default function EmailLoginScreen() {
     }
 
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email.toLowerCase().trim());
+      const { error } = await resetPassword(email);
 
       if (error) throw error;
 
       Alert.alert('Password Reset', 'Check your email for password reset instructions');
-    } catch (error) {
-      const authError = error as AuthError;
-      Alert.alert('Error', authError.message);
+    } catch (error: any) {
+      Alert.alert('Error', error.message);
     }
   };
 
@@ -152,11 +140,11 @@ export default function EmailLoginScreen() {
 
             {/* Submit Button */}
             <TouchableOpacity
-              style={[styles.submitButton, isLoading && styles.submitButtonDisabled]}
+              style={[styles.submitButton, loading && styles.submitButtonDisabled]}
               onPress={handleEmailAuth}
-              disabled={isLoading}
+              disabled={loading}
             >
-              {isLoading ? (
+              {loading ? (
                 <ActivityIndicator color="#fff" />
               ) : (
                 <Text style={styles.submitButtonText}>
