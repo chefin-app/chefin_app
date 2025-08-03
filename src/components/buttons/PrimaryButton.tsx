@@ -10,7 +10,7 @@ import {
   ViewStyle,
   TextStyle,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons'; // Assuming you're using Ionicons
+import { Ionicons } from '@expo/vector-icons';
 
 // we are setting our constansts for the colours
 const PRIMARY_COLOR = '#4ADE80';
@@ -30,8 +30,7 @@ interface PrimaryButtonProps {
   iconPosition?: 'left' | 'right'; // Position of the icon relative to text
 }
 
-// we are creating our custom component, this is what we import if we need it
-// inside we are destructuring inside
+// our custom component, this is what we import if we need it
 const PrimaryButton: React.FC<PrimaryButtonProps> = ({
   onPress,
   title,
@@ -43,7 +42,23 @@ const PrimaryButton: React.FC<PrimaryButtonProps> = ({
   icon,
   iconPosition = 'left',
 }) => {
-  // we are rendering
+  // A helper function to render the text content, wrapping it if it's a string
+  const renderContent = () => {
+    if (children) {
+      // If children are provided and they are a string, wrap them in <Text>
+      if (typeof children === 'string') {
+        return <Text style={[styles.buttonText, textStyle]}>{children}</Text>;
+      }
+      // Otherwise, render the children directly (assuming they are components)
+      return children;
+    }
+    // Fallback to title if no children are provided
+    if (title) {
+      return <Text style={[styles.buttonText, textStyle]}>{title}</Text>;
+    }
+    return null;
+  };
+
   return (
     <TouchableOpacity
       style={[styles.button, { backgroundColor: disabled ? DISABLED_COLOR : PRIMARY_COLOR }, style]}
@@ -59,8 +74,8 @@ const PrimaryButton: React.FC<PrimaryButtonProps> = ({
           {icon && iconPosition === 'left' && (
             <Ionicons name={icon} size={20} color={TEXT_COLOR} style={styles.icon} />
           )}
-          {title && <Text style={[styles.buttonText, textStyle]}>{title}</Text>}
-          {children} {/* Render children if provided, overrides title */}
+          {/* We now use the robust renderContent function */}
+          {renderContent()}
           {icon && iconPosition === 'right' && (
             <Ionicons name={icon} size={20} color={TEXT_COLOR} style={styles.icon} />
           )}

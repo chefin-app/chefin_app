@@ -141,6 +141,18 @@ export default function TabLayout() {
         }}
       />
 
+      {/* This is for the dish selection
+       we are setting the href as null for a Tabs screen - to remove the bottom tab bar 
+      */}
+      <Tabs.Screen
+        name="dish_selection"
+        options={{
+          href: null, // This hides it from the tab bar
+          // we are hiding that bottom bar component in the dish_selection page
+          tabBarStyle: { display: 'none' },
+        }}
+      />
+
       <Tabs.Screen
         name="index"
         options={{
