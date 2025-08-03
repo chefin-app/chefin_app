@@ -1,4 +1,4 @@
-/* Search bar component, styling and size etc. are here*/ 
+/* Search bar component, styling and size etc. are here*/
 
 import React from 'react';
 import { View, TextInput, StyleSheet } from 'react-native';
@@ -10,7 +10,7 @@ type Props = {
   onChangeText: (text: string) => void;
 };
 
-const SearchBar = ({ value, onChangeText, placeholder = "Search..." }: Props) => {
+const SearchBar = ({ value, onChangeText, placeholder = 'Search...' }: Props) => {
   return (
     <View style={styles.wrapper}>
       <Ionicons name="search" size={20} color="#888" style={styles.icon} />
@@ -35,7 +35,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
     alignItems: 'center',
-    shadowColor: "#0d9b4df6",
+    shadowColor: '#0d9b4df6',
     shadowOpacity: 0.1,
     shadowRadius: 10,
     elevation: 2,

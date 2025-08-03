@@ -107,7 +107,7 @@ export default function ExploreScreen() {
         {/* Search Bar*/}
         <SafeAreaView style={styles.container}>
           <View style={{ paddingVertical: 10, paddingHorizontal: 16 }}>
-              <SearchBar value={query} onChangeText={setQuery} />
+            <SearchBar value={query} onChangeText={setQuery} />
           </View>
         </SafeAreaView>
 

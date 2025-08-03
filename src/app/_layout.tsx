@@ -62,7 +62,7 @@ export default function RootLayout() {
         }
 
         if (mounted) {
-          setSession(session); // Set the session (null if not logged in)
+          setSession(data.session); // Set the session (null if not logged in)
           setIsLoading(false); // Auth check is complete
           setIsInitialized(true); // Mark as fully initialized
           // console.log('RUNNNN');
@@ -95,7 +95,7 @@ export default function RootLayout() {
       mounted = false;
       subscription?.unsubscribe();
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   // This effect handles where to navigate based on authentication state
   useEffect(() => {
@@ -109,11 +109,28 @@ export default function RootLayout() {
     // Check if user is currently on an auth page (login, register, etc.)
     const inAuthGroup = segments[0] === '(auth)';
 
+    // this is the testing:
+
+    // Get the current page name from the URL segments
+    const currentPageName = segments[segments.length - 1];
+
+    // Define a list of pages that are publicly accessible even without a login
+    // This is the new part
+    const publiclyAccessiblePages = ['explore', 'dish_selection', 'search'];
+
+    // Check if the current page is one of the publicly accessible ones
+    // This is the new part
+    const isPubliclyAccessible = publiclyAccessiblePages.includes(currentPageName);
+
     if (session && inAuthGroup) {
       // USER IS LOGGED IN + ON AUTH PAGE
       // Redirect logged-in users away from auth pages to explore
       router.replace('/(user)/explore');
-    } else if (!session && !inAuthGroup) {
+    } else if (
+      !session &&
+      !inAuthGroup
+      //&& !isPubliclyAccessible
+    ) {
       // USER IS NOT LOGGED IN + ON PROTECTED PAGE
       // Allow users to browse explore and search without logging in
       // Only redirect to auth when they try to access account features

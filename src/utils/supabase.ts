@@ -8,7 +8,7 @@ const supabaseAnonKey =
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    ...(Platform.OS !== "web" ? { storage: AsyncStorage } : {}), // fix: https://github.com/supabase/supabase-js/issues/870 other fixes: https://github.com/orgs/supabase/discussions/25909
+    ...(Platform.OS !== 'web' ? { storage: AsyncStorage } : {}), // fix: https://github.com/supabase/supabase-js/issues/870 other fixes: https://github.com/orgs/supabase/discussions/25909
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,
