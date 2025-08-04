@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { createShadowStyle } from '../../utils/platform-utils';
 import type { User } from '@supabase/supabase-js';
 import SearchBar from '../../components/filters/SearchBar';
+import { useAuth } from '../../utils/auth-context';
 
 // Sample data for food categories
 const FOOD_CATEGORIES = [
@@ -41,33 +42,11 @@ const FEATURED_RECIPES = [
 
 export default function ExploreScreen() {
   const router = useRouter();
-  const [user, setUser] = useState<User | null>(null);
+  const { user } = useAuth();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-
-  useEffect(() => {
-    getUserInfo();
-  }, []);
-
-  const getUserInfo = async () => {
-    try {
-      const {
-        data: { user },
-        error,
-      } = await supabase.auth.getUser();
-
-      // Only log error if it's not the expected "session missing" error
-      if (error && error.message !== 'Auth session missing!') {
-        console.error('Unexpected auth error:', error);
-      }
-
-      // Set user (will be null if not logged in, which is fine)
-      setUser(user);
-    } catch (error) {
-      // Silently handle auth errors - user simply isn't logged in
-      // console.log('User not authenticated (this is normal if not logged in)');
-      setUser(null);
-    }
-  };
+  // useEffect(() => {
+  //   console.log(user);
+  // }, []);
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -107,7 +86,7 @@ export default function ExploreScreen() {
         {/* Search Bar*/}
         <SafeAreaView style={styles.container}>
           <View style={{ paddingVertical: 10, paddingHorizontal: 16 }}>
-              <SearchBar value={query} onChangeText={setQuery} />
+            <SearchBar value={query} onChangeText={setQuery} />
           </View>
         </SafeAreaView>
 

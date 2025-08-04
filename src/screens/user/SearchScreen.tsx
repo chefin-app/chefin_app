@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier */
 import React, { useState } from 'react';
 import { View } from 'react-native';
 import SearchBar from '../../components/filters/SearchBar';
