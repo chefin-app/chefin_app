@@ -1,3 +1,4 @@
+import { AuthContext } from '../context/AuthContext';
 //import FontAwesome from '@expo/vector-icons/FontAwesome';
 //import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Session } from '@supabase/supabase-js';
@@ -8,6 +9,7 @@ import { useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 import 'react-native-reanimated';
 import { supabase } from '../utils/supabase';
+import { StatusBar } from 'expo-status-bar';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -35,7 +37,7 @@ export default function RootLayout() {
   const [isLoading, setIsLoading] = useState(true); // Tracks if we're still checking auth status
   const [isInitialized, setIsInitialized] = useState(false); // Ensures auth is fully set up before navigation
 
-  const segments = useSegments(); // Gets current route segments (e.g., ['(user)', 'explore'])
+  const segments = useSegments(); // Gets current route segments (e.g., ['(user)', 'home'])
   const router = useRouter(); // For programmatic navigation
 
   useEffect(() => {
@@ -62,7 +64,7 @@ export default function RootLayout() {
         }
 
         if (mounted) {
-          setSession(session); // Set the session (null if not logged in)
+          setSession(data.session); // Ensure 'data.session' is used, which is correct
           setIsLoading(false); // Auth check is complete
           setIsInitialized(true); // Mark as fully initialized
           // console.log('RUNNNN');
@@ -95,7 +97,7 @@ export default function RootLayout() {
       mounted = false;
       subscription?.unsubscribe();
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   // This effect handles where to navigate based on authentication state
   useEffect(() => {
@@ -111,13 +113,13 @@ export default function RootLayout() {
 
     if (session && inAuthGroup) {
       // USER IS LOGGED IN + ON AUTH PAGE
-      // Redirect logged-in users away from auth pages to explore
-      router.replace('/(user)/explore');
-    } else if (!session && !inAuthGroup) {
+      // Redirect logged-in users away from auth pages to home
+      router.replace('/(user)/home');
+    } else if (!session && !inAuthGroup && segments[1] === 'account') {
       // USER IS NOT LOGGED IN + ON PROTECTED PAGE
-      // Allow users to browse explore and search without logging in
+      // Allow users to browse home and search without logging in
       // Only redirect to auth when they try to access account features
-      router.replace('/(user)/explore');
+      router.replace('/(auth)/login');
     }
   }, [session, segments, isLoading, isInitialized, router, loaded]);
 
@@ -126,14 +128,21 @@ export default function RootLayout() {
     return null;
   }
 
-  return <RootLayoutNav />;
+  return (
+    <AuthContext.Provider value={{ session, isLoading }}>
+      <RootLayoutNav />
+    </AuthContext.Provider>
+  );
 }
 
 function RootLayoutNav() {
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="(user)" options={{ headerShown: false }} />
-      <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-    </Stack>
+    <>
+      <StatusBar style="dark" />
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(user)" options={{ headerShown: false }} />
+        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+      </Stack>
+    </>
   );
 }

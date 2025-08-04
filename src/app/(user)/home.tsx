@@ -1,35 +1,37 @@
-import React from 'react';
-import { View, TouchableOpacity, StyleSheet } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { useAuth } from '../../context/AuthContext';
+import React, { useState } from 'react';
 import { useRouter } from 'expo-router';
+import { StyleSheet, ScrollView } from 'react-native';
+import { supabase } from '../../utils/supabase';
+import { Ionicons } from '@expo/vector-icons';
+import { createShadowStyle } from '../../utils/platform-utils';
+import type { User } from '@supabase/supabase-js';
+import { useAuth } from '../../context/AuthContext';
+import SearchBar from '@/src/components/filters/SearchBar';
+import CuisineFilter from '@/src/components/filters/CuisineFilter';
+import MainFilter from '@/src/components/filters/MainFilter';
+import { BaseText, HeadingText, BodyText, CaptionText } from '@/src/components/typography';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-export default function TopNavBarHomeUser() {
-  const router = useRouter();
-  const { session } = useAuth();
-  const user = session?.user;
-
-  const handleCartPress = () => {
-    router.push('/'); // Navigate to cart screen
-  };
-
+export default function HomeScreen() {
   return (
-    <SafeAreaView edges={['top']} style={styles.safeArea}>
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.cartButton} onPress={handleCartPress}>
-          <Ionicons name="cart" size={24} color="#333" />
-          {user && <View style={styles.notificationDot} />}
-        </TouchableOpacity>
-      </View>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+        <SearchBar value="" onChangeText={text => console.log('Search text:', text)} />
+        <CuisineFilter />
+        <MainFilter />
+        <HeadingText level={2}>Welcome to Chefin!</HeadingText>
+        <BaseText>Yo</BaseText>
+        <BodyText size="medium" color="secondary">
+          description
+        </BodyText>
+        <CaptionText color="muted">Caption text</CaptionText>
+      </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    backgroundColor: '#fff',
-  },
+  text: { fontSize: 20, fontWeight: '600', color: '#333' },
   container: {
     flex: 1,
     backgroundColor: '#fff',
@@ -40,10 +42,9 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
+    paddingVertical: 20,
   },
   greeting: {
     fontSize: 16,
@@ -54,12 +55,21 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#333',
   },
-  cartButton: {
+  notificationButton: {
     width: 44,
     height: 44,
+    borderRadius: 22,
+    backgroundColor: '#fff',
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
+    ...createShadowStyle({
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 3,
+    }),
   },
   notificationDot: {
     position: 'absolute',
@@ -75,6 +85,13 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 20,
     marginBottom: 24,
+    ...createShadowStyle({
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 3,
+    }),
   },
   welcomeTitle: {
     fontSize: 20,
