@@ -4,11 +4,12 @@ import { Session } from '@supabase/supabase-js';
 import { useFonts } from 'expo-font';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 import 'react-native-reanimated';
 import { AuthProvider, useAuth } from '../utils/auth-context';
 import { StatusBar } from 'expo-status-bar';
+import { supabase } from '../utils/supabase';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -43,12 +44,12 @@ function NavigationHandler({ children }: { children: React.ReactNode }) {
     if (user && inAuthGroup) {
       // USER IS LOGGED IN + ON AUTH PAGE
       // Redirect logged-in users away from auth pages to explore
-      router.replace('/(user)/explore');
+      router.replace('/(user)/home');
     } else if (!user && !inAuthGroup) {
       // USER IS NOT LOGGED IN + ON PROTECTED PAGE
       // Allow users to browse explore and search without logging in
       // Only redirect to auth when they try to access account features
-      router.replace('/(user)/explore');
+      router.replace('/(user)/home');
     }
   }, [user, segments, initializing, router]);
 

@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import SearchBar from '@/src/components/filters/SearchBar';
 
-export default function SearchScreenPage() {
+export default function SearchScreen() {
   // You can name it whatever, as long as it's the default export
   return;
 }

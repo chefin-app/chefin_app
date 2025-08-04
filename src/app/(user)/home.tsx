@@ -5,7 +5,6 @@ import { supabase } from '../../utils/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import { createShadowStyle } from '../../utils/platform-utils';
 import type { User } from '@supabase/supabase-js';
-import { useAuth } from '../../context/AuthContext';
 import SearchBar from '@/src/components/filters/SearchBar';
 import CuisineFilter from '@/src/components/filters/CuisineFilter';
 import MainFilter from '@/src/components/filters/MainFilter';
