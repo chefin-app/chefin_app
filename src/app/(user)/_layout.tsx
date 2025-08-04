@@ -152,18 +152,15 @@
 // }
 
 import { Tabs, useRouter } from 'expo-router';
+import TopNavBarHomeUser from '../../components/navigation/TopNavBarHomeUser';
+import BottomTabBarUser from '../../components/navigation/BottomTabBarUser';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useCallback } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../utils/auth-context';
 
-const TAB_CONFIG = {
-  activeTintColor: '#4CAF50',
-  inactiveTintColor: '#999',
-  backgroundColor: '#fff',
-  borderColor: '#E0E0E0',
-  height: 84,
-  fontSize: 12,
-};
+const NavBar = (props: any) => <TopNavBarHomeUser {...props} />;
+const TabBar = (props: any) => <BottomTabBarUser {...props} />;
 
 export default function TabLayout() {
   const { user, initializing } = useAuth();
@@ -182,83 +179,30 @@ export default function TabLayout() {
   const isLoggedIn = !!user;
 
   return (
-    <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarActiveTintColor: TAB_CONFIG.activeTintColor,
-        tabBarInactiveTintColor: TAB_CONFIG.inactiveTintColor,
-        tabBarStyle: {
-          backgroundColor: TAB_CONFIG.backgroundColor,
-          borderTopColor: TAB_CONFIG.borderColor,
-          borderTopWidth: 1,
-          paddingBottom: 8,
-          paddingTop: 8,
-          height: TAB_CONFIG.height,
-        },
-        tabBarLabelStyle: {
-          fontSize: TAB_CONFIG.fontSize,
-          fontWeight: '500',
-          marginTop: 4,
-        },
-      }}
-    >
-      <Tabs.Screen
-        name="explore"
-        options={{
-          title: 'Explore',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="compass-outline" size={size} color={color} />
-          ),
+    <SafeAreaProvider>
+      <Tabs
+        tabBar={TabBar}
+        screenOptions={{
+          header: NavBar,
         }}
-      />
-
-      <Tabs.Screen
-        name="search"
-        options={{
-          title: 'Search',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="search-outline" size={size} color={color} />
-          ),
-        }}
-      />
-
-      {/* Account tab - only show if logged in */}
-      <Tabs.Screen
-        name="account"
-        options={{
-          title: 'Account',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="person-outline" size={size} color={color} />
-          ),
-          href: isLoggedIn ? undefined : null, // Hide tab if not logged in
-        }}
-      />
-
-      {/* Login tab - only show if not logged in */}
-      <Tabs.Screen
-        name="log"
-        options={{
-          title: 'Log In',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="log-in-outline" size={size} color={color} />
-          ),
-          href: !isLoggedIn ? undefined : null, // Hide tab if logged in
-        }}
-        listeners={{
-          tabPress: e => {
-            e.preventDefault();
-            handleLoginPress();
-          },
-        }}
-      />
-
-      {/* Hidden route */}
-      <Tabs.Screen
-        name="index"
-        options={{
-          href: null,
-        }}
-      />
-    </Tabs>
+      >
+        <Tabs.Screen name="home" options={{ title: 'Home' }} />
+        <Tabs.Screen name="search" options={{ title: 'Search' }} />
+        <Tabs.Screen
+          name="account"
+          options={{
+            title: isLoggedIn ? 'Account' : 'Log In',
+          }}
+          listeners={{
+            tabPress: e => {
+              if (!isLoggedIn) {
+                e.preventDefault();
+                router.push('/(auth)/login');
+              }
+            },
+          }}
+        />
+      </Tabs>
+    </SafeAreaProvider>
   );
 }

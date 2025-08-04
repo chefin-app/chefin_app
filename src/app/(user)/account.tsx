@@ -10,11 +10,13 @@ import {
   ScrollView,
 } from 'react-native';
 import { supabase } from '../../utils/supabase';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { createShadowStyle } from '../../utils/platform-utils';
 import type { User } from '@supabase/supabase-js';
 
 export default function AccountScreen() {
+  const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSigningOut, setIsSigningOut] = useState(false);
@@ -62,8 +64,9 @@ export default function AccountScreen() {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
 
-      // Navigation will be handled automatically by the auth state change
-      // User will see the login tab instead of account tab
+      // Explicitly navigate to login after sign out
+      router.replace('/(user)/home');
+      Alert.alert('Signed Out', 'You have been signed out successfully.');
     } catch (error: unknown) {
       if (error instanceof Error) {
         console.error('Error signing out:', error);
@@ -204,7 +207,7 @@ export default function AccountScreen() {
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
               <Text style={styles.statNumber}>128</Text>
-              <Text style={styles.statLabel}>Favorites</Text>
+              <Text style={styles.statLabel}>Favourites</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statItem}>

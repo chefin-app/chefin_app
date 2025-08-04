@@ -1,6 +1,7 @@
 const theme = {
   colors: {
     primary: '#4ade80', // green-400
+    inactive: '#9e9e9e', // gray-500
     background: '#ffffff', // white
     surface: '#f3f4f6', // gray-100
     text: '#111827', // gray-900
@@ -8,9 +9,9 @@ const theme = {
     border: '#d1d5db', // gray-300
     success: '#22c55e', // green-600
     error: '#ef4444', // red-600
-    tint: '#2f95dc', // from Colors.ts
-    tabIconDefault: '#ccc', // from Colors.ts
-    tabIconSelected: '#2f95dc', // from Colors.ts
+    tint: '#2f95dc',
+    tabIconDefault: '#ccc',
+    tabIconSelected: '#2f95dc',
   },
 
   modes: {

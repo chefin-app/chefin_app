@@ -104,7 +104,7 @@ export default function PhoneVerifyStep2() {
 
       if (user?.user_metadata?.is_new_user !== false) {
         // New user - redirect to password setup or profile setup
-        router.replace('/(user)/explore');
+        router.replace('/(user)/home');
       } else {
         // Existing user - go to main app
         router.replace('/(user)');

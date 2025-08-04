@@ -1,30 +1,21 @@
 // this is the bottom tab bar component
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, ImageSourcePropType } from 'react-native';
-
-// You might have a separate Colors file or define them here for now
-const PRIMARY_COLOR = '#4ADE80';
-const INACTIVE_COLOR = '#9E9E9E';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import theme from '../../styles/theme';
 
 // Props definition for the component, received from Expo Router's Tabs
 interface BottomTabBarUserProps {
-  state: any; // Contains info about the current navigation state (active route index)
+  state: any; // Contains info about the current navigation state (active route home)
   descriptors: any; // Contains options for each screen (like the 'title' option we set)
   navigation: any; // The navigation object to perform navigate actions
 }
 
 // Image imports — only active images now
-const icons: Record<string, { active: ImageSourcePropType }> = {
-  // We are mapping to tab folder, home.tsx file
-  index: {
-    active: require('../assets/images/home_icon.png'),
-  },
-  search: {
-    active: require('../assets/images/search.png'),
-  },
-  account: {
-    active: require('../assets/images/user.png'),
-  },
+const icons: Record<string, string> = {
+  home: 'home',
+  search: 'search-outline',
+  account: 'person-outline',
 };
 
 // its taking 3 props
@@ -47,7 +38,9 @@ const BottomTabBarUser: React.FC<BottomTabBarUserProps> = ({ state, descriptors,
         const isFocused = state.index === index;
 
         // if its active = set it as primary colour otherwise
-        const textColor = isFocused ? PRIMARY_COLOR : INACTIVE_COLOR;
+        const textColor = isFocused ? theme.colors.primary : theme.colors.inactive;
+
+        const iconName = icons[route.name] || 'help-circle-outline'; // Default to 'help-circle-outline' if no specific icon is set
 
         // when we press on the tab
         const onPress = () => {
@@ -84,11 +77,11 @@ const BottomTabBarUser: React.FC<BottomTabBarUserProps> = ({ state, descriptors,
             onLongPress={onLongPress}
             style={styles.tabItem}
           >
-            <Image
-              source={icons[route.name]?.active}
-              style={{ width: 24, height: 24, tintColor: textColor }}
+            <Ionicons
+              name={iconName as keyof typeof Ionicons.glyphMap}
+              size={32}
+              color={textColor}
             />
-
             {/* we are applying styling */}
             <Text style={{ ...styles.tabLabel, color: textColor }}>{label}</Text>
           </TouchableOpacity>
@@ -101,19 +94,19 @@ const BottomTabBarUser: React.FC<BottomTabBarUserProps> = ({ state, descriptors,
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    height: 53, // Consistent height from Figma
+    height: 90, // Consistent height from Figma
     backgroundColor: '#fff', // White background
     borderTopWidth: 1, // Subtle border at the top
     borderTopColor: 'white',
     alignItems: 'center',
     justifyContent: 'space-around', // Distribute items evenly
-    paddingBottom: 5, // Small padding for bottom safe area
+    paddingBottom: 15, // Small padding for bottom safe area
   },
   tabItem: {
     flex: 1, // Each item takes equal space
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 5, // Vertical padding inside each tab
+    paddingVertical: 20, // Vertical padding inside each tab
   },
   tabLabel: {
     fontSize: 10, // Small text size as per Figma
