@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useRouter } from 'expo-router';
-import { StyleSheet, ScrollView } from 'react-native';
+import { StyleSheet, ScrollView, View, Image } from 'react-native';
 import { supabase } from '../../utils/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import { createShadowStyle } from '../../utils/platform-utils';
@@ -10,20 +10,33 @@ import CuisineFilter from '@/src/components/filters/CuisineFilter';
 import MainFilter from '@/src/components/filters/MainFilter';
 import { BaseText, HeadingText, BodyText, CaptionText } from '@/src/components/typography';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import PromoImage from '../../assets/images/promo-food.png';
 
 export default function HomeScreen() {
+  const [searchValue, setSearchValue] = useState('');
+
+  const handleSearchSubmit = () => {
+    if (searchValue.trim()) {
+      console.log('Search submitted:', searchValue);
+    }
+  };
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        <SearchBar value="" onChangeText={text => console.log('Search text:', text)} />
+        <SearchBar
+          value={searchValue}
+          onChangeText={setSearchValue}
+          onSubmitEditing={handleSearchSubmit}
+        />
+        {/* promo banner */}
+        <View style={styles.promoBanner}>
+          <View style={styles.promoContent}>
+            <HeadingText level={5}>Welcome to Chefin! We think you'll love this dish</HeadingText>
+          </View>
+          <Image source={PromoImage} style={styles.promoImage} />
+        </View>
         <CuisineFilter />
         <MainFilter />
-        <HeadingText level={2}>Welcome to Chefin!</HeadingText>
-        <BaseText>Yo</BaseText>
-        <BodyText size="medium" color="secondary">
-          description
-        </BodyText>
-        <CaptionText color="muted">Caption text</CaptionText>
       </ScrollView>
     </SafeAreaView>
   );
@@ -139,5 +152,22 @@ const styles = StyleSheet.create({
     color: '#4CAF50',
     fontSize: 14,
     fontWeight: '500',
+  },
+  promoBanner: {
+    backgroundColor: '#90EE90',
+    borderRadius: 16,
+    padding: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 16,
+    overflow: 'hidden',
+  },
+  promoContent: {
+    flex: 1,
+  },
+  promoImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
   },
 });

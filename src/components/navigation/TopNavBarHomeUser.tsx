@@ -2,13 +2,46 @@ import React from 'react';
 import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../utils/auth-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useSegments } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { createShadowStyle } from '../../utils/platform-utils';
 
-export default function TopNavBarHomeUser() {
+interface NavBarProps {
+  options?: {
+    headerProps?: {
+      currentTab?: string;
+    };
+  };
+}
+
+export default function TopNavBarHomeUser({ options }: NavBarProps) {
   const router = useRouter();
   const { session } = useAuth();
   const user = session?.user;
+  const segments = useSegments();
+  const currentTab = options?.headerProps?.currentTab || segments[segments.length - 1];
+
+  const renderRightButton = () => {
+    if (currentTab === 'account') {
+      return (
+        <TouchableOpacity style={styles.notificationButton} onPress={handleNotifPress}>
+          <Ionicons name="notifications" size={24} color="#333" />
+          {user && <View style={styles.notificationDot} />}
+        </TouchableOpacity>
+      );
+    } else {
+      return (
+        <TouchableOpacity style={styles.cartButton} onPress={handleCartPress}>
+          <Ionicons name="cart" size={24} color="#333" />
+          {user && <View style={styles.notificationDot} />}
+        </TouchableOpacity>
+      );
+    }
+  };
+
+  const handleNotifPress = () => {
+    router.push('/'); // Navigate to cart screen
+  };
 
   const handleCartPress = () => {
     router.push('/'); // Navigate to cart screen
@@ -16,12 +49,7 @@ export default function TopNavBarHomeUser() {
 
   return (
     <SafeAreaView edges={['top']} style={styles.safeArea}>
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.cartButton} onPress={handleCartPress}>
-          <Ionicons name="cart" size={24} color="#333" />
-          {user && <View style={styles.notificationDot} />}
-        </TouchableOpacity>
-      </View>
+      <View style={styles.header}>{renderRightButton()}</View>
     </SafeAreaView>
   );
 }
@@ -123,5 +151,19 @@ const styles = StyleSheet.create({
     color: '#4CAF50',
     fontSize: 14,
     fontWeight: '500',
+  },
+  notificationButton: {
+    width: 44,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+    ...createShadowStyle({
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 3,
+    }),
   },
 });
