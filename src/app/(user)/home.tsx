@@ -11,6 +11,7 @@ import MainFilter from '@/src/components/filters/MainFilter';
 import { BaseText, HeadingText, BodyText, CaptionText } from '@/src/components/typography';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import PromoImage from '../../assets/images/promo-food.png';
+import MealCard from '@/src/components/cards/MealCard';
 
 export default function HomeScreen() {
   const [searchValue, setSearchValue] = useState('');
@@ -19,10 +20,10 @@ export default function HomeScreen() {
     if (searchValue.trim()) {
       console.log('Search submitted:', searchValue);
     }
-  };
-  return (
-    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+  }; // Alex: added contentContainerStyle to ScrollView with paddingBottom
+  return ( 
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}> 
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>  
         <SearchBar
           value={searchValue}
           onChangeText={setSearchValue}
@@ -37,6 +38,7 @@ export default function HomeScreen() {
         </View>
         <CuisineFilter />
         <MainFilter />
+        <MealCard />
       </ScrollView>
     </SafeAreaView>
   );
