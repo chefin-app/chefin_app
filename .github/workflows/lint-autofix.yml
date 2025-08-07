@@ -1,4 +1,4 @@
-name: Auto Lint Fix (Monorepo)
+name: Auto Lint Fix
 
 on:
   push:
@@ -8,9 +8,6 @@ on:
 jobs:
   lint-fix:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        folder: [chefin_app]
 
     steps:
       - name: Checkout code
@@ -23,20 +20,20 @@ jobs:
         with:
           node-version: 18
 
-      - name: Run ESLint and auto-fix if package.json exists
+      - name: Intall dependencies
         run: |
-          if [ -f package.json ]; then
-            if [ ! -f package-lock.json ]; then
-              npm install
-            fi
-            npm ci
-            npm run lint -- --fix
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add .
-            git diff --cached --quiet || git commit -m "chore: auto-fix lint errors in ${{ matrix.folder }}"
-            git push
-          else
-            echo "Skipping folder ${{ matrix.folder }} — no package.json"
+          if [ ! -f package-loc.json ]; then
+            npm install
           fi
-        working-directory: ${{ matrix.folder }}
+          npm ci
+
+      - name: Run ESLint with auto-fix
+        run: npm run lint -- --fix
+
+      - name: Commit and push changes if needed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .
+          git diff --cached --quiet || git commit -m "chore: auto-fix lint errors"
+          git push
