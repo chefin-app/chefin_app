@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        folder: [mobile-app, backend, admin-dashboard]
+        folder: [src]
 
     steps:
       - name: Checkout code
