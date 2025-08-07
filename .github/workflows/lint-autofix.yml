@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        folder: [src]
+        folder: [chefin_app]
 
     steps:
       - name: Checkout code
