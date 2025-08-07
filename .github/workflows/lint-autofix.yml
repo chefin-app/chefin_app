@@ -29,11 +29,11 @@ jobs:
             npm install
           fi
           npm ci
-        working-directory: ./${{ matrix.folder }}
+        working-directory: ${{ matrix.folder }}
 
       - name: Run ESLint with auto-fix
         run: npm run lint -- --fix
-        working-directory: ./${{ matrix.folder }}
+        working-directory: ${{ matrix.folder }}
 
       - name: Commit and push changes if any
         run: |
