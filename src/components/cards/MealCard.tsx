@@ -1,8 +1,9 @@
 import { View, Text, TouchableOpacity, StyleSheet, ImageBackground, Image } from 'react-native'
-import React from 'react'
+import React, { useState } from 'react'
 import { Ionicons } from '@expo/vector-icons';
 
 const MealCard = () => {
+    const [isFavorite, setIsFavorite] = useState(false);
     return (
         <TouchableOpacity style={styles.card}>
             <ImageBackground
@@ -10,20 +11,29 @@ const MealCard = () => {
                 style={styles.image}
                 imageStyle={styles.imageStyle}
             >
-                <TouchableOpacity style={styles.heartIcon}>
-                    <Ionicons name="heart" size={24} color="#ff0000" />
+                <TouchableOpacity style={styles.heartIcon} onPress={() => setIsFavorite(prev => !prev)}>
+                    <Ionicons 
+                        name={isFavorite ? "heart" : "heart-outline"} 
+                        size={24} 
+                        color={isFavorite ? "#ff0000" : "#111111"} />
                 </TouchableOpacity>
             </ImageBackground>
 
             <View style={styles.infoContainer}>
-                <Image source={require('../../assets/images/templateAvatar.jpg')} style={styles.avatar} />
+                <Image
+                    source={require('../../assets/images/templateAvatar.jpg')}
+                    style={styles.avatar}
+                />
+
                 <View style={{ flex: 1 }}>
-                    <Text style={styles.title}>Sigma Eats
+                    <View style={styles.titleRow}>
+                        <Text style={styles.title} numberOfLines={1}>Sigma Eats</Text>
                         <View style={styles.rating}>
                             <Ionicons name="star" size={16} color="#FFD700" />
                             <Text style={styles.ratingText}>4.5 (223)</Text>
                         </View>
-                    </Text>
+                    </View>
+
                     <Text style={styles.subtitle}>Italian, Pizza, Pasta</Text>
                 </View>
             </View>
@@ -39,11 +49,11 @@ const MealCard = () => {
 
 const styles = StyleSheet.create({
     card: {
-        width: '100%',
+        width: 300,
         height: 220,
         backgroundColor: '#ffffff',
         borderRadius: 10,
-        elevation: 3,
+        elevation: 4,
         shadowColor: '#000000',
         shadowOpacity: 0.1,
         shadowOffset: { width: 0, height: 2 },
@@ -66,6 +76,10 @@ const styles = StyleSheet.create({
         backgroundColor: '#fff',
         borderRadius: 20,
         padding: 6,
+        position: 'absolute',
+        top: 6,
+        right: 6,
+        
     },
     infoContainer: {
         flexDirection: 'row',
@@ -79,14 +93,20 @@ const styles = StyleSheet.create({
         borderRadius: 20,
         borderWidth: 2,
     },
+    titleRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 8,
+    },
     title: {
         color: '#333333',
         fontSize: 16,
         fontWeight: 'bold',
         marginLeft: 8,
-        flexDirection: 'row',
-        alignItems: 'flex-end',
-        justifyContent: 'space-between',
+        flexShrink: 1,
+        maxWidth: '70%',
+
     },
     subtitle: {
         color: '#666666',
@@ -104,6 +124,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         marginLeft: 'auto',
+        flexShrink: 0,
     },
     ratingText: {
         marginLeft: 4,

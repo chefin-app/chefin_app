@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useRouter } from 'expo-router';
-import { StyleSheet, ScrollView, View, Image } from 'react-native';
+import { StyleSheet, ScrollView, View, Image, FlatList } from 'react-native';
 import { supabase } from '../../utils/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import { createShadowStyle } from '../../utils/platform-utils';
@@ -38,7 +38,39 @@ export default function HomeScreen() {
         </View>
         <CuisineFilter />
         <MainFilter />
-        <MealCard />
+        {/* Displaying Meal Cards */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <HeadingText level={4} style={styles.sectionTitle}>Popular Chefins Near You</HeadingText>
+          </View>
+          <FlatList
+            data={[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]} // Placeholder data
+            renderItem={({ item }) => <MealCard />}
+            keyExtractor={(item) => item.toString()}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingVertical: 10 }}
+            ItemSeparatorComponent={() => <View style={{ width: 10 }} />}
+          />
+        </View>
+
+        {/* Displaying Delicious Deals Meal Cards */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <HeadingText level={4} style={styles.sectionTitle}>Delicious Deals</HeadingText>
+          </View>
+          <FlatList
+            data={[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]} // Placeholder data
+            renderItem={({ item }) => <MealCard />}
+            keyExtractor={(item) => item.toString()}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingVertical: 10 }}
+            ItemSeparatorComponent={() => <View style={{ width: 10 }} />}
+          />
+        </View>
+
+        {/*<MealCard />*/}
       </ScrollView>
     </SafeAreaView>
   );
@@ -146,9 +178,10 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 20,
-    fontWeight: '600',
+    fontWeight: 'bold',
     color: '#333',
-    marginBottom: 16,
+    marginTop: 2,
+    marginBottom: 2,
   },
   seeAllText: {
     color: '#4CAF50',
