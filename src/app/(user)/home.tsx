@@ -14,7 +14,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import PromoImage from '../../assets/images/promo-food.webp';
 import MealCard from '@/src/components/cards/MealCard';
 
-
 export default function HomeScreen() {
   const [searchValue, setSearchValue] = useState('');
 
@@ -23,9 +22,13 @@ export default function HomeScreen() {
       console.log('Search submitted:', searchValue);
     }
   }; // Alex: added contentContainerStyle to ScrollView with paddingBottom
-  return ( 
-    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}> 
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>  
+  return (
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+      <ScrollView
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 20 }}
+      >
         <SearchBar
           value={searchValue}
           onChangeText={setSearchValue}
@@ -43,12 +46,14 @@ export default function HomeScreen() {
         {/* Displaying Meal Cards */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <HeadingText level={4} style={styles.sectionTitle}>Popular Chefins Near You</HeadingText>
+            <HeadingText level={4} style={styles.sectionTitle}>
+              Popular Chefins Near You
+            </HeadingText>
           </View>
           <FlatList
             data={[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]} // Placeholder data
             renderItem={({ item }) => <MealCard />}
-            keyExtractor={(item) => item.toString()}
+            keyExtractor={item => item.toString()}
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={{ paddingVertical: 10 }}
@@ -59,12 +64,14 @@ export default function HomeScreen() {
         {/* Displaying Delicious Deals Meal Cards */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <HeadingText level={4} style={styles.sectionTitle}>Delicious Deals</HeadingText>
+            <HeadingText level={4} style={styles.sectionTitle}>
+              Delicious Deals
+            </HeadingText>
           </View>
           <FlatList
             data={[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]} // Placeholder data
             renderItem={({ item }) => <MealCard />}
-            keyExtractor={(item) => item.toString()}
+            keyExtractor={item => item.toString()}
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={{ paddingVertical: 10 }}
@@ -75,7 +82,6 @@ export default function HomeScreen() {
         {/*<MealCard />*/}
       </ScrollView>
     </SafeAreaView>
-
   );
 }
 
@@ -191,7 +197,6 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     paddingHorizontal: 10,
     paddingVertical: 10,
-
   },
   promoBanner: {
     backgroundColor: '#90EE90',
