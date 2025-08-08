@@ -11,7 +11,7 @@ import MainFilter from '@/src/components/filters/MainFilter';
 import { BaseText, HeadingText, BodyText, CaptionText } from '@/src/components/typography';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import PromoImage from '../../assets/images/promo-food.png';
+import PromoImage from '../../assets/images/promo-food.webp';
 import MealCard from '@/src/components/cards/MealCard';
 
 
@@ -74,7 +74,8 @@ export default function HomeScreen() {
 
         {/*<MealCard />*/}
       </ScrollView>
-    </View>
+    </SafeAreaView>
+
   );
 }
 
@@ -188,7 +189,7 @@ const styles = StyleSheet.create({
     color: '#4CAF50',
     fontSize: 14,
     fontWeight: '500',
-    paddingHorizontal: 10, {/* check if this needs changing */}
+    paddingHorizontal: 10,
     paddingVertical: 10,
 
   },
