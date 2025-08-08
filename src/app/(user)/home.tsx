@@ -10,8 +10,10 @@ import CuisineFilter from '@/src/components/filters/CuisineFilter';
 import MainFilter from '@/src/components/filters/MainFilter';
 import { BaseText, HeadingText, BodyText, CaptionText } from '@/src/components/typography';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
 import PromoImage from '../../assets/images/promo-food.png';
 import MealCard from '@/src/components/cards/MealCard';
+
 
 export default function HomeScreen() {
   const [searchValue, setSearchValue] = useState('');
@@ -72,15 +74,14 @@ export default function HomeScreen() {
 
         {/*<MealCard />*/}
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  text: { fontSize: 20, fontWeight: '600', color: '#333' },
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#f8f9fa', // Slightly off-white background
   },
   scrollView: {
     flex: 1,
@@ -187,15 +188,25 @@ const styles = StyleSheet.create({
     color: '#4CAF50',
     fontSize: 14,
     fontWeight: '500',
+    paddingHorizontal: 10, {/* check if this needs changing */}
+    paddingVertical: 10,
+
   },
   promoBanner: {
     backgroundColor: '#90EE90',
-    borderRadius: 16,
+    borderRadius: 20,
     padding: 20,
     flexDirection: 'row',
     alignItems: 'center',
     marginVertical: 16,
     overflow: 'hidden',
+    ...createShadowStyle({
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.15,
+      shadowRadius: 16,
+      elevation: 10,
+    }),
   },
   promoContent: {
     flex: 1,

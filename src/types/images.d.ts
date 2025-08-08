@@ -12,3 +12,8 @@ declare module '*.jpeg' {
   const content: number;
   export default content;
 }
+
+declare module '*.webp' {
+  const content: number;
+  export default content;
+}
