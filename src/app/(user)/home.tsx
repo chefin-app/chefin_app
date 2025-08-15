@@ -13,8 +13,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import PromoImage from '../../assets/images/promo-food.webp';
 import MealCard from '@/src/components/cards/MealCard';
+import MenuItemCard from '@/src/components/cards/MenuItemCard';
 
 export default function HomeScreen() {
+  const router = useRouter();
   const [searchValue, setSearchValue] = useState('');
 
   const handleSearchSubmit = () => {

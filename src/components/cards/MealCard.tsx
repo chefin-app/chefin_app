@@ -1,13 +1,17 @@
 import { View, Text, TouchableOpacity, StyleSheet, ImageBackground, Image } from 'react-native';
 import React, { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from "expo-router";
+
+import { images } from '@/src/constants/images';
 
 const MealCard = () => {
+  const router = useRouter();
   const [isFavorite, setIsFavorite] = useState(false);
   return (
-    <TouchableOpacity style={styles.card}>
+    <TouchableOpacity style={styles.card} onPress={() => router.push('/restaurant/[id]')}>
       <ImageBackground
-        source={require('../../assets/images/templateMeal.jpg')}
+        source={images.templateMeal}
         style={styles.image}
         imageStyle={styles.imageStyle}
       >
@@ -21,7 +25,7 @@ const MealCard = () => {
       </ImageBackground>
 
       <View style={styles.infoContainer}>
-        <Image source={require('../../assets/images/templateAvatar.jpg')} style={styles.avatar} />
+        <Image source={images.templateAvatar} style={styles.avatar} />
 
         <View style={{ flex: 1 }}>
           <View style={styles.titleRow}>
