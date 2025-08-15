@@ -1,7 +1,7 @@
 import { View, Text, TouchableOpacity, StyleSheet, ImageBackground, Image } from 'react-native';
 import React, { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from "expo-router";
+import { useRouter } from 'expo-router';
 
 import { images } from '@/src/constants/images';
 

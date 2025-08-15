@@ -3,7 +3,7 @@ import templateAvatar from '@/src//assets/images/templateAvatar.jpg';
 import arrow from '@/src//assets/images/arrow.png';
 
 export const images = {
-    templateMeal,
-    templateAvatar,
-    arrow
-}
+  templateMeal,
+  templateAvatar,
+  arrow,
+};
