@@ -1,0 +1,1 @@
+for setting premade images and icons as constants for use throught the program 
