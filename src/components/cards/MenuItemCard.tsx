@@ -1,16 +1,15 @@
-import { View, Text, StyleSheet, TouchableOpacity, ImageBackground } from 'react-native'
-import React from 'react'
+import { View, Text, StyleSheet, TouchableOpacity, ImageBackground } from 'react-native';
+import React from 'react';
 
 const MenuItemCard = () => {
   return (
     <TouchableOpacity style={styles.card}>
       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
         <ImageBackground
-            source={require('../../assets/images/templateMeal.jpg')}
-            style={{ width: 50, height: 50, borderRadius: 8, marginRight: 10 }}
-            imageStyle={{ borderRadius: 8 }}
-        >
-        </ImageBackground>
+          source={require('../../assets/images/templateMeal.jpg')}
+          style={{ width: 50, height: 50, borderRadius: 8, marginRight: 10 }}
+          imageStyle={{ borderRadius: 8 }}
+        />
         <View style={{ marginLeft: 10 }}>
           <Text style={{ fontSize: 16, fontWeight: 'bold' }}>Menu Item Name</Text>
           <Text style={{ color: '#666' }}>Description of the menu item.</Text>
@@ -18,12 +17,12 @@ const MenuItemCard = () => {
         </View>
       </View>
     </TouchableOpacity>
-  )
-}
+  );
+};
 
 const styles = StyleSheet.create({
   card: {
-    width: "90%",
+    width: '90%',
     height: 100,
     alignSelf: 'center',
     backgroundColor: '#ffffff',
@@ -36,7 +35,7 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 16,
   },
-    image: {
+  image: {
     width: '100%',
     height: 120,
     borderRadius: 10,
@@ -49,7 +48,6 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 12,
     borderTopRightRadius: 12,
   },
-  
-})
+});
 
-export default MenuItemCard
+export default MenuItemCard;
