@@ -4,7 +4,7 @@ import { Image, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'r
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useAuth } from '../../utils/auth-context';
-
+import SocialMediaButtons from '@/src/components/buttons/SocialMediaButtons';
 export default function LoginScreen() {
   const { signInWithFacebook, signInWithGoogle, signInWithApple } = useAuth();
 
@@ -42,7 +42,12 @@ export default function LoginScreen() {
         {/* Login Buttons */}
         <View style={styles.buttonContainer}>
           {/* Facebook Login */}
-          <TouchableOpacity style={styles.facebookButton} onPress={signInWithFacebook}>
+          <SocialMediaButtons buttonName={'facebook'} onPress={signInWithFacebook} />
+          <SocialMediaButtons buttonName={'apple'} onPress={signInWithApple} />
+          <SocialMediaButtons buttonName={'google'} onPress={signInWithGoogle} />
+          <SocialMediaButtons buttonName={'email'} onPress={handleEmailLogin} />
+
+          {/* <TouchableOpacity style={styles.facebookButton} onPress={signInWithFacebook}>
             <View style={styles.socialButtonContent}>
               <Ionicons name="logo-facebook" size={20} color="#fff" />
               <Text style={styles.facebookButtonText}>Continue with Facebook</Text>
@@ -50,28 +55,28 @@ export default function LoginScreen() {
           </TouchableOpacity>
 
           {/* Google Login */}
-          <TouchableOpacity style={styles.googleButton} onPress={signInWithGoogle}>
+          {/* <TouchableOpacity style={styles.googleButton} onPress={signInWithGoogle}>
             <View style={styles.socialButtonContent}>
               <Ionicons name="logo-google" size={20} color="#DB4437" />
               <Text style={styles.googleButtonText}>Continue with Google</Text>
             </View>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
 
           {/* Apple Login */}
-          <TouchableOpacity style={styles.appleButton} onPress={signInWithApple}>
+          {/* <TouchableOpacity style={styles.appleButton} onPress={signInWithApple}>
             <View style={styles.socialButtonContent}>
               <Ionicons name="logo-apple" size={20} color="#fff" />
               <Text style={styles.appleButtonText}>Continue with Apple</Text>
             </View>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
 
           {/* Email Login */}
-          <TouchableOpacity style={styles.emailButton} onPress={handleEmailLogin}>
+          {/* <TouchableOpacity style={styles.emailButton} onPress={handleEmailLogin}>
             <View style={styles.socialButtonContent}>
               <Ionicons name="mail" size={20} color="#fff" />
               <Text style={styles.emailButtonText}>Continue with email</Text>
             </View>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
 
           {/* Phone Login */}
           <TouchableOpacity style={styles.phoneButton} onPress={handlePhoneLogin}>
