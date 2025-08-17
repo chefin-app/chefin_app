@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
+import { PhoneNumberInput } from '@/src/components/inputs/PhoneNumberInput';
 import {
   ActivityIndicator,
   Alert,
@@ -181,7 +182,12 @@ export default function PhoneLoginScreen() {
           </View>
 
           {/* Phone Number Input */}
-          <TextInput
+          <PhoneNumberInput
+            value={phoneNumber}
+            onChangeText={handlePhoneNumberChange}
+            selectedCountry={selectedCountry}
+          />
+          {/* <TextInput
             style={styles.phoneInput}
             placeholder="Mobile number"
             placeholderTextColor="#999"
@@ -189,7 +195,7 @@ export default function PhoneLoginScreen() {
             onChangeText={handlePhoneNumberChange}
             keyboardType="phone-pad"
             maxLength={selectedCountry.code === '+1' ? 14 : 15}
-          />
+          /> */}
         </View>
 
         {/* Next Button */}
