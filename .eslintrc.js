@@ -27,7 +27,7 @@ module.exports = {
     // You might want to adjust some React Native specific rules or TypeScript rules later
     '@typescript-eslint/no-require-imports': 'warn', // turned it off
     '@typescript-eslint/no-unused-vars': 'warn',
-    '@typescript-eslint/no-explicit-any': 'warn',
+    '@typescript-eslint/no-explicit-any': 'off',
   },
   env: {
     node: true,

@@ -1,11 +1,8 @@
-// src/app/(user)/search.tsx
 import React, { useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import SearchBar from '../../components/filters/SearchBar';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, Text, StyleSheet, SafeAreaView } from 'react-native';
+import SearchBar from '@/src/components/filters/SearchBar';
 
-const SearchScreenPage = () => {
-  // You can name it whatever, as long as it's the default export
+export default function SearchScreen() {
   const [query, setQuery] = useState(''); // adding search bar
   return (
     <>
@@ -19,9 +16,7 @@ const SearchScreenPage = () => {
       </SafeAreaView>
     </>
   );
-};
-
-export default SearchScreenPage;
+}
 
 const styles = StyleSheet.create({
   container: {

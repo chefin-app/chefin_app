@@ -1,375 +1,3 @@
-// import { Ionicons } from "@expo/vector-icons";
-// import { router } from "expo-router";
-// import React, { useState } from "react";
-// import {
-//   ActivityIndicator,
-//   Alert,
-//   KeyboardAvoidingView,
-//   Platform,
-//   SafeAreaView,
-//   StyleSheet,
-//   Text,
-//   TextInput,
-//   TouchableOpacity,
-//   View,
-// } from "react-native";
-// import { supabase } from "../../utils/supabase";
-
-// export default function PhoneLoginScreen() {
-//   const [phoneNumber, setPhoneNumber] = useState("");
-//   const [otp, setOtp] = useState("");
-//   const [isLoading, setIsLoading] = useState(false);
-//   const [otpSent, setOtpSent] = useState(false);
-//   const [timer, setTimer] = useState(0);
-
-//   const formatPhoneNumber = (text: string) => {
-//     // Remove all non-numeric characters
-//     const cleaned = text.replace(/\D/g, "");
-
-//     // Format as +1 (XXX) XXX-XXXX for US numbers
-//     if (cleaned.length >= 10) {
-//       const match = cleaned.match(/^(\d{3})(\d{3})(\d{4})$/);
-//       if (match) {
-//         return `+1 (${match[1]}) ${match[2]}-${match[3]}`;
-//       }
-//     }
-
-//     return `+1 ${cleaned}`;
-//   };
-
-//   const sendOTP = async () => {
-//     if (!phoneNumber) {
-//       Alert.alert("Error", "Please enter your phone number");
-//       return;
-//     }
-
-//     // Clean phone number to E.164 format
-//     const cleanPhone = phoneNumber.replace(/\D/g, "");
-//     const formattedPhone = `+1${cleanPhone}`;
-
-//     setIsLoading(true);
-
-//     try {
-//       const { error } = await supabase.auth.signInWithOtp({
-//         phone: formattedPhone,
-//       });
-
-//       if (error) throw error;
-
-//       setOtpSent(true);
-//       setTimer(60); // 60 second countdown
-
-//       // Start countdown timer
-//       const interval = setInterval(() => {
-//         setTimer((prev) => {
-//           if (prev <= 1) {
-//             clearInterval(interval);
-//             return 0;
-//           }
-//           return prev - 1;
-//         });
-//       }, 1000);
-
-//       Alert.alert(
-//         "SMS Sent",
-//         "Please check your phone for the verification code"
-//       );
-//     } catch (error: any) {
-//       Alert.alert("Error", error.message);
-//     } finally {
-//       setIsLoading(false);
-//     }
-//   };
-
-//   const verifyOTP = async () => {
-//     if (!otp) {
-//       Alert.alert("Error", "Please enter the verification code");
-//       return;
-//     }
-
-//     if (otp.length !== 6) {
-//       Alert.alert("Error", "Please enter a valid 6-digit code");
-//       return;
-//     }
-
-//     const cleanPhone = phoneNumber.replace(/\D/g, "");
-//     const formattedPhone = `+1${cleanPhone}`;
-
-//     setIsLoading(true);
-
-//     try {
-//       const { error } = await supabase.auth.verifyOtp({
-//         phone: formattedPhone,
-//         token: otp,
-//         type: "sms",
-//       });
-
-//       if (error) throw error;
-//     } catch (error: any) {
-//       Alert.alert("Error", error.message);
-//     } finally {
-//       setIsLoading(false);
-//     }
-//   };
-
-//   const handlePhoneNumberChange = (text: string) => {
-//     const formatted = formatPhoneNumber(text);
-//     setPhoneNumber(formatted);
-//   };
-
-//   const resendOTP = () => {
-//     if (timer > 0) return;
-//     sendOTP();
-//   };
-
-//   return (
-//     <SafeAreaView style={styles.container}>
-//       <KeyboardAvoidingView
-//         behavior={Platform.OS === "ios" ? "padding" : "height"}
-//         style={styles.keyboardView}
-//       >
-//         {/* Header */}
-//         <View style={styles.header}>
-//           <TouchableOpacity
-//             style={styles.backButton}
-//             onPress={() => router.back()}
-//           >
-//             <Ionicons name="arrow-back" size={24} color="#333" />
-//           </TouchableOpacity>
-//           <Text style={styles.headerTitle}>Phone Login</Text>
-//           <View style={styles.placeholder} />
-//         </View>
-
-//         <View style={styles.content}>
-//           {!otpSent ? (
-//             // Phone Number Input Phase
-//             <View style={styles.form}>
-//               <Text style={styles.subtitle}>
-//                 Enter your phone number to receive a verification code
-//               </Text>
-
-//               <View style={styles.inputContainer}>
-//                 <Text style={styles.inputLabel}>Phone Number</Text>
-//                 <TextInput
-//                   style={styles.input}
-//                   placeholder="+1 (555) 123-4567"
-//                   value={phoneNumber}
-//                   onChangeText={handlePhoneNumberChange}
-//                   keyboardType="phone-pad"
-//                   maxLength={18} // +1 (XXX) XXX-XXXX
-//                 />
-//               </View>
-
-//               <TouchableOpacity
-//                 style={[
-//                   styles.submitButton,
-//                   isLoading && styles.submitButtonDisabled,
-//                 ]}
-//                 onPress={sendOTP}
-//                 disabled={isLoading}
-//               >
-//                 {isLoading ? (
-//                   <ActivityIndicator color="#fff" />
-//                 ) : (
-//                   <Text style={styles.submitButtonText}>Send Code</Text>
-//                 )}
-//               </TouchableOpacity>
-
-//               <Text style={styles.disclaimer}>
-//                 By continuing, you agree to receive SMS messages from us.
-//                 Message and data rates may apply.
-//               </Text>
-//             </View>
-//           ) : (
-//             // OTP Verification Phase
-//             <View style={styles.form}>
-//               <Text style={styles.subtitle}>
-//                 Enter the 6-digit code sent to {phoneNumber}
-//               </Text>
-
-//               <View style={styles.inputContainer}>
-//                 <Text style={styles.inputLabel}>Verification Code</Text>
-//                 <TextInput
-//                   style={styles.otpInput}
-//                   placeholder="123456"
-//                   value={otp}
-//                   onChangeText={setOtp}
-//                   keyboardType="number-pad"
-//                   maxLength={6}
-//                   textAlign="center"
-//                   //   fontSize={24}
-//                 />
-//               </View>
-
-//               <TouchableOpacity
-//                 style={[
-//                   styles.submitButton,
-//                   isLoading && styles.submitButtonDisabled,
-//                 ]}
-//                 onPress={verifyOTP}
-//                 disabled={isLoading}
-//               >
-//                 {isLoading ? (
-//                   <ActivityIndicator color="#fff" />
-//                 ) : (
-//                   <Text style={styles.submitButtonText}>Verify Code</Text>
-//                 )}
-//               </TouchableOpacity>
-
-//               {/* Resend Code */}
-//               <View style={styles.resendContainer}>
-//                 <Text style={styles.resendText}>Didn't receive the code?</Text>
-//                 <TouchableOpacity onPress={resendOTP} disabled={timer > 0}>
-//                   <Text
-//                     style={[
-//                       styles.resendLink,
-//                       timer > 0 && styles.resendLinkDisabled,
-//                     ]}
-//                   >
-//                     {timer > 0 ? `Resend in ${timer}s` : "Resend"}
-//                   </Text>
-//                 </TouchableOpacity>
-//               </View>
-
-//               {/* Change Phone Number */}
-//               <TouchableOpacity
-//                 style={styles.changeNumberButton}
-//                 onPress={() => {
-//                   setOtpSent(false);
-//                   setOtp("");
-//                   setTimer(0);
-//                 }}
-//               >
-//                 <Text style={styles.changeNumberText}>Change Phone Number</Text>
-//               </TouchableOpacity>
-//             </View>
-//           )}
-//         </View>
-//       </KeyboardAvoidingView>
-//     </SafeAreaView>
-//   );
-// }
-
-// const styles = StyleSheet.create({
-//   container: {
-//     flex: 1,
-//     backgroundColor: "#fff",
-//   },
-//   keyboardView: {
-//     flex: 1,
-//   },
-//   header: {
-//     flexDirection: "row",
-//     alignItems: "center",
-//     justifyContent: "space-between",
-//     paddingHorizontal: 20,
-//     paddingVertical: 16,
-//     borderBottomWidth: 1,
-//     borderBottomColor: "#F0F0F0",
-//   },
-//   backButton: {
-//     padding: 8,
-//   },
-//   headerTitle: {
-//     fontSize: 18,
-//     fontWeight: "600",
-//     color: "#333",
-//   },
-//   placeholder: {
-//     width: 40,
-//   },
-//   content: {
-//     flex: 1,
-//     paddingHorizontal: 24,
-//     paddingTop: 32,
-//   },
-//   form: {
-//     flex: 1,
-//   },
-//   subtitle: {
-//     fontSize: 16,
-//     color: "#666",
-//     textAlign: "center",
-//     marginBottom: 32,
-//     lineHeight: 24,
-//   },
-//   inputContainer: {
-//     marginBottom: 32,
-//   },
-//   inputLabel: {
-//     fontSize: 14,
-//     fontWeight: "500",
-//     color: "#333",
-//     marginBottom: 8,
-//   },
-//   input: {
-//     borderWidth: 1,
-//     borderColor: "#E0E0E0",
-//     borderRadius: 12,
-//     paddingHorizontal: 16,
-//     paddingVertical: 16,
-//     fontSize: 16,
-//     backgroundColor: "#F9F9F9",
-//   },
-//   otpInput: {
-//     borderWidth: 1,
-//     borderColor: "#E0E0E0",
-//     borderRadius: 12,
-//     paddingHorizontal: 16,
-//     paddingVertical: 20,
-//     backgroundColor: "#F9F9F9",
-//     letterSpacing: 8,
-//   },
-//   submitButton: {
-//     backgroundColor: "#4CAF50",
-//     paddingVertical: 16,
-//     borderRadius: 12,
-//     alignItems: "center",
-//     marginBottom: 24,
-//   },
-//   submitButtonDisabled: {
-//     opacity: 0.7,
-//   },
-//   submitButtonText: {
-//     color: "#fff",
-//     fontSize: 16,
-//     fontWeight: "600",
-//   },
-//   disclaimer: {
-//     fontSize: 12,
-//     color: "#666",
-//     textAlign: "center",
-//     lineHeight: 18,
-//   },
-//   resendContainer: {
-//     flexDirection: "row",
-//     justifyContent: "center",
-//     alignItems: "center",
-//     gap: 4,
-//     marginBottom: 16,
-//   },
-//   resendText: {
-//     color: "#666",
-//     fontSize: 14,
-//   },
-//   resendLink: {
-//     color: "#4CAF50",
-//     fontSize: 14,
-//     fontWeight: "500",
-//   },
-//   resendLinkDisabled: {
-//     color: "#999",
-//   },
-//   changeNumberButton: {
-//     alignSelf: "center",
-//     padding: 8,
-//   },
-//   changeNumberText: {
-//     color: "#4CAF50",
-//     fontSize: 14,
-//     fontWeight: "500",
-//   },
-// });
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
@@ -385,7 +13,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { supabase } from '../../utils/supabase';
+import { useAuth } from '../../utils/auth-context';
 
 // Country codes data
 const COUNTRY_CODES = [
@@ -435,12 +63,13 @@ const COUNTRY_CODES = [
   { code: '+84', country: 'VN', flag: '🇻🇳', name: 'Vietnam' },
 ];
 
-export default function PhoneSignupStep1() {
+export default function PhoneLoginScreen() {
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
   const [showCountryPicker, setShowCountryPicker] = useState(false);
   const [selectedCountry, setSelectedCountry] = useState(COUNTRY_CODES[0]); // Default to US
   const [searchQuery, setSearchQuery] = useState('');
+
+  const { signInWithPhone, loading } = useAuth();
 
   const filteredCountries = COUNTRY_CODES.filter(
     country =>
@@ -487,17 +116,10 @@ export default function PhoneSignupStep1() {
     const cleanPhone = phoneNumber.replace(/\D/g, '');
     const fullPhoneNumber = `${selectedCountry.code}${cleanPhone}`;
 
-    setIsLoading(true);
-
     try {
-      const { error } = await supabase.auth.signInWithOtp({
-        phone: fullPhoneNumber,
-        options: {
-          shouldCreateUser: true, // This allows signup with phone
-        },
-      });
+      const { error } = await signInWithPhone(fullPhoneNumber);
 
-      //   if (error) throw error;
+      if (error) throw error;
 
       // Navigate to OTP verification screen
       router.push({
@@ -507,13 +129,9 @@ export default function PhoneSignupStep1() {
           displayNumber: `${selectedCountry.flag} ${selectedCountry.code} ${phoneNumber}`,
         },
       });
-    } catch (error: unknown) {
-      if (error instanceof Error) {
-        console.error('OTP send error:', error);
-        Alert.alert('Error', error.message || 'Failed to send verification code');
-      }
-    } finally {
-      setIsLoading(false);
+    } catch (error: any) {
+      console.error('OTP send error:', error);
+      Alert.alert('Error', error.message || 'Failed to send verification code');
     }
   };
 
@@ -576,11 +194,11 @@ export default function PhoneSignupStep1() {
 
         {/* Next Button */}
         <TouchableOpacity
-          style={[styles.nextButton, isLoading && styles.nextButtonDisabled]}
+          style={[styles.nextButton, (loading || !phoneNumber.trim()) && styles.nextButtonDisabled]}
           onPress={sendOTP}
-          disabled={isLoading || !phoneNumber.trim()}
+          disabled={loading || !phoneNumber.trim()}
         >
-          {isLoading ? (
+          {loading ? (
             <ActivityIndicator color="#fff" />
           ) : (
             <>
@@ -593,7 +211,7 @@ export default function PhoneSignupStep1() {
         {/* Disclaimer */}
         <Text style={styles.disclaimer}>
           By proceeding, you consent to get calls, WhatsApp or SMS messages, including by automated
-          means, from Uber and its affiliates to the number provided.
+          means, from our app and its affiliates to the number provided.
         </Text>
       </View>
 

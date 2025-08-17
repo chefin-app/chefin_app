@@ -7,6 +7,8 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 import 'react-native-reanimated';
+import { AuthProvider, useAuth } from '../utils/auth-context';
+import { StatusBar } from 'expo-status-bar';
 import { supabase } from '../utils/supabase';
 
 export {
@@ -22,9 +24,40 @@ export const unstable_settings = {
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
+// Separate component to handle navigation logic that needs auth context
+function NavigationHandler({ children }: { children: React.ReactNode }) {
+  const { user, initializing } = useAuth();
+  const segments = useSegments();
+  const router = useRouter();
+
+  useEffect(() => {
+    // Don't navigate if still initializing auth
+    if (initializing) return;
+
+    if (Platform.OS === 'web' && typeof window === 'undefined') {
+      return;
+    }
+
+    // Check if user is currently on an auth page (login, register, etc.)
+    const inAuthGroup = segments[0] === '(auth)';
+
+    if (user && inAuthGroup) {
+      // USER IS LOGGED IN + ON AUTH PAGE
+      // Redirect logged-in users away from auth pages to explore
+      router.replace('/(user)/home');
+    } else if (!user && !inAuthGroup) {
+      // USER IS NOT LOGGED IN + ON PROTECTED PAGE
+      // Allow users to browse explore and search without logging in
+      // Only redirect to auth when they try to access account features
+      router.replace('/(user)/home');
+    }
+  }, [user, segments, initializing, router]);
+
+  return <>{children}</>;
+}
+
 export default function RootLayout() {
   // FONT LOADING
-  // ============
   const [loaded, error] = useFonts({
     mon: require('../assets/fonts/Montserrat-Regular.ttf'),
     'mon-sb': require('../assets/fonts/Montserrat-SemiBold.ttf'),
@@ -35,7 +68,7 @@ export default function RootLayout() {
   const [isLoading, setIsLoading] = useState(true); // Tracks if we're still checking auth status
   const [isInitialized, setIsInitialized] = useState(false); // Ensures auth is fully set up before navigation
 
-  const segments = useSegments(); // Gets current route segments (e.g., ['(user)', 'explore'])
+  const segments = useSegments(); // Gets current route segments (e.g., ['(user)', 'home'])
   const router = useRouter(); // For programmatic navigation
 
   useEffect(() => {
@@ -124,17 +157,13 @@ export default function RootLayout() {
 
     if (session && inAuthGroup) {
       // USER IS LOGGED IN + ON AUTH PAGE
-      // Redirect logged-in users away from auth pages to explore
-      router.replace('/(user)/explore');
-    } else if (
-      !session &&
-      !inAuthGroup
-      //&& !isPubliclyAccessible
-    ) {
+      // Redirect logged-in users away from auth pages to home
+      router.replace('/(user)/home');
+    } else if (!session && !inAuthGroup && segments[1] === 'account') {
       // USER IS NOT LOGGED IN + ON PROTECTED PAGE
-      // Allow users to browse explore and search without logging in
+      // Allow users to browse home and search without logging in
       // Only redirect to auth when they try to access account features
-      router.replace('/(user)/explore');
+      router.replace('/(auth)/login');
     }
   }, [session, segments, isLoading, isInitialized, router, loaded]);
 
@@ -143,14 +172,30 @@ export default function RootLayout() {
     return null;
   }
 
-  return <RootLayoutNav />;
+  return (
+    <AuthProvider>
+      <NavigationHandler>
+        <RootLayoutNav />
+      </NavigationHandler>
+    </AuthProvider>
+  );
 }
 
 function RootLayoutNav() {
+  const { initializing } = useAuth();
+
+  // Don't render navigation until auth is initialized
+  if (initializing) {
+    return null;
+  }
+
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="(user)" options={{ headerShown: false }} />
-      <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-    </Stack>
+    <>
+      <StatusBar style="dark" />
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(user)" options={{ headerShown: false }} />
+        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+      </Stack>
+    </>
   );
 }

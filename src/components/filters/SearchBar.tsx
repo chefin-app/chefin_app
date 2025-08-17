@@ -8,9 +8,15 @@ type Props = {
   placeholder?: string;
   value: string;
   onChangeText: (text: string) => void;
+  onSubmitEditing?: () => void;
 };
 
-const SearchBar = ({ value, onChangeText, placeholder = 'Search...' }: Props) => {
+const SearchBar = ({
+  value,
+  onChangeText,
+  placeholder = 'Search for cuisines, dishes, locations, home restaurants...',
+  onSubmitEditing,
+}: Props) => {
   return (
     <View style={styles.wrapper}>
       <Ionicons name="search" size={20} color="#888" style={styles.icon} />
@@ -20,6 +26,11 @@ const SearchBar = ({ value, onChangeText, placeholder = 'Search...' }: Props) =>
         value={value}
         onChangeText={onChangeText}
         placeholderTextColor="#888"
+        onSubmitEditing={() => {
+          if (onSubmitEditing) onSubmitEditing();
+        }}
+        returnKeyType="search"
+        blurOnSubmit={true}
       />
     </View>
   );
@@ -39,14 +50,17 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 10,
     elevation: 2,
-    width: '100%',
+    width: '90%',
+    alignSelf: 'center',
   },
   icon: {
     marginRight: 8,
+    alignSelf: 'center',
   },
   input: {
     flex: 1,
-    fontSize: 16,
+    fontSize: 17,
     color: '#333',
+    height: 30,
   },
 });

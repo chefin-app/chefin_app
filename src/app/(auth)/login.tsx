@@ -1,106 +1,18 @@
 import React from 'react';
-import {
-  Alert,
-  Image,
-  Linking,
-  SafeAreaView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { Image, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { supabase } from '../../utils/supabase';
+import { useAuth } from '../../utils/auth-context';
 
 export default function LoginScreen() {
-  const handleFacebookLogin = async () => {
-    try {
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'facebook',
-        options: {
-          redirectTo: 'your-app-scheme://auth/callback',
-          scopes: 'email',
-        },
-      });
-
-      if (error) throw error;
-
-      // For mobile, we need to handle the redirect URL
-      if (data.url) {
-        await Linking.openURL(data.url);
-      }
-    } catch (error: unknown) {
-      if (error instanceof Error) {
-        console.error('Facebook login error:', error);
-        Alert.alert('Login Error', error.message);
-      } else {
-        console.error('Unknown error:', error);
-        Alert.alert('Login Error', 'An unknown error occurred.');
-      }
-    }
-  };
-
-  const handleGoogleLogin = async () => {
-    try {
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: 'your-app-scheme://auth/callback',
-          scopes: 'email profile',
-        },
-      });
-
-      if (error) throw error;
-
-      if (data.url) {
-        await Linking.openURL(data.url);
-      }
-    } catch (error: unknown) {
-      if (error instanceof Error) {
-        console.error('Google login error:', error);
-        Alert.alert('Login Error', error.message);
-      } else {
-        console.error('Unknown error:', error);
-        Alert.alert('Google Login Error', 'An unknown error occurred.');
-      }
-    }
-  };
-
-  const handleAppleLogin = async () => {
-    try {
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'apple',
-        options: {
-          redirectTo: 'your-app-scheme://auth/callback',
-          scopes: 'email name',
-        },
-      });
-
-      if (error) throw error;
-
-      if (data.url) {
-        await Linking.openURL(data.url);
-      }
-    } catch (error: unknown) {
-      if (error instanceof Error) {
-        console.error('Apple login error:', error);
-        Alert.alert('Login Error', error.message);
-      } else {
-        console.error('Unknown error:', error);
-        Alert.alert('Apple Login Error', 'An unknown error occurred.');
-      }
-    }
-  };
+  const { signInWithFacebook, signInWithGoogle, signInWithApple } = useAuth();
 
   const handleEmailLogin = () => {
-    // Navigate to email login form or handle email login
     router.push('/(auth)/email-login');
   };
 
   const handlePhoneLogin = () => {
-    // Navigate to phone login form
     router.push('/(auth)/phone-login');
   };
 
@@ -130,7 +42,7 @@ export default function LoginScreen() {
         {/* Login Buttons */}
         <View style={styles.buttonContainer}>
           {/* Facebook Login */}
-          <TouchableOpacity style={styles.facebookButton} onPress={handleFacebookLogin}>
+          <TouchableOpacity style={styles.facebookButton} onPress={signInWithFacebook}>
             <View style={styles.socialButtonContent}>
               <Ionicons name="logo-facebook" size={20} color="#fff" />
               <Text style={styles.facebookButtonText}>Continue with Facebook</Text>
@@ -138,7 +50,7 @@ export default function LoginScreen() {
           </TouchableOpacity>
 
           {/* Google Login */}
-          <TouchableOpacity style={styles.googleButton} onPress={handleGoogleLogin}>
+          <TouchableOpacity style={styles.googleButton} onPress={signInWithGoogle}>
             <View style={styles.socialButtonContent}>
               <Ionicons name="logo-google" size={20} color="#DB4437" />
               <Text style={styles.googleButtonText}>Continue with Google</Text>
@@ -146,7 +58,7 @@ export default function LoginScreen() {
           </TouchableOpacity>
 
           {/* Apple Login */}
-          <TouchableOpacity style={styles.appleButton} onPress={handleAppleLogin}>
+          <TouchableOpacity style={styles.appleButton} onPress={signInWithApple}>
             <View style={styles.socialButtonContent}>
               <Ionicons name="logo-apple" size={20} color="#fff" />
               <Text style={styles.appleButtonText}>Continue with Apple</Text>
