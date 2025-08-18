@@ -3,18 +3,18 @@ import { View, Text, TouchableOpacity, StyleSheet, ViewStyle } from 'react-nativ
 import { Ionicons } from '@expo/vector-icons';
 import { BaseText } from '@/src/components/typography';
 
-type CheckboxProps = {
+type RadioButtonProps = {
   label: string;
-  isChecked: boolean;
+  isSelected: boolean;
   onPress: () => void;
   style?: ViewStyle;
 };
 
-export const Checkbox = ({ label, isChecked, onPress, style }: CheckboxProps) => {
+export const RadioButton = ({ label, isSelected, onPress, style }: RadioButtonProps) => {
   return (
     <TouchableOpacity style={[styles.container, style]} onPress={onPress} activeOpacity={0.7}>
-      <View style={[styles.outerBox, isChecked && styles.checkedBox]}>
-        {isChecked && <Ionicons name="checkmark-sharp" size={16} color="#fff" />}
+      <View style={[styles.outerCircle, isSelected && styles.selectedOuterCircle]}>
+        {isSelected && <View style={styles.innerCircle} />}
       </View>
       <BaseText style={styles.labelText}>{label}</BaseText>
     </TouchableOpacity>
@@ -25,21 +25,26 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 10,
+    paddingVertical: 12,
   },
-  outerBox: {
+  outerCircle: {
     height: 24,
     width: 24,
-    borderRadius: 6,
+    borderRadius: 12,
     borderWidth: 2,
     borderColor: '#ccc',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
   },
-  checkedBox: {
-    backgroundColor: '#4CAF50',
+  selectedOuterCircle: {
     borderColor: '#4CAF50',
+  },
+  innerCircle: {
+    height: 12,
+    width: 12,
+    borderRadius: 6,
+    backgroundColor: '#4CAF50',
   },
   labelText: {
     fontSize: 16,
