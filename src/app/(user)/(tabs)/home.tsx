@@ -83,7 +83,7 @@ export default function HomeScreen() {
         </View>
 
         {/*<MealCard />*/}
-{/*         <ReviewCard/>
+        {/*         <ReviewCard/>
         <ReviewCard/>
         <ReviewCard/> */}
       </ScrollView>

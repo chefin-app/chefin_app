@@ -1,13 +1,13 @@
-import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native'
-import React, { useState } from 'react'
+import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
+import React, { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { images } from '@/src/constants/images';
 
 const ReviewCard = () => {
   const [expanded, setExpanded] = useState(false);
   const toggleExpanded = () => setExpanded(!expanded);
-  const reviewText = "This meal was delicious but a bird ate a bit on the way! Not impressed. Super Scary Skibidies and I don't like it. I would not recommend this to anyone. I expected better service and quality from this restaurant. The portion sizes were also smaller than expected, leaving me still hungry after the meal. Overall, a disappointing experience that I won't be repeating. ";
-
+  const reviewText =
+    "This meal was delicious but a bird ate a bit on the way! Not impressed. Super Scary Skibidies and I don't like it. I would not recommend this to anyone. I expected better service and quality from this restaurant. The portion sizes were also smaller than expected, leaving me still hungry after the meal. Overall, a disappointing experience that I won't be repeating. ";
 
   return (
     <View style={styles.card}>
@@ -18,24 +18,19 @@ const ReviewCard = () => {
       <View style={styles.ratingContainer}>
         <View style={styles.ratingRow}>
           {Array.from({ length: 5 }).map((_, i) => (
-            <Ionicons
-              key={i}
-              name={i < 4 ? 'star' : 'star-outline'}
-              size={16}
-              color="#FFD700"
-            />
+            <Ionicons key={i} name={i < 4 ? 'star' : 'star-outline'} size={16} color="#FFD700" />
           ))}
         </View>
         <Text style={styles.subtitle}>2 days ago</Text>
       </View>
-      <Text style={styles.reviewText} numberOfLines={expanded ? undefined: 3}>{reviewText}</Text>
+      <Text style={styles.reviewText} numberOfLines={expanded ? undefined : 3}>
+        {reviewText}
+      </Text>
 
       {/* show more button, only shows when text is too long*/}
       {reviewText.length > 80 && (
         <TouchableOpacity onPress={toggleExpanded}>
-          <Text style={styles.seeMore}>
-            {expanded ? 'See Less' : 'See More'}
-          </Text>
+          <Text style={styles.seeMore}>{expanded ? 'See Less' : 'See More'}</Text>
         </TouchableOpacity>
       )}
     </View>
@@ -139,4 +134,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default ReviewCard
+export default ReviewCard;
