@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { useRouter } from 'expo-router';
 import { StyleSheet, ScrollView, View, Image, FlatList } from 'react-native';
-import { supabase } from '../../utils/supabase';
+import { supabase } from '../../../utils/supabase';
 import { Ionicons } from '@expo/vector-icons';
-import { createShadowStyle } from '../../utils/platform-utils';
+import { createShadowStyle } from '../../../utils/platform-utils';
 import type { User } from '@supabase/supabase-js';
 import SearchBar from '@/src/components/filters/SearchBar';
 import CuisineFilter from '@/src/components/filters/CuisineFilter';
@@ -11,7 +11,7 @@ import MainFilter from '@/src/components/filters/MainFilter';
 import { BaseText, HeadingText, BodyText, CaptionText } from '@/src/components/typography';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import PromoImage from '../../assets/images/promo-food.webp';
+import PromoImage from '../../../assets/images/promo-food.webp';
 import MealCard from '@/src/components/cards/MealCard';
 import MenuItemCard from '@/src/components/cards/MenuItemCard';
 

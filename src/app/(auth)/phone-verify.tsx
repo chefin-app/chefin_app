@@ -104,10 +104,10 @@ export default function PhoneVerifyStep2() {
 
       if (user?.user_metadata?.is_new_user !== false) {
         // New user - redirect to password setup or profile setup
-        router.replace('/(user)/home');
+        router.replace('/(user)/(tabs)/home');
       } else {
         // Existing user - go to main app
-        router.replace('/(user)');
+        router.replace('/(user)/(tabs)/home');
       }
     } catch (error: unknown) {
       if (error instanceof Error) {

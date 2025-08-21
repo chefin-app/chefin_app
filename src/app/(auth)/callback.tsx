@@ -34,7 +34,7 @@ export default function AuthCallback() {
           }
 
           // Successfully authenticated, redirect to main app
-          router.replace('/(user)');
+          router.replace('/(user)/(tabs)/home');
         } else {
           // No tokens received, redirect back to login
           router.replace('/(auth)/login');

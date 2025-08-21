@@ -25,10 +25,8 @@ jobs:
 
       - name: Intall dependencies
         run: |
-          if [ ! -f package-loc.json ]; then
+          if [ ! -f package-lock.json ]; then
             npm install
-          fi
-          npm ci
 
       - name: Run ESLint with auto-fix
         run: npm run lint -- --fix

@@ -41,15 +41,20 @@ function NavigationHandler({ children }: { children: React.ReactNode }) {
     // Check if user is currently on an auth page (login, register, etc.)
     const inAuthGroup = segments[0] === '(auth)';
 
+    // Define which pages require authentication
+    const protectedPages = ['account', 'profile', 'settings'];
+    const currentPage = segments[2]; // For (user)/(tabs)/[page] structure
+    const isOnProtectedPage = currentPage ? protectedPages.includes(currentPage) : false;
+
     if (user && inAuthGroup) {
       // USER IS LOGGED IN + ON AUTH PAGE
-      // Redirect logged-in users away from auth pages to explore
-      router.replace('/(user)/home');
-    } else if (!user && !inAuthGroup) {
+      // Redirect logged-in users away from auth pages to home
+      router.replace('/(user)/(tabs)/home');
+    } else if (!user && !inAuthGroup && isOnProtectedPage) {
       // USER IS NOT LOGGED IN + ON PROTECTED PAGE
-      // Allow users to browse explore and search without logging in
-      // Only redirect to auth when they try to access account features
-      router.replace('/(user)/home');
+      // Only redirect to auth when they try to access protected features
+      // Allow access to home, search, and other public pages
+      router.replace('/(auth)/login');
     }
   }, [user, segments, initializing, router]);
 
@@ -67,9 +72,6 @@ export default function RootLayout() {
   const [session, setSession] = useState<Session | null>(null); // Stores user authentication session
   const [isLoading, setIsLoading] = useState(true); // Tracks if we're still checking auth status
   const [isInitialized, setIsInitialized] = useState(false); // Ensures auth is fully set up before navigation
-
-  const segments = useSegments(); // Gets current route segments (e.g., ['(user)', 'home'])
-  const router = useRouter(); // For programmatic navigation
 
   useEffect(() => {
     if (error) throw error;
@@ -98,7 +100,6 @@ export default function RootLayout() {
           setSession(data.session); // Ensure 'data.session' is used, which is correct
           setIsLoading(false); // Auth check is complete
           setIsInitialized(true); // Mark as fully initialized
-          // console.log('RUNNNN');
         }
       } catch (error) {
         console.warn('Failed to get session:', error);
@@ -106,7 +107,6 @@ export default function RootLayout() {
           setSession(null); // No session available
           setIsLoading(false);
           setIsInitialized(true);
-          // console.log('FAILLL');
         }
       }
     };
@@ -129,30 +129,6 @@ export default function RootLayout() {
       subscription?.unsubscribe();
     };
   }, []);
-
-  // This effect handles where to navigate based on authentication state
-  useEffect(() => {
-    // Don't navigate if still loading or not initialized
-    if (!isInitialized || isLoading || !loaded) return;
-
-    if (Platform.OS === 'web' && typeof window === 'undefined') {
-      return;
-    }
-
-    // Check if user is currently on an auth page (login, register, etc.)
-    const inAuthGroup = segments[0] === '(auth)';
-
-    if (session && inAuthGroup) {
-      // USER IS LOGGED IN + ON AUTH PAGE
-      // Redirect logged-in users away from auth pages to home
-      router.replace('/(user)/home');
-    } else if (!session && !inAuthGroup && segments[1] === 'account') {
-      // USER IS NOT LOGGED IN + ON PROTECTED PAGE
-      // Allow users to browse home and search without logging in
-      // Only redirect to auth when they try to access account features
-      router.replace('/(auth)/login');
-    }
-  }, [session, segments, isLoading, isInitialized, router, loaded]);
 
   // Don't render anything until fonts are loaded and auth is initialized
   if (!loaded || isLoading || !isInitialized) {
@@ -180,8 +156,12 @@ function RootLayoutNav() {
     <>
       <StatusBar style="dark" />
       <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="(user)" options={{ headerShown: false }} />
+        <Stack.Screen name="index" options={{ headerShown: false }} />
+        <Stack.Screen name="(user)/(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+        <Stack.Screen name="(cook)" options={{ headerShown: false }} />
+        <Stack.Screen name="restaurant/[id]" options={{ headerShown: false }} />
+        <Stack.Screen name="+not-found" options={{ headerShown: false }} />
       </Stack>
     </>
   );

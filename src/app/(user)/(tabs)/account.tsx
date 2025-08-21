@@ -9,10 +9,10 @@ import {
   ActivityIndicator,
   ScrollView,
 } from 'react-native';
-import { supabase } from '../../utils/supabase';
+import { supabase } from '../../../utils/supabase';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { createShadowStyle } from '../../utils/platform-utils';
+import { createShadowStyle } from '../../../utils/platform-utils';
 import type { User } from '@supabase/supabase-js';
 
 export default function AccountScreen() {
@@ -65,7 +65,7 @@ export default function AccountScreen() {
       if (error) throw error;
 
       // Explicitly navigate to login after sign out
-      router.replace('/(user)/home');
+      router.replace('/(user)/(tabs)/home');
       Alert.alert('Signed Out', 'You have been signed out successfully.');
     } catch (error: unknown) {
       if (error instanceof Error) {
