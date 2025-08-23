@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import PromoImage from '../../../assets/images/promo-food.webp';
 import MealCard from '@/src/components/cards/MealCard';
 import MenuItemCard from '@/src/components/cards/MenuItemCard';
+import ReviewCard from '@/src/components/cards/ReviewCard';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -82,6 +83,9 @@ export default function HomeScreen() {
         </View>
 
         {/*<MealCard />*/}
+        {/*         <ReviewCard/>
+        <ReviewCard/>
+        <ReviewCard/> */}
       </ScrollView>
     </SafeAreaView>
   );

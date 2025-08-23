@@ -23,10 +23,11 @@ jobs:
         with:
           node-version: 18
 
-      - name: Intall dependencies
+      - name: Install dependencies
         run: |
           if [ ! -f package-lock.json ]; then
             npm install
+          fi
 
       - name: Run ESLint with auto-fix
         run: npm run lint -- --fix
