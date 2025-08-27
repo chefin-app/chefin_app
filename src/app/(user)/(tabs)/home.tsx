@@ -20,17 +20,16 @@ import useFetch from '@/src/hooks/useFetch';
 import { fetchListings, Listing } from '@/src/services/fetchListings';
 import { fetchRestaurantName } from '@/src/services/fetchRestaurantName';
 
-
 export default function HomeScreen() {
   const router = useRouter();
   const [searchValue, setSearchValue] = useState('');
 
-  const { data: listings } = useFetch(() => fetchListings({ query: "" }), true);
-  const { data: listings2 } = useFetch(() => fetchListings({ query: "Special Galbi" }), true);
+  const { data: listings } = useFetch(() => fetchListings({ query: '' }), true);
+  const { data: listings2 } = useFetch(() => fetchListings({ query: 'Special Galbi' }), true);
   //console.log('Listings data:', listings);
   const { data: restaurants, loading, error } = useFetch(() => fetchRestaurantName({}), true);
   console.log('Restaurants data:', restaurants);
-  const { data: restaurant } = useFetch(() => fetchRestaurantName({ query: "Mango" }), true);
+  const { data: restaurant } = useFetch(() => fetchRestaurantName({ query: 'Mango' }), true);
   console.log('Restaurant data:', restaurant);
 
   const handleSearchSubmit = () => {
