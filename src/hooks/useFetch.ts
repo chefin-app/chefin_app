@@ -23,12 +23,12 @@ const useFetch = <T>(fetchFunction: () => Promise<T>, autoFetch = true) => {  //
         setError(null);
         setLoading(false);
     }
-
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    
     useEffect(() => { // fetch data on mount if autoFetch is true
         if (autoFetch) {
             fetchData();
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
   return { data, loading, error, refetch: fetchData, reset } // return data, loading, error and a function to refetch the data
 }
