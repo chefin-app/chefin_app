@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'expo-router';
-import { StyleSheet, ScrollView, View, Image, FlatList } from 'react-native';
-import { supabase } from '../../../utils/supabase';
+import { StyleSheet, ScrollView, View, Image, FlatList, Text } from 'react-native';
+//import { supabase } from '../../../utils/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import { createShadowStyle } from '../../../utils/platform-utils';
 import type { User } from '@supabase/supabase-js';
@@ -16,9 +16,21 @@ import MealCard from '@/src/components/cards/MealCard';
 import MenuItemCard from '@/src/components/cards/MenuItemCard';
 import ReviewCard from '@/src/components/cards/ReviewCard';
 
+import useFetch from '@/src/hooks/useFetch';
+import { fetchListings, Listing } from '@/src/services/fetchListings';
+import { fetchRestaurantName } from '@/src/services/fetchRestaurantName';
+
 export default function HomeScreen() {
   const router = useRouter();
   const [searchValue, setSearchValue] = useState('');
+
+  const { data: listings } = useFetch(() => fetchListings({ query: '' }), true);
+  const { data: listings2 } = useFetch(() => fetchListings({ query: 'Special Galbi' }), true);
+  //console.log('Listings data:', listings);
+  const { data: restaurants, loading, error } = useFetch(() => fetchRestaurantName({}), true);
+  console.log('Restaurants data:', restaurants);
+  const { data: restaurant } = useFetch(() => fetchRestaurantName({ query: 'Mango' }), true);
+  console.log('Restaurant data:', restaurant);
 
   const handleSearchSubmit = () => {
     if (searchValue.trim()) {
@@ -81,6 +93,9 @@ export default function HomeScreen() {
             ItemSeparatorComponent={() => <View style={{ width: 10 }} />}
           />
         </View>
+        {/*         <Text>
+          {listings2?.length} listings found with "Special Galbi"
+        </Text> */}
 
         {/*<MealCard />*/}
         {/*         <ReviewCard/>
