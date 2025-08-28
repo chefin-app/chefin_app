@@ -1,17 +1,58 @@
 import { View, Text, TouchableOpacity, StyleSheet, ImageBackground, Image } from 'react-native';
+import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
 
 import { images } from '@/src/constants/images';
 
-const MealCard = () => {
+interface Profile {
+  user_id: string;
+  full_name: string;
+  profile_image?: string;
+  is_verified: boolean;
+  restaurant_name: string;
+}
+
+interface Listing {
+  id: string;
+  cook_id: string;
+  title: string;
+  description?: string;
+  cuisine?: string;
+  price: number;
+  image_url?: string;
+  created_at: string;
+  dietary_tags?: string[];
+  pickup_location: string;
+}
+
+export interface MealCardProps extends Listing {
+  cookName: string;
+  restaurantName: string;
+  isVerified: boolean;
+  cookImage?: string;
+  profiles: Profile;
+}
+
+const MealCard: React.FC<MealCardProps> = ({
+  cookName,
+  restaurantName,
+  isVerified,
+  cookImage,
+  title,
+  price,
+  cuisine,
+  description,
+  image_url,
+  created_at,
+  id,
+}) => {
   const router = useRouter();
   const [isFavorite, setIsFavorite] = useState(false);
   return (
     <TouchableOpacity style={styles.card} onPress={() => router.push('/restaurant/[id]')}>
       <ImageBackground
-        source={images.templateMeal}
+        source={image_url ? { uri: image_url } : images.templateMeal}
         style={styles.image}
         imageStyle={styles.imageStyle}
       >
@@ -25,26 +66,32 @@ const MealCard = () => {
       </ImageBackground>
 
       <View style={styles.infoContainer}>
-        <Image source={images.templateAvatar} style={styles.avatar} />
+        <Image
+          source={cookImage ? { uri: cookImage } : images.templateAvatar}
+          style={styles.avatar}
+        />
 
         <View style={{ flex: 1 }}>
           <View style={styles.titleRow}>
             <Text style={styles.title} numberOfLines={1}>
-              Sigma Eats
+              {title}
             </Text>
             <View style={styles.rating}>
               <Ionicons name="star" size={16} color="#FFD700" />
-              <Text style={styles.ratingText}>4.5 (223)</Text>
+              <Text style={styles.ratingText}>{price ? `RM ${price}` : 'N/A'}</Text>
             </View>
           </View>
 
-          <Text style={styles.subtitle}>Italian, Pizza, Pasta</Text>
+          <Text style={styles.subtitle}>{cuisine || description || 'No description'}</Text>
         </View>
       </View>
 
       <View style={{ flex: 1 }}>
         <Text style={styles.available}>
-          Available <Text style={{ fontWeight: 'bold' }}>18/07</Text>
+          Available{' '}
+          <Text style={{ fontWeight: 'bold' }}>
+            {created_at ? new Date(created_at).toLocaleDateString() : 'Unknown'}
+          </Text>
         </Text>
       </View>
     </TouchableOpacity>

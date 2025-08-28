@@ -44,7 +44,7 @@ export default function TopNavBarHomeUser({ options }: NavBarProps) {
   };
 
   const handleCartPress = () => {
-    router.push('/'); // Navigate to cart screen
+    router.push('/(user)/cart'); // Navigate to cart screen
   };
 
   return (
