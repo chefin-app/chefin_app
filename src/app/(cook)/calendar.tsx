@@ -84,14 +84,14 @@ const Calendar: React.FC = () => {
     setMenuItems(mockMenuItems);
     // Uncomment below when database is ready
     // fetchMenuItems();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     if (user && selectedDate) {
       fetchMenuAvailability();
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDate, user]);
 
   const getCurrentUser = async () => {
