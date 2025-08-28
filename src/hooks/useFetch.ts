@@ -28,7 +28,7 @@ const useFetch = <T>(fetchFunction: () => Promise<T>, autoFetch = true) => {
 
   useEffect(() => {
     // fetch data on mount if autoFetch is true
-    if (autoFetch) {
+    if (autoFetch && data === null) {
       fetchData();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
