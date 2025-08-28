@@ -78,7 +78,7 @@ const Calendar: React.FC = () => {
       price: 12.99,
     },
   ];
-
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     getCurrentUser();
     // Use mock data for now
@@ -87,6 +87,7 @@ const Calendar: React.FC = () => {
     // fetchMenuItems();
   }, []);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (user && selectedDate) {
       fetchMenuAvailability();
