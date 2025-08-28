@@ -17,8 +17,9 @@ import MenuItemCard from '@/src/components/cards/MenuItemCard';
 import ReviewCard from '@/src/components/cards/ReviewCard';
 
 import useFetch from '@/src/hooks/useFetch';
-import { fetchListings, Listing } from '@/src/services/fetchListings';
+import { fetchListings } from '@/src/services/fetchListings';
 import { fetchRestaurantName } from '@/src/services/fetchRestaurantName';
+import { supabase } from '@/src/services/supabase';
 
 interface Listing {
   id: string;
@@ -103,7 +104,7 @@ export default function HomeScreen() {
   const { data: listings } = useFetch(() => fetchListings({ query: '' }), true);
   const { data: listings2 } = useFetch(() => fetchListings({ query: 'Special Galbi' }), true);
   //console.log('Listings data:', listings);
-  const { data: restaurants, loading, error } = useFetch(() => fetchRestaurantName({}), true);
+  const { data: restaurants } = useFetch(() => fetchRestaurantName({}), true);
   console.log('Restaurants data:', restaurants);
   const { data: restaurant } = useFetch(() => fetchRestaurantName({ query: 'Mango' }), true);
   console.log('Restaurant data:', restaurant);
