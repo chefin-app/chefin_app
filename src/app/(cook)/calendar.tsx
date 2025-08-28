@@ -78,19 +78,20 @@ const Calendar: React.FC = () => {
       price: 12.99,
     },
   ];
-
   useEffect(() => {
     getCurrentUser();
     // Use mock data for now
     setMenuItems(mockMenuItems);
     // Uncomment below when database is ready
     // fetchMenuItems();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     if (user && selectedDate) {
       fetchMenuAvailability();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDate, user]);
 
   const getCurrentUser = async () => {
