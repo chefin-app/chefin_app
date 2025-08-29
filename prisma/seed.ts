@@ -75,6 +75,25 @@ const klangValleyAreas = [
   'Puchong',
 ];
 
+const restaurantNames = [
+  "Mama's Kitchen Haven",
+  'The Cozy Corner Cuisine',
+  'Hearth & Home Eats',
+  'Garden Table Delights',
+  'Sweet Home Flavors',
+  'The Kitchen Studio',
+  'Home Plate Classics',
+  'Taste of Home KL',
+  'Family Recipe House',
+  'The Homestyle Bistro',
+  'Kitchen Stories PJ',
+  'Comfort Bites',
+  'Heritage Home Cooking',
+  'The Dining Room KL',
+  'Home & Spice',
+  'Secret Kitchen Society',
+];
+
 const foodImages = [
   'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=400',
   'https://images.unsplash.com/photo-1559314809-0f31657499fe?w=400',
@@ -176,7 +195,7 @@ const generateFoodListing = () => {
     image_url: getRandomItem(foodImages),
     dietary_tags: faker.helpers.arrayElements(dietaryTags, { min: 1, max: 4 }),
     pickup_location: getRandomItem(klangValleyAreas),
-    is_certified: faker.datatype.boolean({ probability: 0.8 }),
+    restaurant_name: getRandomItem(restaurantNames),
   };
 };
 
@@ -233,6 +252,7 @@ async function main() {
           ? `${faker.lorem.sentence()} Specializing in ${getRandomItem(cuisines).toLowerCase()} cuisine. ${faker.lorem.sentence()}`
           : faker.lorem.sentence(),
         is_verified: isCook ? faker.datatype.boolean({ probability: 0.8 }) : false,
+        restaurant_name: isCook ? getRandomItem(restaurantNames) : null,
       },
     });
 
@@ -274,7 +294,6 @@ async function main() {
           cuisine: foodData.cuisine,
           dietary_tags: foodData.dietary_tags,
           pickup_location: foodData.pickup_location,
-          is_certified: foodData.is_certified,
           is_active: faker.datatype.boolean({ probability: 0.9 }),
         },
       });
@@ -355,7 +374,7 @@ async function main() {
 
     if (listing && customer) {
       const quantity = getRandomInt(1, 4);
-      const totalPrice = listing.price * quantity;
+      const totalPrice = Number(listing.price) * quantity;
       const status = faker.helpers.weightedArrayElement([
         { weight: 0.1, value: 'pending' },
         { weight: 0.2, value: 'confirmed' },
@@ -439,7 +458,7 @@ async function main() {
         ]);
       }
 
-      const reviewDate = new Date(order.created_at);
+      const reviewDate = new Date(Number(order.created_at));
       reviewDate.setDate(reviewDate.getDate() + getRandomInt(1, 7)); // Review 1-7 days after order
 
       const review = await prisma.reviews.create({
