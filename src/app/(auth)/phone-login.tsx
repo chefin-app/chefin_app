@@ -16,7 +16,6 @@ import {
 } from 'react-native';
 import { useAuth } from '@/src/services/auth-context';
 
-
 // Country codes data
 const COUNTRY_CODES = [
   { code: '+1', country: 'US', flag: '🇺🇸', name: 'United States' },

@@ -12,7 +12,6 @@ import { StatusBar } from 'expo-status-bar';
 import { supabase } from '@/src/services/supabase';
 import { AuthProvider, useAuth } from '../services/auth-context';
 
-
 export {
   // Catch any errors thrown by the Layout component.
   ErrorBoundary,

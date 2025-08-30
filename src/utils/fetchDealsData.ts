@@ -26,15 +26,15 @@ interface ListingWithProfile extends Listing {
 }
 
 export const fetchDealsData = async () => {
-    let request = supabase
-        .from('listings')
-        .select(`*, profiles ( user_id, full_name, profile_image, is_verified, restaurant_name )`)
-        .limit(10);
-    const { data, error } = await request;
+  const request = supabase
+    .from('listings')
+    .select(`*, profiles ( user_id, full_name, profile_image, is_verified, restaurant_name )`)
+    .limit(10);
+  const { data, error } = await request;
 
-    if (error) {
-        throw new Error(error.message);
-    }
-    console.log('Total listings:', data);
-    return (data ?? []) as ListingWithProfile[];
+  if (error) {
+    throw new Error(error.message);
+  }
+  console.log('Total listings:', data);
+  return (data ?? []) as ListingWithProfile[];
 };

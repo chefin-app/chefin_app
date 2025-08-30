@@ -91,9 +91,8 @@ export default function HomeScreen() {
           .select(`*, profiles ( user_id, full_name, profile_image, is_verified, restaurant_name )`)
           .limit(10);
         if (!dealsError && dealsData) {
-          setDeliciousDeals(dealsData); // why do we need to use the set function here? 
+          setDeliciousDeals(dealsData); // why do we need to use the set function here?
           // because useState is asynchronous and we need to update the state with the fetched data
-          
         }
       } catch (error) {
         console.error('Error fetching listings:', error);
@@ -129,7 +128,6 @@ export default function HomeScreen() {
 
   // console.log('Popular chefins state:', popularChefins);
   // console.log('Delicious deals state:', deliciousDeals);
-
 
   const handleSearchSubmit = () => {
     if (searchValue.trim()) {
