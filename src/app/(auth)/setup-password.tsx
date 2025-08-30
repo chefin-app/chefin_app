@@ -10,7 +10,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
-import { supabase } from '../../utils/supabase';
+import { supabase } from '@/src/services/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import { AuthError } from '@supabase/supabase-js';
 

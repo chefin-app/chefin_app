@@ -2,7 +2,9 @@ import { Tabs, useRouter } from 'expo-router';
 import TopNavBarHomeUser from '../../../components/navigation/TopNavBarHomeUser';
 import BottomTabBarUser from '../../../components/navigation/BottomTabBarUser';
 import { useCallback } from 'react';
-import { useAuth } from '../../../utils/auth-context';
+import { useAuth } from '@/src/services/auth-context';
+
+
 
 const NavBar = (props: any) => <TopNavBarHomeUser {...props} />;
 const TabBar = (props: any) => <BottomTabBarUser {...props} />;

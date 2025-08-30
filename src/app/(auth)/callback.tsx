@@ -1,7 +1,7 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
-import { supabase } from '../../utils/supabase';
+import { supabase } from '@/src/services/supabase';
 
 export default function AuthCallback() {
   const router = useRouter();

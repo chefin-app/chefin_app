@@ -13,7 +13,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { supabase } from '../../utils/supabase';
+import { supabase } from '@/src/services/supabase';
 
 export default function PhoneVerifyStep2() {
   const { phoneNumber, displayNumber } = useLocalSearchParams<{

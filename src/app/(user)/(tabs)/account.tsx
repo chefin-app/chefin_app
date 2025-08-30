@@ -9,7 +9,7 @@ import {
   ActivityIndicator,
   ScrollView,
 } from 'react-native';
-import { supabase } from '../../../utils/supabase';
+import { supabase } from '@/src/services/supabase';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { createShadowStyle } from '../../../utils/platform-utils';

@@ -11,7 +11,7 @@ import {
   Image,
   Alert,
 } from 'react-native';
-import { supabase } from '../../utils/supabase'; // Adjust path as needed
+import { supabase } from '@/src/services/supabase';// Adjust path as needed
 import DateTimePickerModal from '../../components/inputs/DateTimePickerModal'; // Adjust path as needed
 import type { User } from '@supabase/supabase-js';
 

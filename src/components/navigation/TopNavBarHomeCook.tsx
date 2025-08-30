@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter, useSegments } from 'expo-router';
 import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity } from 'react-native';
-import { supabase } from '../../utils/supabase';
+import { supabase } from '@/src/services/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import Entypo from '@expo/vector-icons/Entypo';
 import { createShadowStyle } from '../../utils/platform-utils';

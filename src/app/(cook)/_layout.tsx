@@ -1,7 +1,8 @@
 import { Tabs, useRouter } from 'expo-router';
-import { useAuth } from '../../utils/auth-context';
+
 import TopNavBarHomeCook from '../../components/navigation/TopNavBarHomeCook';
 import BottomTabBarCook from '../../components/navigation/BottomTabBarCook';
+import { useAuth } from '@/src/services/auth-context';
 
 const NavBar = (props: any) => <TopNavBarHomeCook {...props} />;
 const TabBar = (props: any) => <BottomTabBarCook {...props} />;

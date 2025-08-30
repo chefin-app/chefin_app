@@ -8,7 +8,7 @@ import {
   ScrollView,
   ActivityIndicator,
 } from 'react-native';
-import { supabase } from '../../utils/supabase'; // Adjust path as needed
+import { supabase } from '@/src/services/supabase'; // Adjust path as needed
 import type { User } from '@supabase/supabase-js';
 import { Ionicons } from '@expo/vector-icons';
 

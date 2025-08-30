@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'expo-router';
 import { StyleSheet, ScrollView, View, Image, FlatList, Text } from 'react-native';
 //import { supabase } from '../../../utils/supabase';
@@ -17,9 +17,12 @@ import MenuItemCard from '@/src/components/cards/MenuItemCard';
 import ReviewCard from '@/src/components/cards/ReviewCard';
 
 import useFetch from '@/src/hooks/useFetch';
-import { fetchListings } from '@/src/services/fetchListings';
-import { fetchRestaurantName } from '@/src/services/fetchRestaurantName';
+import { fetchListings } from '@/src/utils/fetchListings';
+import { fetchRestaurantName } from '@/src/utils/fetchRestaurantName';
 import { supabase } from '@/src/services/supabase';
+import { fetchTestData } from '@/src/utils/fetchTestData';
+import { fetchPopularData } from '@/src/utils/fetchPopularData';
+import { fetchDealsData } from '@/src/utils/fetchDealsData';
 
 interface Listing {
   id: string;
@@ -88,7 +91,9 @@ export default function HomeScreen() {
           .select(`*, profiles ( user_id, full_name, profile_image, is_verified, restaurant_name )`)
           .limit(10);
         if (!dealsError && dealsData) {
-          setDeliciousDeals(dealsData);
+          setDeliciousDeals(dealsData); // why do we need to use the set function here? 
+          // because useState is asynchronous and we need to update the state with the fetched data
+          
         }
       } catch (error) {
         console.error('Error fetching listings:', error);
@@ -97,17 +102,34 @@ export default function HomeScreen() {
         setLoading(false);
       }
     };
-
+    console.log('Data fetched.');
     fetchData();
   }, []);
 
-  const { data: listings } = useFetch(() => fetchListings({ query: '' }), true);
-  const { data: listings2 } = useFetch(() => fetchListings({ query: 'Special Galbi' }), true);
-  //console.log('Listings data:', listings);
-  const { data: restaurants } = useFetch(() => fetchRestaurantName({}), true);
-  console.log('Restaurants data:', restaurants);
-  const { data: restaurant } = useFetch(() => fetchRestaurantName({ query: 'Mango' }), true);
-  console.log('Restaurant data:', restaurant);
+  // const { data: listings } = useFetch(() => fetchListings({ query: '' }), true);
+  // const { data: listings2 } = useFetch(() => fetchListings({ query: 'Special Galbi' }), true);
+  // //console.log('Listings data:', listings);
+  // const { data: restaurants } = useFetch(() => fetchRestaurantName({}), true);
+  // console.log('Restaurants data:', restaurants);
+  // const { data: restaurant } = useFetch(() => fetchRestaurantName({ query: 'Mango' }), true);
+  // console.log('Restaurant data:', restaurant);
+
+  // const fetchTest = useCallback(() => fetchPopularData(), []);
+  // const {data: testData} = useFetch(fetchTest, true);
+  // console.log('Test data count, total listings:', testData);
+
+  // const fetchPopular = useCallback(() => fetchPopularData(), []);
+  // const {data: popularData} = useFetch(fetchPopular, true);
+  // // const {data: popularData} = useFetch(() => fetchPopularData(), true);
+  // console.log('Popular data:', popularData);
+  // //console.log('Popular chefins state:', popularChefins);
+  // const fetchDeals = useCallback(() => fetchDealsData(), []);
+  // const {data: dealsData} = useFetch(fetchDeals, true);
+  // console.log('Deals data:', dealsData);
+
+  // console.log('Popular chefins state:', popularChefins);
+  // console.log('Delicious deals state:', deliciousDeals);
+
 
   const handleSearchSubmit = () => {
     if (searchValue.trim()) {
@@ -144,6 +166,7 @@ export default function HomeScreen() {
           </View>
           <FlatList
             data={popularChefins}
+            // data={popularData}
             renderItem={({ item }) => (
               <MealCard
                 {...item}
@@ -170,6 +193,7 @@ export default function HomeScreen() {
           </View>
           <FlatList
             data={deliciousDeals}
+            // data={dealsData}
             renderItem={({ item }) => (
               <MealCard
                 {...item}

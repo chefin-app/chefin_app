@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { supabase } from '../services/supabase';
 import useFetch from '../hooks/useFetch';
 import { Text } from 'react-native';
 
