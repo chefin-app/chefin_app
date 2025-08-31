@@ -1,3 +1,4 @@
+import { useAuth } from '@/src/services/auth-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
@@ -13,7 +14,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useAuth } from '../../utils/auth-context';
 
 export default function EmailLoginScreen() {
   const [email, setEmail] = useState('');

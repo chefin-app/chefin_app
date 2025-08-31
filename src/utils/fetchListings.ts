@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { supabase } from '../services/supabase';
 import useFetch from '../hooks/useFetch';
 import { Text } from 'react-native';
 
@@ -12,8 +12,6 @@ export type Listing = {
   cuisine: string | null;
   dietary_tags: string | null;
   pickup_location: string | null;
-  is_certified: boolean;
-  is_active: boolean;
   created_at: string;
 };
 

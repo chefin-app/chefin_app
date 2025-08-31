@@ -1,10 +1,11 @@
 import React from 'react';
 import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useAuth } from '../../utils/auth-context';
+
 import { useRouter, useSegments } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { createShadowStyle } from '../../utils/platform-utils';
+import { useAuth } from '@/src/services/auth-context';
 
 interface NavBarProps {
   options?: {
@@ -44,7 +45,7 @@ export default function TopNavBarHomeUser({ options }: NavBarProps) {
   };
 
   const handleCartPress = () => {
-    router.push('/'); // Navigate to cart screen
+    router.push('/(user)/cart'); // Navigate to cart screen
   };
 
   return (

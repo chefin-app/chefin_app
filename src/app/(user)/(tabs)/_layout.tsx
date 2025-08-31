@@ -1,10 +1,8 @@
 import { Tabs, useRouter } from 'expo-router';
 import TopNavBarHomeUser from '../../../components/navigation/TopNavBarHomeUser';
 import BottomTabBarUser from '../../../components/navigation/BottomTabBarUser';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useCallback } from 'react';
-import { Ionicons } from '@expo/vector-icons';
-import { useAuth } from '../../../utils/auth-context';
+import { useAuth } from '@/src/services/auth-context';
 
 const NavBar = (props: any) => <TopNavBarHomeUser {...props} />;
 const TabBar = (props: any) => <BottomTabBarUser {...props} />;
@@ -26,30 +24,28 @@ export default function TabLayout() {
   const isLoggedIn = !!user;
 
   return (
-    <SafeAreaProvider>
-      <Tabs
-        tabBar={TabBar}
-        screenOptions={{
-          header: NavBar,
+    <Tabs
+      tabBar={TabBar}
+      screenOptions={{
+        header: NavBar,
+      }}
+    >
+      <Tabs.Screen name="home" options={{ title: 'Home' }} />
+      <Tabs.Screen name="search" options={{ title: 'Search' }} />
+      <Tabs.Screen
+        name="account"
+        options={{
+          title: isLoggedIn ? 'Account' : 'Log In',
         }}
-      >
-        <Tabs.Screen name="home" options={{ title: 'Home' }} />
-        <Tabs.Screen name="search" options={{ title: 'Search' }} />
-        <Tabs.Screen
-          name="account"
-          options={{
-            title: isLoggedIn ? 'Account' : 'Log In',
-          }}
-          listeners={{
-            tabPress: e => {
-              if (!isLoggedIn) {
-                e.preventDefault();
-                router.push('/(auth)/login');
-              }
-            },
-          }}
-        />
-      </Tabs>
-    </SafeAreaProvider>
+        listeners={{
+          tabPress: e => {
+            if (!isLoggedIn) {
+              e.preventDefault();
+              router.push('/(auth)/login');
+            }
+          },
+        }}
+      />
+    </Tabs>
   );
 }

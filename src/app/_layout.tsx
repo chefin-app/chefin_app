@@ -7,9 +7,10 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 import 'react-native-reanimated';
-import { AuthProvider, useAuth } from '../utils/auth-context';
+
 import { StatusBar } from 'expo-status-bar';
-import { supabase } from '../utils/supabase';
+import { supabase } from '@/src/services/supabase';
+import { AuthProvider, useAuth } from '../services/auth-context';
 
 export {
   // Catch any errors thrown by the Layout component.
