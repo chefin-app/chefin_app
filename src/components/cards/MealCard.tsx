@@ -74,7 +74,7 @@ const MealCard: React.FC<MealCardProps> = ({
         <View style={{ flex: 1 }}>
           <View style={styles.titleRow}>
             <Text style={styles.title} numberOfLines={1}>
-              {title}
+              {restaurantName}
             </Text>
             <View style={styles.rating}>
               <Ionicons name="star" size={16} color="#FFD700" />

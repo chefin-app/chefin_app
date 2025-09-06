@@ -135,16 +135,18 @@ export default function HomeScreen() {
     }
   }; // Alex: added contentContainerStyle to ScrollView with paddingBottom
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+    // changed from 'top', re-add if needed 
+    <SafeAreaView style={styles.container} edges={['left', 'right']}>
+      
       <ScrollView
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 20 }}
       >
-        <SearchBar
+        <SearchBar 
           value={searchValue}
           onChangeText={setSearchValue}
-          onSubmitEditing={handleSearchSubmit}
+          onSubmitEditing={() => router.push("/search")} 
         />
         {/* promo banner */}
         <View style={styles.promoBanner}>
@@ -228,7 +230,7 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
-    paddingHorizontal: 20,
+    paddingHorizontal: 10,
   },
   header: {
     flexDirection: 'row',

@@ -26,7 +26,7 @@ interface ListingWithProfile extends Listing {
 }
 
 export const fetchPopularData = async () => {
-  const request = supabase
+  let request = supabase
     .from('listings')
     .select(`*, profiles ( user_id, full_name, profile_image, is_verified, restaurant_name )`)
     .limit(10);

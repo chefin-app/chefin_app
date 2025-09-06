@@ -14,7 +14,7 @@ type Props = {
 const SearchBar = ({
   value,
   onChangeText,
-  placeholder = 'Search for cuisines, dishes, locations, home restaurants...',
+  placeholder = 'Home restaurants, dishes, locations...',
   onSubmitEditing,
 }: Props) => {
   return (
@@ -30,7 +30,8 @@ const SearchBar = ({
           if (onSubmitEditing) onSubmitEditing();
         }}
         returnKeyType="search"
-        blurOnSubmit={true}
+        multiline={false}
+        scrollEnabled={false}
       />
     </View>
   );
@@ -44,12 +45,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffffff',
     borderRadius: 50,
     paddingHorizontal: 16,
-    paddingVertical: 20,
+    paddingVertical: 10,
     shadowColor: '#0d9b4df6',
     shadowOpacity: 0.1,
     shadowRadius: 10,
     elevation: 2,
-    width: '90%',
+    width: '95%',
     alignSelf: 'center',
   },
   icon: {
@@ -58,8 +59,9 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    fontSize: 17,
+    fontSize: 14,
     color: '#333',
-    height: 30,
+    height: 25,
+    paddingVertical: 0,
   },
 });
