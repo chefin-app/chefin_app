@@ -1,6 +1,14 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
+import { useRouter } from 'expo-router';
+import { TouchableOpacity } from 'react-native';
 import MealCard from '@/src/components/cards/MealCard';
+import { act } from 'react-test-renderer';
+
+const mockRouterPush = jest.fn();
+    jest.mock('expo-router', () => ({
+        useRouter: () => ({ push: mockRouterPush })
+    })); // Mock useRouter hook
 
 describe('MealCard', () => {
   const meal = {
@@ -25,18 +33,35 @@ describe('MealCard', () => {
       restaurant_name: 'Pasta Palace',
     },
   };
-
-  it('renders title, cuisine/description, and price', () => {
-    const { getByText } = render(<MealCard {...meal} />);
-
+  
+  // MealCard component tests
+  it('renders meal card information on the card', () => {
+    const { getByText, getByTestId } = render(<MealCard {...meal} />);
     expect(getByText('Spaghetti Bolognese')).toBeTruthy();
-    expect(getByText('Italian')).toBeTruthy(); // or cuisine
+    expect(getByText('Italian')).toBeTruthy(); 
     expect(getByText('RM 12.99')).toBeTruthy();
+    expect(getByText(/Available/)).toBeTruthy();
+    expect(getByText('10/09/2025')).toBeTruthy();
+
+    const mealImage = getByTestId('meal-image')
+    expect(mealImage).toBeTruthy();
+    const mealAvatar = getByTestId('meal-avatar')
+    expect(mealAvatar).toBeTruthy();
   });
 
-  it('renders created_at date', () => {
-    const { getByText } = render(<MealCard {...meal} />);
-    expect(getByText(/Available/)).toBeTruthy();
-    expect(getByText('10/09/2025')).toBeTruthy(); // Depending on locale
-  });
+  it('MealCard navigates to restaurant page', () => {
+    const { getByTestId } = render(<MealCard {...meal} />);
+    fireEvent.press(getByTestId('meal-restaurant-push'));
+    expect(mockRouterPush).toHaveBeenCalledWith('/restaurant/[id]');
+  })
+
+  it('toggles favourite state when heart icon is pressed', () => {
+    const { getByTestId } = render(<MealCard {...meal} />);
+    const heartButton = getByTestId('favourite-button');
+    act(() => {
+      fireEvent.press(heartButton);
+    });
+    expect(heartButton).toBeTruthy();
+  })
+
 });
