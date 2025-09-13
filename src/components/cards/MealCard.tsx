@@ -50,14 +50,22 @@ const MealCard: React.FC<MealCardProps> = ({
   const router = useRouter();
   const [isFavorite, setIsFavorite] = useState(false);
   return (
-    <TouchableOpacity testID="meal-restaurant-push" style={styles.card} onPress={() => router.push('/restaurant/[id]')}>
+    <TouchableOpacity
+      testID="meal-restaurant-push"
+      style={styles.card}
+      onPress={() => router.push('/restaurant/[id]')}
+    >
       <ImageBackground
-        testID='meal-image'
+        testID="meal-image"
         source={image_url ? { uri: image_url } : images.templateMeal}
         style={styles.image}
         imageStyle={styles.imageStyle}
       >
-        <TouchableOpacity testID="favourite-button" style={styles.heartIcon} onPress={() => setIsFavorite(prev => !prev)}>
+        <TouchableOpacity
+          testID="favourite-button"
+          style={styles.heartIcon}
+          onPress={() => setIsFavorite(prev => !prev)}
+        >
           <Ionicons
             name={isFavorite ? 'heart' : 'heart-outline'}
             size={24}
@@ -68,7 +76,7 @@ const MealCard: React.FC<MealCardProps> = ({
 
       <View style={styles.infoContainer}>
         <Image
-          testID='meal-avatar'
+          testID="meal-avatar"
           source={cookImage ? { uri: cookImage } : images.templateAvatar}
           style={styles.avatar}
         />
