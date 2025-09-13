@@ -140,7 +140,7 @@ export default function EmailLoginScreen() {
 
             {/* Submit Button */}
             <TouchableOpacity
-              testID='create-account-button'
+              testID="create-account-button"
               style={[styles.submitButton, loading && styles.submitButtonDisabled]}
               onPress={handleEmailAuth}
               disabled={loading}
