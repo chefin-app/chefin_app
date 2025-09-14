@@ -138,7 +138,7 @@ This project is licensed under the MIT License.
 
 💡 Motto
 
-Chefin – Taste The World, One Home At A Time.
+Chefin – Taste The World, One Home At A Time!
 
 ⸻
 
