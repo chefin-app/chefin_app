@@ -37,7 +37,7 @@ describe('MealCard', () => {
   // MealCard component tests
   it('renders meal card information on the card', () => {
     const { getByText, getByTestId } = render(<MealCard {...meal} />);
-    expect(getByText('Spaghetti Bolognese')).toBeTruthy();
+    expect(getByText('Pasta Palace')).toBeTruthy();
     expect(getByText('Italian')).toBeTruthy();
     expect(getByText('RM 12.99')).toBeTruthy();
     expect(getByText(/Available/)).toBeTruthy();
