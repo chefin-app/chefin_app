@@ -135,18 +135,17 @@ export default function HomeScreen() {
     }
   }; // Alex: added contentContainerStyle to ScrollView with paddingBottom
   return (
-    // changed from 'top', re-add if needed 
+    // changed from 'top', re-add if needed
     <SafeAreaView style={styles.container} edges={['left', 'right']}>
-      
       <ScrollView
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 20 }}
       >
-        <SearchBar 
+        <SearchBar
           value={searchValue}
           onChangeText={setSearchValue}
-          onSubmitEditing={() => router.push("/search")} 
+          onSubmitEditing={() => router.push('/search')}
         />
         {/* promo banner */}
         <View style={styles.promoBanner}>
