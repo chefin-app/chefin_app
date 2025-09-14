@@ -53,6 +53,7 @@ const SearchScreen = () => {
       }
     }, 800);
     return () => clearTimeout(timeoutFunc);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery])
 
   console.log("Restaurant Data:", restaurantData);
