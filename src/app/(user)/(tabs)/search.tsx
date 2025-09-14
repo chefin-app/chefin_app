@@ -32,6 +32,7 @@ const SearchScreen = () => {
       };
     };
     loadHistory();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -54,34 +55,37 @@ const SearchScreen = () => {
     return () => clearTimeout(timeoutFunc);
   }, [searchQuery])
 
-  console.log("Resetaurant Data:", restaurantData);
+  console.log("Restaurant Data:", restaurantData);
 
   return (
     <FlatList
       data={restaurantData}
       renderItem={({ item }) => (
-        <MealCard
-          {...item}
-          cookName={item.profiles.full_name}
-          restaurantName={item.profiles.restaurant_name}
-          isVerified={item.profiles.is_verified}
-          cookImage={item.profiles.profile_image}
-        />
+        <View style={{ alignItems: "center" }}>
+          <MealCard
+            {...item}
+            cookName={item.profiles.full_name}
+            restaurantName={item.profiles.restaurant_name}
+            isVerified={item.profiles.is_verified}
+            cookImage={item.profiles.profile_image}
+          />
+        </View>
       )}
       keyExtractor={item => item.id}
       showsVerticalScrollIndicator={false}
       contentContainerStyle={{
         paddingHorizontal: 10,
         paddingVertical: 10,
-        alignItems: "left",   // ensures cards are centered horizontally
       }}
       ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
       ListHeaderComponent={
         <>
-          <SearchBar
-            value={searchQuery}
-            onChangeText={(text: string) => setSearchQuery(text)}
-          />
+          <View style={{ width: '100%', paddingHorizontal: 0 }}>
+            <SearchBar
+              value={searchQuery}
+              onChangeText={(text: string) => setSearchQuery(text)}
+            />
+          </View>
           {restaurantLoading && <Text style={{ textAlign: 'center', marginTop: 10 }}>Loading...</Text>}
           {restaurantError && <Text style={{ textAlign: 'center', marginTop: 10, color: 'red' }}>{restaurantError.message}</Text>}
           {!restaurantLoading && !restaurantError && restaurantData?.length > 0 && searchQuery.trim() && (
@@ -100,7 +104,7 @@ const SearchScreen = () => {
             <Text style={{ textAlign: 'center', marginTop: 20, color: '#555' }}>
               No results found.
             </Text>
-          ) : 
+          ) :
             (
               <View style={{ marginTop: 20 }}>
                 <View style={styles.rowContainer}>
@@ -116,7 +120,9 @@ const SearchScreen = () => {
                 </View>
 
                 {searchHistory.map((item, index) => (
-                  <SearchHistoryCard query={item} onPress={() => setSearchQuery(item)} key={index} />
+                  <View style={{ alignItems: "flex-start" }}>
+                    <SearchHistoryCard query={item} onPress={() => setSearchQuery(item)} key={index} />
+                  </View>
                 ))}
               </View>
             )
