@@ -3,7 +3,7 @@ import { Image, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'r
 
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { useAuth } from '../../utils/auth-context';
+import { useAuth } from '../../src/utils/auth-context';
 import SocialMediaButtons from '@/src/components/buttons/SocialMediaButtons';
 export default function LoginScreen() {
   const { signInWithFacebook, signInWithGoogle, signInWithApple } = useAuth();

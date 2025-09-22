@@ -8,7 +8,6 @@ import {
   ScrollView,
   ActivityIndicator,
 } from 'react-native';
-import { supabase } from '../../utils/supabase'; // Adjust path as needed
 import type { User } from '@supabase/supabase-js';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -43,40 +42,25 @@ const Today: React.FC = () => {
 
   const getCurrentUser = async () => {
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      setUser(user);
+      const res = await fetch('http://localhost:8000/api/auth/session');
+      if (!res.ok) {
+        throw new Error('Failed to fetch session');
+      }
+      const data = await res.json();
+      setUser(data.session?.user ?? null);
     } catch (error) {
-      console.error('Error getting user:', error);
+      console.error('Error fetching user session:', error);
     }
   };
 
   const fetchOrders = async (status: OrderStatus) => {
     setLoading(true);
     try {
-      const today = new Date().toISOString().split('T')[0];
-
-      let query = supabase
-        .from('orders')
-        .select('*')
-        .eq('status', status)
-        .gte('created_at', `${today}T00:00:00`)
-        .lte('created_at', `${today}T23:59:59`)
-        .order('created_at', { ascending: false });
-
-      // For preparing orders, also filter by pickup date
-      if (status === 'preparing') {
-        query = query.eq('pickup_date', today);
+      const res = await fetch('http://localhost:8000/api/auth/session');
+      if (!res.ok) {
+        throw new Error('Failed to fetch orders');
       }
-
-      const { data, error } = await query;
-
-      if (error) {
-        console.error('Error fetching orders:', error);
-        return;
-      }
-
+      const data = await res.json();
       setOrders(data || []);
     } catch (error) {
       console.error('Error fetching orders:', error);
@@ -86,6 +70,7 @@ const Today: React.FC = () => {
   };
 
   const getOrderCount = (status: OrderStatus): number => {
+    console.log('ORDERS:', orders);
     return orders.filter(order => order.status === status).length;
   };
 

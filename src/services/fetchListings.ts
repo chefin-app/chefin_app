@@ -1,6 +1,6 @@
-import { supabase } from './supabase';
 import useFetch from '../hooks/useFetch';
 import { Text } from 'react-native';
+// import { Listing } from '../types/models';
 
 export type Listing = {
   id: string;
@@ -16,19 +16,15 @@ export type Listing = {
 };
 
 export const fetchListings = async ({ query }: { query?: string }): Promise<Listing[]> => {
-  let request = supabase.from('listings').select('*');
-
+  const url = new URL('http://localhost:8000/api/listings');
   if (query && query.trim() !== '') {
-    // ilike is case-insensitive LIKE (good for search)
-    request = request.ilike('title', `%${query}%`);
+    url.searchParams.append('query', query);
   }
 
-  const { data, error } = await request;
-  //console.log("Supabase response:", { data, error });
-
-  if (error) {
-    throw new Error(error.message);
+  const res = await fetch(url.toString());
+  if (!res.ok) {
+    throw new Error('Failed to fetch listings');
   }
 
-  return (data ?? []) as Listing[];
+  return (await res.json()) as Listing[];
 };

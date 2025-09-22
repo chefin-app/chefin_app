@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Dimensions } from 'react-native';
 
 import {
@@ -11,8 +11,7 @@ import {
   Image,
   Alert,
 } from 'react-native';
-import { supabase } from '../../utils/supabase'; // Adjust path as needed
-import DateTimePickerModal from '../../components/inputs/DateTimePickerModal'; // Adjust path as needed
+import DateTimePickerModal from '../../src/components/inputs/DateTimePickerModal'; // Adjust path as needed
 import type { User } from '@supabase/supabase-js';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -43,64 +42,46 @@ const Calendar: React.FC = () => {
   const [menuAvailability, setMenuAvailability] = useState<MenuAvailability[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // Mock data for demonstration
-  const mockMenuItems: MenuItem[] = [
-    {
-      id: '1',
-      name: 'The American Burger',
-      image_url:
-        'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=100&h=100&fit=crop&crop=center',
-      description: 'Classic American burger with cheese',
-      price: 12.99,
-    },
-    {
-      id: '2',
-      name: 'The American Burger',
-      image_url:
-        'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=100&h=100&fit=crop&crop=center',
-      description: 'Classic American burger with cheese',
-      price: 12.99,
-    },
-    {
-      id: '3',
-      name: 'The American Burger',
-      image_url:
-        'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=100&h=100&fit=crop&crop=center',
-      description: 'Classic American burger with cheese',
-      price: 12.99,
-    },
-    {
-      id: '4',
-      name: 'The American Burger',
-      image_url:
-        'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=100&h=100&fit=crop&crop=center',
-      description: 'Classic American burger with cheese',
-      price: 12.99,
-    },
-  ];
-
   useEffect(() => {
     getCurrentUser();
-    // Use mock data for now
-    setMenuItems(mockMenuItems);
-    // Uncomment below when database is ready
-    // fetchMenuItems();
   }, []);
+
+  const fetchMenuAvailability = useCallback(async () => {
+    if (!user) return;
+    try {
+      setLoading(true);
+      const dateStr = selectedDate.toISOString().split('T')[0];
+      const res = await fetch(
+        `http://localhost:8000/api/menu-availability?user_id=${user.id}&date=${dateStr}`
+      );
+      if (!res.ok) {
+        throw new Error('Failed to fetch availability');
+      }
+      const data = await res.json();
+      setMenuAvailability(data.availability || []);
+    } catch (error) {
+      console.error('Error fetching menu availability:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [user, selectedDate]);
 
   useEffect(() => {
     if (user && selectedDate) {
       fetchMenuAvailability();
     }
-  }, [selectedDate, user]);
+  }, [user, selectedDate, fetchMenuAvailability]);
 
   const getCurrentUser = async () => {
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      setUser(user);
+      const res = await fetch('http://localhost:8000/api/auth/session');
+      if (!res.ok) {
+        throw new Error('Failed to fetch session');
+      }
+      const data = await res.json();
+      setUser(data.session?.user ?? null);
     } catch (error) {
-      console.error('Error getting user:', error);
+      console.error('Error fetching user session:', error);
     }
   };
 
@@ -125,32 +106,6 @@ const Calendar: React.FC = () => {
   };
   */
 
-  const fetchMenuAvailability = async () => {
-    if (!user) return;
-
-    try {
-      setLoading(true);
-      const dateStr = selectedDate.toISOString().split('T')[0];
-
-      const { data, error } = await supabase
-        .from('menu_availability') // Table for storing availability
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('date', dateStr);
-
-      if (error) {
-        console.error('Error fetching menu availability:', error);
-        return;
-      }
-
-      setMenuAvailability(data || []);
-    } catch (error) {
-      console.error('Error fetching menu availability:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const toggleAvailability = async (menuItemId: string, currentlyAvailable: boolean) => {
     if (!user) return;
 
@@ -162,50 +117,24 @@ const Calendar: React.FC = () => {
       const existingRecord = menuAvailability.find(item => item.menu_item_id === menuItemId);
 
       if (existingRecord) {
-        // Update existing record
-        const { error } = await supabase
-          .from('menu_availability')
-          .update({ is_available: newAvailability })
-          .eq('id', existingRecord.id);
+        const res = await fetch('http://localhost:8000/api/toggle-availability', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: existingRecord.id, is_available: newAvailability }),
+        });
 
-        if (error) {
-          console.error('Error updating availability:', error);
-          Alert.alert('Error', 'Failed to update availability');
-          return;
+        if (!res.ok) {
+          throw new Error('Failed to update availability');
         }
+
+        const data = await res.json();
 
         // Update local state
         setMenuAvailability(prev =>
-          prev.map(item =>
-            item.id === existingRecord.id ? { ...item, is_available: newAvailability } : item
-          )
+          prev.map(item => (item.id === existingRecord.id ? data.availability : item))
         );
       } else {
-        // Create new record
-        const newRecord: Omit<MenuAvailability, 'id'> = {
-          menu_item_id: menuItemId,
-          date: dateStr,
-          is_available: newAvailability,
-          start_time: '12:00', // Default time slot
-          end_time: '13:00',
-          user_id: user.id,
-        };
-
-        const { data, error } = await supabase
-          .from('menu_availability')
-          .insert([newRecord])
-          .select();
-
-        if (error) {
-          console.error('Error creating availability:', error);
-          Alert.alert('Error', 'Failed to create availability');
-          return;
-        }
-
-        // Update local state
-        if (data && data[0]) {
-          setMenuAvailability(prev => [...prev, data[0]]);
-        }
+        Alert.alert('Error', 'No availability record exists yet for this menu item');
       }
     } catch (error) {
       console.error('Error toggling availability:', error);

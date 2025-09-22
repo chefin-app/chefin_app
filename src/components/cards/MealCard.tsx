@@ -4,38 +4,19 @@ import React, { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 
 import { images } from '@/src/constants/images';
+import type { Listing, Profile, Review } from '@/src/types/models';
 
-interface Profile {
-  user_id: string;
-  full_name: string;
-  profile_image?: string;
-  is_verified: boolean;
-  restaurant_name: string;
-}
-
-interface Listing {
-  id: string;
-  cook_id: string;
-  title: string;
-  description?: string;
-  cuisine?: string;
-  price: number;
-  image_url?: string;
-  created_at: string;
-  dietary_tags?: string[];
-  pickup_location: string;
-}
-
-export interface MealCardProps extends Listing {
-  cookName: string;
-  restaurantName: string;
-  isVerified: boolean;
+export interface MealCardProps extends Listing, Review {
+  cookName?: string;
+  restaurantName?: string;
+  isVerified?: boolean;
   cookImage?: string;
-  profiles: Profile;
+  profiles?: Profile;
+  reviews?: Review[];
+  averageRating?: number;
 }
 
 const MealCard: React.FC<MealCardProps> = ({
-  cookName,
   restaurantName,
   isVerified,
   cookImage,
@@ -46,11 +27,35 @@ const MealCard: React.FC<MealCardProps> = ({
   image_url,
   created_at,
   id,
+  reviews = [], // Default to empty array if undefined
+  profiles, // Add profiles to destructured props
 }) => {
   const router = useRouter();
   const [isFavorite, setIsFavorite] = useState(false);
+
+  // Handle both flattened props and nested profiles object
+  const displayName =
+    restaurantName || profiles?.restaurant_name || profiles?.full_name || 'Unknown Restaurant';
+  const displayImage = cookImage || profiles?.profile_image;
+  const displayVerified = isVerified ?? profiles?.is_verified ?? false;
+  const displayAggregateRating =
+    reviews && reviews.length > 0
+      ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
+      : null;
+  // console.log({
+  //   id,
+  //   displayName,
+  //   title,
+  //   reviewsCount: reviews.length,
+  //   displayAggregateRating,
+  //   profiles: !!profiles,
+  // });
+
   return (
-    <TouchableOpacity style={styles.card} onPress={() => router.push('/restaurant/[id]')}>
+    <TouchableOpacity
+      style={styles.card}
+      onPress={() => router.push(`/restaurant/${id}`)} // Fix the route
+    >
       <ImageBackground
         source={image_url ? { uri: image_url } : images.templateMeal}
         style={styles.image}
@@ -67,22 +72,24 @@ const MealCard: React.FC<MealCardProps> = ({
 
       <View style={styles.infoContainer}>
         <Image
-          source={cookImage ? { uri: cookImage } : images.templateAvatar}
+          source={displayImage ? { uri: displayImage } : images.templateAvatar}
           style={styles.avatar}
         />
 
         <View style={{ flex: 1 }}>
           <View style={styles.titleRow}>
             <Text style={styles.title} numberOfLines={1}>
-              {title}
+              {displayName}
             </Text>
             <View style={styles.rating}>
               <Ionicons name="star" size={16} color="#FFD700" />
-              <Text style={styles.ratingText}>{price ? `RM ${price}` : 'N/A'}</Text>
+              <Text style={styles.ratingText}>
+                {displayAggregateRating !== null ? displayAggregateRating.toFixed(1) : 'N/A'}
+              </Text>
             </View>
           </View>
 
-          <Text style={styles.subtitle}>{cuisine || description || 'No description'}</Text>
+          <Text style={styles.subtitle}>{cuisine || title || description || 'No description'}</Text>
         </View>
       </View>
 

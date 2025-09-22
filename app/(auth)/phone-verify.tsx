@@ -13,7 +13,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { supabase } from '../../utils/supabase';
 
 export default function PhoneVerifyStep2() {
   const { phoneNumber, displayNumber } = useLocalSearchParams<{
@@ -85,30 +84,29 @@ export default function PhoneVerifyStep2() {
       return;
     }
 
+    if (!phoneNumber) {
+      Alert.alert('Error', 'Phone number is missing');
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      const { error } = await supabase.auth.verifyOtp({
-        phone: phoneNumber,
-        token: code,
-        type: 'sms',
+      const response = await fetch('http://localhost:8000/api/auth/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: phoneNumber, token: code }),
       });
 
-      //   if (error) throw error;
+      const data = await response.json();
 
-      // Success! User is now authenticated
-      // Check if this is a new user who needs to set up their profile
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (user?.user_metadata?.is_new_user !== false) {
-        // New user - redirect to password setup or profile setup
-        router.replace('/(user)/(tabs)/home');
-      } else {
-        // Existing user - go to main app
-        router.replace('/(user)/(tabs)/home');
+      if (!response.ok) {
+        throw new Error(data.error || 'OTP verification failed');
       }
+
+      // Successful verification
+      // Navigate to home screen
+      router.replace('/(user)/(tabs)/home');
     } catch (error: unknown) {
       if (error instanceof Error) {
         console.error('OTP verification error:', error);
@@ -129,12 +127,17 @@ export default function PhoneVerifyStep2() {
     setIsResending(true);
 
     try {
-      const { error } = await supabase.auth.resend({
-        type: 'sms',
-        phone: phoneNumber,
+      const response = await fetch('http://localhost:8000/api/auth/sign-in-phone', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: phoneNumber }),
       });
 
-      if (error) throw error;
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to resend OTP');
+      }
 
       // Reset timer
       setTimer(60);

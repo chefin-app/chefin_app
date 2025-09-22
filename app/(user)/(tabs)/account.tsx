@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -9,39 +9,15 @@ import {
   ActivityIndicator,
   ScrollView,
 } from 'react-native';
-import { supabase } from '../../../utils/supabase';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { createShadowStyle } from '../../../utils/platform-utils';
-import type { User } from '@supabase/supabase-js';
+import { createShadowStyle } from '../../../src/utils/platform-utils';
+import { useAuth } from '@/src/utils/auth-context';
 
 export default function AccountScreen() {
   const router = useRouter();
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const { user, signOut, initializing } = useAuth();
   const [isSigningOut, setIsSigningOut] = useState(false);
-
-  useEffect(() => {
-    const getUserInfo = async () => {
-      try {
-        const { data, error } = await supabase.auth.getUser();
-        if (error) throw error;
-        setUser(data.user);
-        // console.log(auth);
-      } catch (error: unknown) {
-        if (error instanceof Error) {
-          console.error('Error getting user:', error);
-          Alert.alert('Error', 'Failed to load user information');
-        }
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    getUserInfo();
-
-    // console.log('Account screen mounted - fetching user info');
-  }, []);
 
   const handleSignOut = async () => {
     Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
@@ -61,10 +37,9 @@ export default function AccountScreen() {
     setIsSigningOut(true);
 
     try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
+      await signOut();
 
-      // Explicitly navigate to login after sign out
+      // navigate to home after sign out
       router.replace('/(user)/(tabs)/home');
       Alert.alert('Signed Out', 'You have been signed out successfully.');
     } catch (error: unknown) {
@@ -162,7 +137,7 @@ export default function AccountScreen() {
     },
   ];
 
-  if (isLoading) {
+  if (initializing) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>

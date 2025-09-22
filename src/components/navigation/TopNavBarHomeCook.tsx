@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter, useSegments } from 'expo-router';
 import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity } from 'react-native';
-import { supabase } from '../../utils/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import Entypo from '@expo/vector-icons/Entypo';
 import { createShadowStyle } from '../../utils/platform-utils';
@@ -29,20 +28,23 @@ export default function TopNavBarHomeCook({ options }: NavBarProps) {
 
   const getUserInfo = async () => {
     try {
-      const {
-        data: { user },
-        error,
-      } = await supabase.auth.getUser();
+      const res = await fetch('http://localhost:8000/api/auth/session', {
+        method: 'GET',
+      });
 
-      // Only log error if it's not the expected "session missing" error
-      if (error && error.message !== 'Auth session missing!') {
-        console.error('Unexpected auth error:', error);
+      if (!res.ok) {
+        throw new Error('Failed to get user info');
       }
 
-      // Set user (will be null if not logged in, which is fine)
-      setUser(user);
+      const data = await res.json();
+
+      if (data.session?.user) {
+        setUser(data.session.user);
+      } else {
+        setUser(null);
+      }
     } catch (error) {
-      // Silently handle auth errors - user simply isn't logged in
+      console.error('Failed to get user info:', error);
       setUser(null);
     }
   };

@@ -7,9 +7,9 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 import 'react-native-reanimated';
-import { AuthProvider, useAuth } from '../utils/auth-context';
+import { AuthProvider, useAuth } from '../src/utils/auth-context';
 import { StatusBar } from 'expo-status-bar';
-import { supabase } from '../utils/supabase';
+import { supabase } from '../src/utils/supabaseClient';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -27,7 +27,7 @@ SplashScreen.preventAutoHideAsync();
 // Separate component to handle navigation logic that needs auth context
 function NavigationHandler({ children }: { children: React.ReactNode }) {
   const { user, initializing } = useAuth();
-  const segments = useSegments();
+  const segments = useSegments() as string[];
   const router = useRouter();
 
   useEffect(() => {
@@ -37,7 +37,6 @@ function NavigationHandler({ children }: { children: React.ReactNode }) {
     if (Platform.OS === 'web' && typeof window === 'undefined') {
       return;
     }
-
     // Check if user is currently on an auth page (login, register, etc.)
     const inAuthGroup = segments[0] === '(auth)';
 
@@ -64,14 +63,14 @@ function NavigationHandler({ children }: { children: React.ReactNode }) {
 export default function RootLayout() {
   // FONT LOADING
   const [loaded, error] = useFonts({
-    mon: require('../assets/fonts/Montserrat-Regular.ttf'),
-    'mon-sb': require('../assets/fonts/Montserrat-SemiBold.ttf'),
-    'mon-b': require('../assets/fonts/Montserrat-Bold.ttf'),
+    mon: require('@/src/assets/fonts/Montserrat-Regular.ttf'),
+    'mon-sb': require('@/src/assets/fonts/Montserrat-SemiBold.ttf'),
+    'mon-b': require('@/src/assets/fonts/Montserrat-Bold.ttf'),
   });
 
-  const [session, setSession] = useState<Session | null>(null); // Stores user authentication session
-  const [isLoading, setIsLoading] = useState(true); // Tracks if we're still checking auth status
-  const [isInitialized, setIsInitialized] = useState(false); // Ensures auth is fully set up before navigation
+  const [session, setSession] = useState<Session | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
     if (error) throw error;
@@ -83,86 +82,60 @@ export default function RootLayout() {
     }
   }, [loaded]);
 
-  // This effect runs once when the app starts to set up authentication
   useEffect(() => {
-    let mounted = true; // Prevents state updates after component unmounts
-
+    let mounted = true;
     const initializeAuth = async () => {
       try {
-        // Get the current user session from Supabase
-        const { data, error } = await supabase.auth.getSession();
-
-        if (error) {
-          console.warn('Session error:', error.message);
-        }
-
+        const { data, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError) throw sessionError;
         if (mounted) {
-          setSession(data.session); // Ensure 'data.session' is used, which is correct
-          setIsLoading(false); // Auth check is complete
-          setIsInitialized(true); // Mark as fully initialized
+          setSession(data.session);
+          setIsLoading(false);
+          setIsInitialized(true);
         }
-      } catch (error) {
-        console.warn('Failed to get session:', error);
+      } catch (err) {
+        console.error('Failed to initialize auth:', err);
         if (mounted) {
-          setSession(null); // No session available
+          setSession(null);
           setIsLoading(false);
           setIsInitialized(true);
         }
       }
     };
-
     initializeAuth();
 
-    // This listener fires when user logs in/out anywhere in the app
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       if (mounted) {
-        setSession(session); // Update session when auth state changes
+        setSession(session);
         setIsLoading(false);
       }
     });
 
-    // Clean up when component unmounts to prevent memory leaks
     return () => {
       mounted = false;
       subscription?.unsubscribe();
     };
   }, []);
 
-  // Don't render anything until fonts are loaded and auth is initialized
   if (!loaded || isLoading || !isInitialized) {
     return null;
   }
 
   return (
     <AuthProvider>
+      <StatusBar style="dark" />
       <NavigationHandler>
-        <RootLayoutNav />
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="index" options={{ headerShown: false }} />
+          <Stack.Screen name="(user)/(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+          <Stack.Screen name="(cook)" options={{ headerShown: false }} />
+          <Stack.Screen name="restaurant/[id]" options={{ headerShown: false }} />
+          <Stack.Screen name="+not-found" options={{ headerShown: false }} />
+        </Stack>
       </NavigationHandler>
     </AuthProvider>
-  );
-}
-
-function RootLayoutNav() {
-  const { initializing } = useAuth();
-
-  // Don't render navigation until auth is initialized
-  if (initializing) {
-    return null;
-  }
-
-  return (
-    <>
-      <StatusBar style="dark" />
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="index" options={{ headerShown: false }} />
-        <Stack.Screen name="(user)/(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-        <Stack.Screen name="(cook)" options={{ headerShown: false }} />
-        <Stack.Screen name="restaurant/[id]" options={{ headerShown: false }} />
-        <Stack.Screen name="+not-found" options={{ headerShown: false }} />
-      </Stack>
-    </>
   );
 }

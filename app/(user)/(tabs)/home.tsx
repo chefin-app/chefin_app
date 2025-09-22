@@ -1,17 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import { StyleSheet, ScrollView, View, Image, FlatList, Text } from 'react-native';
-//import { supabase } from '../../../utils/supabase';
 import { Ionicons } from '@expo/vector-icons';
-import { createShadowStyle } from '../../../utils/platform-utils';
-import type { User } from '@supabase/supabase-js';
+import { createShadowStyle } from '../../../src/utils/platform-utils';
 import SearchBar from '@/src/components/filters/SearchBar';
 import CuisineFilter from '@/src/components/filters/CuisineFilter';
 import MainFilter from '@/src/components/filters/MainFilter';
 import { BaseText, HeadingText, BodyText, CaptionText } from '@/src/components/typography';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import LoadingSpinner from '@/src/components/feedback/LoadingSpinner';
 
-import PromoImage from '../../../assets/images/promo-food.webp';
+import PromoImage from '@/src/assets/images/promo-food.webp';
 import MealCard from '@/src/components/cards/MealCard';
 import MenuItemCard from '@/src/components/cards/MenuItemCard';
 import ReviewCard from '@/src/components/cards/ReviewCard';
@@ -19,38 +18,18 @@ import ReviewCard from '@/src/components/cards/ReviewCard';
 import useFetch from '@/src/hooks/useFetch';
 import { fetchListings } from '@/src/services/fetchListings';
 import { fetchRestaurantName } from '@/src/services/fetchRestaurantName';
-import { supabase } from '@/src/services/supabase';
 
-interface Listing {
-  id: string;
-  cook_id: string;
-  title: string;
-  description?: string;
-  cuisine?: string;
-  price: number;
-  image_url?: string;
-  created_at: string;
-  dietary_tags?: string[];
-  pickup_location: string;
-}
-
-interface Profile {
-  user_id: string;
-  full_name: string;
-  profile_image?: string;
-  is_verified: boolean;
-  restaurant_name: string;
-}
+import { Listing, Profile, Review } from '@/src/types/models';
 
 interface ListingWithProfile extends Listing {
   profiles: Profile;
+  reviews?: Review[];
 }
 
 export default function HomeScreen() {
   const router = useRouter();
   const [searchValue, setSearchValue] = useState('');
   const [popularChefins, setPopularChefins] = useState<ListingWithProfile[]>([]);
-  const [deliciousDeals, setDeliciousDeals] = useState<ListingWithProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -60,36 +39,25 @@ export default function HomeScreen() {
         setLoading(true);
         setError(null);
 
-        const { data: testData, error: testError } = await supabase
-          .from('listings')
-          .select('count', { count: 'exact', head: true });
-        if (testError) {
-          console.error('Error fetching test data:', testError);
-          setError(`Database connection error: ${testError.message}`);
-          return;
-        }
+        // // Test connection
+        // const { data: testData, error: testError } = await supabase
+        //   .from('listings')
+        //   .select('count', { count: 'exact', head: true });
 
-        console.log('supabase successful connection, total listings:', testData);
+        // if (testError) {
+        //   console.error('Error fetching test data:', testError);
+        //   setError(`Database connection error: ${testError.message}`);
+        //   return;
+        // }
 
-        const { data: popularData, error: popularError } = await supabase
-          .from('listings')
-          .select(`*, profiles ( user_id, full_name, profile_image, is_verified, restaurant_name )`)
-          .limit(10);
-        if (popularError) {
-          console.log('Error fetching popular listings:', popularError);
-        }
-        if (popularData) {
-          setPopularChefins(popularData);
-          console.log('Fetched popular chefins:', popularData);
-        }
+        // console.log('Supabase successful connection, total listings:', testData);
 
-        const { data: dealsData, error: dealsError } = await supabase
-          .from('listings')
-          .select(`*, profiles ( user_id, full_name, profile_image, is_verified, restaurant_name )`)
-          .limit(10);
-        if (!dealsError && dealsData) {
-          setDeliciousDeals(dealsData);
-        }
+        // call Node backend instead of Supabase directly
+        const response = await fetch(
+          `${process.env.EXPO_PUBLIC_API_URL}/api/home/popular-chefin-listings`
+        );
+        const data = await response.json();
+        setPopularChefins(data.popularChefins || []);
       } catch (error) {
         console.error('Error fetching listings:', error);
         setError('Failed to load listings. Please try again later.');
@@ -101,19 +69,31 @@ export default function HomeScreen() {
     fetchData();
   }, []);
 
-  const { data: listings } = useFetch(() => fetchListings({ query: '' }), true);
-  const { data: listings2 } = useFetch(() => fetchListings({ query: 'Special Galbi' }), true);
-  //console.log('Listings data:', listings);
-  const { data: restaurants } = useFetch(() => fetchRestaurantName({}), true);
-  console.log('Restaurants data:', restaurants);
-  const { data: restaurant } = useFetch(() => fetchRestaurantName({ query: 'Mango' }), true);
-  console.log('Restaurant data:', restaurant);
-
   const handleSearchSubmit = () => {
     if (searchValue.trim()) {
       console.log('Search submitted:', searchValue);
     }
-  }; // Alex: added contentContainerStyle to ScrollView with paddingBottom
+  };
+
+  // Add loading and error states to render
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+        <LoadingSpinner />
+      </SafeAreaView>
+    );
+  }
+
+  if (error) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+        <View style={styles.centerContainer}>
+          <Text style={styles.errorText}>Error: {error}</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <ScrollView
@@ -126,80 +106,76 @@ export default function HomeScreen() {
           onChangeText={setSearchValue}
           onSubmitEditing={handleSearchSubmit}
         />
-        {/* promo banner */}
+
+        {/* Promo banner */}
         <View style={styles.promoBanner}>
           <View style={styles.promoContent}>
             <HeadingText level={5}>Welcome to Chefin! We think you'll love this dish</HeadingText>
           </View>
           <Image source={PromoImage} style={styles.promoImage} />
         </View>
+
         <CuisineFilter />
         <MainFilter />
-        {/* Displaying Meal Cards */}
+
+        {/* Popular Chefins Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <HeadingText level={4} style={styles.sectionTitle}>
               Popular Chefins Near You
             </HeadingText>
           </View>
-          <FlatList
-            data={popularChefins}
-            renderItem={({ item }) => (
-              <MealCard
-                {...item}
-                cookName={item.profiles.full_name}
-                restaurantName={item.profiles.restaurant_name}
-                isVerified={item.profiles.is_verified}
-                cookImage={item.profiles.profile_image}
-              />
-            )}
-            keyExtractor={item => item.id}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ paddingVertical: 10 }}
-            ItemSeparatorComponent={() => <View style={{ width: 10 }} />}
-          />
-        </View>
 
-        {/* Displaying Delicious Deals Meal Cards */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <HeadingText level={4} style={styles.sectionTitle}>
-              Delicious Deals
-            </HeadingText>
-          </View>
-          <FlatList
-            data={deliciousDeals}
-            renderItem={({ item }) => (
-              <MealCard
-                {...item}
-                cookName={item.profiles.full_name}
-                restaurantName={item.profiles.restaurant_name}
-                isVerified={item.profiles.is_verified}
-                cookImage={item.profiles.profile_image}
-              />
-            )}
-            keyExtractor={item => item.id}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ paddingVertical: 10 }}
-            ItemSeparatorComponent={() => <View style={{ width: 10 }} />}
-          />
+          {popularChefins.length > 0 ? (
+            <FlatList
+              data={popularChefins}
+              renderItem={({ item }) => {
+                // console.log('Rendering item:', item.id, item.profiles?.restaurant_name);
+                return (
+                  <MealCard
+                    {...item}
+                    cookName={item.profiles.full_name}
+                    restaurantName={item.profiles.restaurant_name}
+                    isVerified={item.profiles.is_verified}
+                    cookImage={item.profiles.profile_image}
+                    reviews={item.reviews || []}
+                  />
+                );
+              }}
+              keyExtractor={item => item.id}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ paddingVertical: 10 }}
+              ItemSeparatorComponent={() => <View style={{ width: 10 }} />}
+            />
+          ) : (
+            <Text style={styles.noDataText}>No popular chefins found</Text>
+          )}
         </View>
-        {/*         <Text>
-          {listings2?.length} listings found with "Special Galbi"
-        </Text> */}
-
-        {/*<MealCard />*/}
-        {/*         <ReviewCard/>
-        <ReviewCard/>
-        <ReviewCard/> */}
       </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  errorText: {
+    color: 'red',
+    fontSize: 16,
+    textAlign: 'center',
+  },
+  noDataText: {
+    color: '#666',
+    fontSize: 14,
+    textAlign: 'center',
+    fontStyle: 'italic',
+    padding: 20,
+  },
   container: {
     flex: 1,
     backgroundColor: '#f8f9fa', // Slightly off-white background

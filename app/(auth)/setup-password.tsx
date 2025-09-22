@@ -10,9 +10,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
-import { supabase } from '../../utils/supabase';
 import { Ionicons } from '@expo/vector-icons';
-import { AuthError } from '@supabase/supabase-js';
 
 export default function SetupPasswordStep3() {
   const [password, setPassword] = useState('');
@@ -39,26 +37,25 @@ export default function SetupPasswordStep3() {
     setIsLoading(true);
 
     try {
-      const { error } = await supabase.auth.updateUser({
-        password: password,
-        data: {
-          is_new_user: false,
-          setup_completed: true,
-        },
+      const res = await fetch('http://localhost:8000/api/auth/sign-up', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: password }),
       });
 
-      if (error) throw error;
-
-      Alert.alert('Setup Complete!', 'Your account has been successfully created.', [
+      if (!res.ok) {
+        const { error } = await res.json();
+        throw new Error(error || 'Failed to set up password');
+      }
+      Alert.alert('Success', 'Your account has been created successfully!', [
         {
-          text: 'Continue',
+          text: 'OK',
           onPress: () => router.replace('/(user)/(tabs)/home'),
         },
       ]);
     } catch (error) {
-      const authError = error as AuthError;
-      console.error('Password setup error:', authError);
-      Alert.alert('Error', authError.message || 'Failed to set up password');
+      const err = error as Error;
+      Alert.alert('Error', err.message || 'An error occurred while setting up your password');
     } finally {
       setIsLoading(false);
     }

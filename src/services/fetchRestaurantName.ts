@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { supabase } from '@/src/utils/supabaseClient';
 import useFetch from '../hooks/useFetch';
 
 export type Restaurant = {

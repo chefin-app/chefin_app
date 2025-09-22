@@ -1,7 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
-import { supabase } from '../../utils/supabase';
 
 export default function AuthCallback() {
   const router = useRouter();
@@ -10,29 +9,26 @@ export default function AuthCallback() {
   useEffect(() => {
     const handleAuthCallback = async () => {
       try {
-        // console.log('Auth callback params:', params);
-
-        // Handle OAuth callback
-        const { access_token, refresh_token, error, error_description } = params;
-
-        if (error) {
-          console.error('OAuth error:', error, error_description);
-          router.replace('/(auth)/login');
-          return;
-        }
+        const { access_token, refresh_token } = params;
 
         if (access_token && refresh_token) {
-          const { error: sessionError } = await supabase.auth.setSession({
-            access_token: access_token as string,
-            refresh_token: refresh_token as string,
+          const res = await fetch('http://localhost:8000/auth/callback', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              access_token: access_token as string,
+              refresh_token: refresh_token as string,
+            }),
           });
 
-          if (sessionError) {
-            console.error('Session error:', sessionError);
+          if (!res.ok) {
+            const errorData = await res.json();
+            console.error('Session error:', errorData.error);
             router.replace('/(auth)/login');
             return;
           }
-
           // Successfully authenticated, redirect to main app
           router.replace('/(user)/(tabs)/home');
         } else {
