@@ -7,7 +7,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 import 'react-native-reanimated';
-import { AuthProvider, useAuth } from '../src/utils/auth-context';
+import { AuthProvider, useAuth } from '../src/services/auth-context';
 import { StatusBar } from 'expo-status-bar';
 import { supabase } from '../src/utils/supabaseClient';
 
