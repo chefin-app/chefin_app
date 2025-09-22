@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'expo-router';
 import { StyleSheet, ScrollView, View, Image, FlatList, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,8 +16,8 @@ import MenuItemCard from '@/src/components/cards/MenuItemCard';
 import ReviewCard from '@/src/components/cards/ReviewCard';
 
 import useFetch from '@/src/hooks/useFetch';
-import { fetchListings } from '@/src/services/fetchListings';
-import { fetchRestaurantName } from '@/src/services/fetchRestaurantName';
+import { fetchListings } from '@/src/utils/fetchListings';
+import { fetchRestaurantName } from '@/src/utils/fetchRestaurantName';
 
 import { Listing, Profile, Review } from '@/src/types/models';
 
@@ -65,7 +65,7 @@ export default function HomeScreen() {
         setLoading(false);
       }
     };
-
+    console.log('Data fetched.');
     fetchData();
   }, []);
 
