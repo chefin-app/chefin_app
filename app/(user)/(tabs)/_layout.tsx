@@ -1,8 +1,8 @@
 import { Tabs, useRouter } from 'expo-router';
-import TopNavBarHomeUser from '../../../src/components/navigation/TopNavBarHomeUser';
-import BottomTabBarUser from '../../../src/components/navigation/BottomTabBarUser';
+import TopNavBarHomeUser from '@/src/components/navigation/TopNavBarHomeUser';
+import BottomTabBarUser from '@/src/components/navigation/BottomTabBarUser';
 import { useCallback } from 'react';
-import { useAuth } from '../../../src/utils/auth-context';
+import { useAuth } from '@/src/services/auth-context';
 
 const NavBar = (props: any) => <TopNavBarHomeUser {...props} />;
 const TabBar = (props: any) => <BottomTabBarUser {...props} />;
@@ -16,10 +16,7 @@ export default function TabLayout() {
     router.push('/(auth)/login');
   }, [router]);
 
-  // Don't render tabs until auth state is determined
-  if (initializing) {
-    return null;
-  }
+  if (initializing) return null;
 
   const isLoggedIn = !!user;
 

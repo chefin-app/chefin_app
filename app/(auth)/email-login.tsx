@@ -14,7 +14,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useAuth } from '../../src/utils/auth-context';
 
 export default function EmailLoginScreen() {
   const [email, setEmail] = useState('');
@@ -34,7 +33,7 @@ export default function EmailLoginScreen() {
       if (isSignUp) {
         const { error } = await signUp(email, password);
 
-        if (error) throw error;
+        if (error) throw new Error(error);
 
         Alert.alert(
           'Check your email',
@@ -50,11 +49,18 @@ export default function EmailLoginScreen() {
           ]
         );
       } else {
+        console.log('Attempting sign in with', email, password);
         const { error } = await signIn(email, password);
+        console.log('Sign in response:', error);
 
-        if (error) throw error;
+        if (error) throw new Error(error);
+
+        // ✅ Redirect to home after successful login
+        console.log('✅ Login successful, redirecting...');
+        router.replace('/(user)/(tabs)/home');
       }
     } catch (error: any) {
+      console.error('Sign in failed:', error);
       Alert.alert('Error', error.message);
     }
   };

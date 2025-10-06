@@ -1,5 +1,5 @@
 import { Tabs, useRouter } from 'expo-router';
-import { useAuth } from '../../src/utils/auth-context';
+import { useAuth } from '@/src/services/auth-context';
 import TopNavBarHomeCook from '../../src/components/navigation/TopNavBarHomeCook';
 import BottomTabBarCook from '../../src/components/navigation/BottomTabBarCook';
 

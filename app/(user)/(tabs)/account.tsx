@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -12,45 +12,52 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { createShadowStyle } from '../../../src/utils/platform-utils';
-import { useAuth } from '@/src/utils/auth-context';
+import { useAuth } from '@/src/services/auth-context';
+import { supabase } from '@/src/utils/supabaseClient';
 
 export default function AccountScreen() {
   const router = useRouter();
-  const { user, signOut, initializing } = useAuth();
-  const [isSigningOut, setIsSigningOut] = useState(false);
+  const { user, initializing, loading } = useAuth();
+  const [isSigningOut, setIsSigningOut] = React.useState(false);
 
   const handleSignOut = async () => {
     Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
-      {
-        text: 'Cancel',
-        style: 'cancel',
-      },
-      {
-        text: 'Sign Out',
-        style: 'destructive',
-        onPress: confirmSignOut,
-      },
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Sign Out', style: 'destructive', onPress: confirmSignOut },
     ]);
   };
 
   const confirmSignOut = async () => {
     setIsSigningOut(true);
-
-    try {
-      await signOut();
-
-      // navigate to home after sign out
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      Alert.alert('Error', error.message);
+    } else {
       router.replace('/(user)/(tabs)/home');
-      Alert.alert('Signed Out', 'You have been signed out successfully.');
-    } catch (error: unknown) {
-      if (error instanceof Error) {
-        console.error('Error signing out:', error);
-        Alert.alert('Error', 'Failed to sign out. Please try again.');
-      }
-    } finally {
-      setIsSigningOut(false);
     }
+    setIsSigningOut(false);
   };
+
+  if (initializing || loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#4CAF50" />
+          <Text style={styles.loadingText}>Loading your account...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!user) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <Text>No user found. Please log in again.</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   const getLoginMethod = () => {
     if (!user) return 'Unknown';
@@ -136,17 +143,6 @@ export default function AccountScreen() {
       onPress: () => {}, // TODO: Navigate to settings
     },
   ];
-
-  if (initializing) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#4CAF50" />
-          <Text style={styles.loadingText}>Loading your account...</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
 
   return (
     <SafeAreaView style={styles.container}>
