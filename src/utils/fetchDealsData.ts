@@ -1,4 +1,4 @@
-import { supabase } from '../services/supabase';
+import { supabase } from '@/src/utils/supabaseClient';
 
 interface Listing {
   id: string;

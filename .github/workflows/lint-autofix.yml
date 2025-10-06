@@ -2,8 +2,14 @@ name: Auto Lint Fix
 
 on:
   push:
+    branches:
+      - main
+      - dev
+      - feature/**
+      - (user)/**
   pull_request:
-    branches: [main]
+    branches:
+      - main
 
 permissions:
   contents: write

@@ -1,89 +1,70 @@
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { Alert, Linking } from 'react-native';
-import { supabase } from './supabase';
-import { Session, User, AuthError } from '@supabase/supabase-js';
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { supabase } from '@/src/utils/supabaseClient';
+import type { Session, User } from '@supabase/supabase-js';
 
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
   initializing: boolean;
+  signUp: (email: string, password: string) => Promise<{ error: string | null }>;
+  signIn: (email: string, password: string) => Promise<{ error: string | null }>;
+  signOut: () => Promise<{ error: string | null }>;
+  resetPassword: (email: string) => Promise<{ error: string | null }>;
+  updatePassword: (newPassword: string) => Promise<{ error: string | null }>;
+  signInWithFacebook: () => Promise<any>;
+  signInWithGoogle: () => Promise<any>;
+  signInWithApple: () => Promise<any>;
+  signInWithPhone: () => Promise<{ error: string }>;
+  verifyOTP: () => Promise<{ error: string }>;
+  updateProfile: () => Promise<{ error: string }>;
+}
 
-  // Email/Password Auth
-  signUp: (email: string, password: string) => Promise<{ error: AuthError | null }>;
-  signIn: (email: string, password: string) => Promise<{ error: AuthError | null }>;
-  signOut: () => Promise<{ error: AuthError | null }>;
-  resetPassword: (email: string) => Promise<{ error: AuthError | null }>;
-  updatePassword: (newPassword: string) => Promise<{ error: AuthError | null }>;
-
-  // OAuth Auth
-  signInWithFacebook: () => Promise<void>;
-  signInWithGoogle: () => Promise<void>;
-  signInWithApple: () => Promise<void>;
-
-  // Phone Auth
-  signInWithPhone: (phone: string) => Promise<{ error: AuthError | null }>;
-  verifyOTP: (phone: string, token: string) => Promise<{ error: AuthError | null }>;
-
-  // Profile
-  updateProfile: (updates: any) => Promise<{ error: AuthError | null }>;
+interface AuthProviderProps {
+  children: React.ReactNode;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider = ({ children }: { children: ReactNode }) => {
+export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(false); // For ongoing operations
-  const [initializing, setInitializing] = useState(true); // For app startup
+  const [loading, setLoading] = useState(false);
+  const [initializing, setInitializing] = useState(true);
 
   useEffect(() => {
-    // Get initial session
-    const getSession = async () => {
-      try {
-        const {
-          data: { session },
-          error,
-        } = await supabase.auth.getSession();
-        if (error) {
-          console.error('Error getting session:', error);
-        } else {
-          setSession(session);
-          setUser(session?.user ?? null);
-        }
-      } catch (error) {
-        console.error('Session error:', error);
-      } finally {
-        setInitializing(false); // Mark initialization as complete
-      }
-    };
+    console.log('🔄 Initializing Supabase Auth...');
 
-    getSession();
-
-    // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('Auth state changed:', event, session?.user?.email);
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('📦 Initial session:', session);
       setSession(session);
       setUser(session?.user ?? null);
-      setInitializing(false); // Ensure this is false after any auth change
+      setInitializing(false);
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      console.log('⚡ Auth state changed:', _event, session);
+      setSession(session);
+      setUser(session?.user ?? null);
+      setInitializing(false);
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
-  // Email/Password Authentication
   const signUp = async (email: string, password: string) => {
     try {
       setLoading(true);
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email: email.toLowerCase().trim(),
         password,
       });
-      return { error };
-    } catch (error) {
-      return { error: error as AuthError };
+      if (error) return { error: error.message };
+      return { error: null };
+    } catch (err: any) {
+      return { error: err.message ?? 'An error occurred' };
     } finally {
       setLoading(false);
     }
@@ -92,13 +73,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const signIn = async (email: string, password: string) => {
     try {
       setLoading(true);
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email: email.toLowerCase().trim(),
         password,
       });
-      return { error };
-    } catch (error) {
-      return { error: error as AuthError };
+      if (error) return { error: error.message };
+      setSession(data.session ?? null);
+      setUser(data.session?.user ?? null);
+      console.log('✅ Signed in successfully:', data.session);
+      return { error: null };
+    } catch (err: any) {
+      return { error: err.message ?? 'An error occurred' };
     } finally {
       setLoading(false);
     }
@@ -108,9 +93,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       setLoading(true);
       const { error } = await supabase.auth.signOut();
-      return { error };
-    } catch (error) {
-      return { error: error as AuthError };
+      if (error) return { error: error.message };
+      setUser(null);
+      setSession(null);
+      console.log('👋 Signed out successfully');
+      return { error: null };
+    } catch (err: any) {
+      return { error: err.message ?? 'An error occurred' };
     } finally {
       setLoading(false);
     }
@@ -118,74 +107,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const resetPassword = async (email: string) => {
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email.toLowerCase().trim(), {
-        redirectTo: 'your-app-scheme://reset-password',
-      });
-      return { error };
-    } catch (error) {
-      return { error: error as AuthError };
+      setLoading(true);
+      const { data, error } = await supabase.auth.resetPasswordForEmail(email.toLowerCase().trim());
+      if (error) return { error: error.message };
+      console.log('📧 Password reset email sent');
+      return { error: null };
+    } catch (err: any) {
+      return { error: err.message ?? 'An error occurred' };
+    } finally {
+      setLoading(false);
     }
   };
 
   const updatePassword = async (newPassword: string) => {
     try {
-      const { error } = await supabase.auth.updateUser({
-        password: newPassword,
-      });
-      return { error };
-    } catch (error) {
-      return { error: error as AuthError };
-    }
-  };
-
-  // OAuth Authentication
-  const signInWithFacebook = async () => {
-    return;
-  };
-
-  const signInWithGoogle = async () => {
-    return;
-  };
-
-  const signInWithApple = async () => {
-    return;
-  };
-
-  // Phone Authentication
-  const signInWithPhone = async (phone: string) => {
-    try {
-      const { error } = await supabase.auth.signInWithOtp({
-        phone,
-        options: {
-          shouldCreateUser: true,
-        },
-      });
-      return { error };
-    } catch (error) {
-      return { error: error as AuthError };
-    }
-  };
-
-  const verifyOTP = async (phone: string, token: string) => {
-    try {
-      const { error } = await supabase.auth.verifyOtp({
-        phone,
-        token,
-        type: 'sms',
-      });
-      return { error };
-    } catch (error) {
-      return { error: error as AuthError };
-    }
-  };
-
-  // Profile Management
-  const updateProfile = async (updates: any) => {
-    try {
-      const { error } = await supabase.auth.updateUser(updates);
-      return { error };
-    } catch (error) {
-      return { error: error as AuthError };
+      setLoading(true);
+      const { data, error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) return { error: error.message };
+      console.log('🔐 Password updated successfully');
+      return { error: null };
+    } catch (err: any) {
+      return { error: err.message ?? 'An error occurred' };
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -194,25 +138,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     session,
     loading,
     initializing,
-
-    // Email/Password
     signUp,
     signIn,
     signOut,
     resetPassword,
     updatePassword,
-
-    // OAuth
-    signInWithFacebook,
-    signInWithGoogle,
-    signInWithApple,
-
-    // Phone
-    signInWithPhone,
-    verifyOTP,
-
-    // Profile
-    updateProfile,
+    signInWithFacebook: async () => Promise.resolve(),
+    signInWithGoogle: async () => Promise.resolve(),
+    signInWithApple: async () => Promise.resolve(),
+    signInWithPhone: async () => Promise.resolve({ error: 'Not implemented' }),
+    verifyOTP: async () => Promise.resolve({ error: 'Not implemented' }),
+    updateProfile: async () => Promise.resolve({ error: 'Not implemented' }),
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -220,8 +156,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used witin an AuthProvider');
-  }
+  if (!context) throw new Error('useAuth must be used within an AuthProvider');
   return context;
 };

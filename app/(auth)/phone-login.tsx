@@ -14,7 +14,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useAuth } from '@/src/services/auth-context';
+import { useAuth } from '../../src/services/auth-context';
 
 // Country codes data
 const COUNTRY_CODES = [
