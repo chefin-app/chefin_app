@@ -16,11 +16,11 @@ export default function CartScreen() {
         <CaptionText>Add dishes to your cart now.</CaptionText>
         <PrimaryButton
           title="Start Shopping"
-          onPress={() => console.log('Start Shopping pressed')}
+          onPress={() => router.replace('/(user)/(tabs)/home')}
           style={{ marginTop: 40, width: '80%' }}
         />
       </View>
-      <TouchableOpacity style={styles.xButton} onPress={() => router.push('/home')}>
+      <TouchableOpacity style={styles.xButton}>
         <Ionicons name="close-outline" size={30} color="#34ec7bff" />
       </TouchableOpacity>
     </SafeAreaView>
