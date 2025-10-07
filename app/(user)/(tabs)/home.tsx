@@ -1,23 +1,16 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import { StyleSheet, ScrollView, View, Image, FlatList, Text } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { createShadowStyle } from '../../../src/utils/platform-utils';
 import SearchBar from '@/src/components/filters/SearchBar';
 import CuisineFilter from '@/src/components/filters/CuisineFilter';
 import MainFilter from '@/src/components/filters/MainFilter';
-import { BaseText, HeadingText, BodyText, CaptionText } from '@/src/components/typography';
+import { HeadingText } from '@/src/components/typography';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import LoadingSpinner from '@/src/components/feedback/LoadingSpinner';
 
 import PromoImage from '@/src/assets/images/promo-food.webp';
 import MealCard from '@/src/components/cards/MealCard';
-import MenuItemCard from '@/src/components/cards/MenuItemCard';
-import ReviewCard from '@/src/components/cards/ReviewCard';
-
-import useFetch from '@/src/hooks/useFetch';
-import { fetchListings } from '@/src/utils/fetchListings';
-import { fetchRestaurantName } from '@/src/utils/fetchRestaurantName';
 
 import { Listing, Profile, Review } from '@/src/types/models';
 
@@ -32,6 +25,26 @@ export default function HomeScreen() {
   const [popularChefins, setPopularChefins] = useState<ListingWithProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const [selectedCuisine, setSelectedCuisine] = useState('all');
+  const [filteredChefins, setFilteredChefins] = useState<ListingWithProfile[]>([]);
+
+  const handleCuisineSelect = (cuisine: string) => {
+    setSelectedCuisine(cuisine);
+
+    if (cuisine === 'all') {
+      setFilteredChefins(popularChefins);
+    } else {
+      const filtered = popularChefins.filter(
+        chefin => chefin.cuisine?.toLowerCase() === cuisine.toLowerCase()
+      );
+      setFilteredChefins(filtered);
+    }
+  };
+
+  useEffect(() => {
+    setFilteredChefins(popularChefins);
+  }, [popularChefins]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -58,8 +71,8 @@ export default function HomeScreen() {
         );
         const data = await response.json();
         setPopularChefins(data.popularChefins || []);
-      } catch (error) {
-        console.error('Error fetching listings:', error);
+      } catch (err) {
+        console.error('Error fetching listings:', err);
         setError('Failed to load listings. Please try again later.');
       } finally {
         setLoading(false);
@@ -116,7 +129,7 @@ export default function HomeScreen() {
           <Image source={PromoImage} style={styles.promoImage} />
         </View>
 
-        <CuisineFilter />
+        <CuisineFilter onCuisineSelect={handleCuisineSelect} />
         <MainFilter />
 
         {/* Popular Chefins Section */}
@@ -127,11 +140,10 @@ export default function HomeScreen() {
             </HeadingText>
           </View>
 
-          {popularChefins.length > 0 ? (
+          {filteredChefins.length > 0 ? (
             <FlatList
-              data={popularChefins}
+              data={filteredChefins}
               renderItem={({ item }) => {
-                // console.log('Rendering item:', item.id, item.profiles?.restaurant_name);
                 return (
                   <MealCard
                     {...item}

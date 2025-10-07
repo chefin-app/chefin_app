@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { images } from '@/src/constants/images';
 import type { Listing, Profile, Review } from '@/src/types/models';
 
-export interface MealCardProps extends Listing, Review {
+export interface MealCardProps extends Listing {
   cookName?: string;
   restaurantName?: string;
   isVerified?: boolean;
