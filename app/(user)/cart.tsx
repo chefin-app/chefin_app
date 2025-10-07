@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button, StyleSheet, Text, View, TouchableOpacity } from 'react-native';
+import { Button, StyleSheet, Text, View, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import PrimaryButton from '@/src/components/buttons/PrimaryButton';
 import { CaptionText } from '@/src/components/typography';
@@ -20,9 +20,9 @@ export default function CartScreen() {
           style={{ marginTop: 40, width: '80%' }}
         />
       </View>
-      <TouchableOpacity style={styles.xButton}>
+      <Pressable style={styles.xButton} onPress={() => router.replace('/(user)/(tabs)/home')}>
         <Ionicons name="close-outline" size={30} color="#34ec7bff" />
-      </TouchableOpacity>
+      </Pressable>
     </SafeAreaView>
   );
 }
@@ -46,7 +46,6 @@ const styles = StyleSheet.create({
   xButton: {
     width: 30,
     height: 80,
-    backgroundColor: '#fff',
     borderRadius: 20,
     position: 'absolute',
     top: 40,
