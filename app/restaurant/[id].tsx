@@ -47,8 +47,8 @@ const MenuScreen = () => {
         />
       </ScrollView>
 
-      <TouchableOpacity style={styles.backButton} onPress={() => router.push('/home')}>
-        <Ionicons name="close-outline" size={30} color="#34ec7bff" />
+      <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+        <Ionicons name="arrow-back-outline" size={30} color="#34ec7bff" />
       </TouchableOpacity>
     </View>
   );
@@ -84,7 +84,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 20,
     position: 'absolute',
-    top: 40,
+    top: 50,
     left: 20,
     flexDirection: 'row',
     alignItems: 'center',

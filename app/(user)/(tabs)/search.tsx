@@ -133,15 +133,26 @@ const SearchScreen = () => {
                 )}
               </View>
 
-              {searchHistory.map((item, index) => (
-                <View style={{ alignItems: 'flex-start' }}>
-                  <SearchHistoryCard
-                    query={item}
-                    onPress={() => setSearchQuery(item)}
-                    key={index}
-                  />
-                </View>
-              ))}
+              {searchHistory.map((item, index) => {
+                const keyUsingItem = item;
+                const keyUsingIndex = String(index);
+                const keyUsingItemIndex = `${item}-${index}`;
+
+                // Add debug logs (remove after debugging)
+                console.log('[searchHistory render]', {
+                  item,
+                  index,
+                  keyUsingItem,
+                  keyUsingIndex,
+                  keyUsingItemIndex,
+                });
+
+                return (
+                  <View key={keyUsingItem} style={{ alignItems: 'flex-start' }}>
+                    <SearchHistoryCard query={item} onPress={() => setSearchQuery(item)} />
+                  </View>
+                );
+              })}
             </View>
           )
         ) : null
