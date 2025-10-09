@@ -31,37 +31,24 @@ const Today: React.FC = () => {
   const [isChefSetupComplete, setIsChefSetupComplete] = useState(true);
 
   // Get user info on component mount
-  useEffect(() => {
-    getCurrentUser();
-  }, []);
+  // useEffect(() => {
+  //   getCurrentUser();
+  // }, []);
 
   // Fetch orders when active tab changes
   useEffect(() => {
     fetchOrders(activeTab);
   }, [activeTab]);
 
-  const getCurrentUser = async () => {
-    try {
-      const res = await fetch('http://localhost:8000/api/auth/session');
-      if (!res.ok) {
-        throw new Error('Failed to fetch session');
-      }
-      const data = await res.json();
-      setUser(data.session?.user ?? null);
-    } catch (error) {
-      console.error('Error fetching user session:', error);
-    }
-  };
-
   const fetchOrders = async (status: OrderStatus) => {
     setLoading(true);
     try {
-      const res = await fetch('http://localhost:8000/api/auth/session');
-      if (!res.ok) {
-        throw new Error('Failed to fetch orders');
-      }
-      const data = await res.json();
-      setOrders(data || []);
+      // const res = await fetch('http://localhost:8000/api/auth/session');
+      // if (!res.ok) {
+      //   throw new Error('Failed to fetch orders');
+      // }
+      // const data = await res.json();
+      setOrders([]);
     } catch (error) {
       console.error('Error fetching orders:', error);
     } finally {

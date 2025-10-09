@@ -77,9 +77,9 @@ const Calendar: React.FC = () => {
       price: 12.99,
     },
   ];
-  useEffect(() => {
-    getCurrentUser();
-  }, []);
+  // useEffect(() => {
+  //   getCurrentUser();
+  // }, []);
 
   const fetchMenuAvailability = useCallback(async () => {
     if (!user) return;
@@ -107,18 +107,18 @@ const Calendar: React.FC = () => {
     }
   }, [user, selectedDate, fetchMenuAvailability]);
 
-  const getCurrentUser = async () => {
-    try {
-      const res = await fetch('http://localhost:8000/api/auth/session');
-      if (!res.ok) {
-        throw new Error('Failed to fetch session');
-      }
-      const data = await res.json();
-      setUser(data.session?.user ?? null);
-    } catch (error) {
-      console.error('Error fetching user session:', error);
-    }
-  };
+  // const getCurrentUser = async () => {
+  //   try {
+  //     const res = await fetch('http://localhost:8000/api/auth/session');
+  //     if (!res.ok) {
+  //       throw new Error('Failed to fetch session');
+  //     }
+  //     const data = await res.json();
+  //     setUser(data.session?.user ?? null);
+  //   } catch (error) {
+  //     console.error('Error fetching user session:', error);
+  //   }
+  // };
 
   // Commented out database fetch - uncomment when ready
   /*
