@@ -16,7 +16,7 @@ export type Listing = {
 };
 
 export const fetchListings = async ({ query }: { query?: string }): Promise<Listing[]> => {
-  const url = new URL('http://localhost:8000/api/listings');
+  const url = new URL(`${process.env.EXPO_PUBLIC_API_URL}/api/listings`);
   if (query && query.trim() !== '') {
     url.searchParams.append('query', query);
   }

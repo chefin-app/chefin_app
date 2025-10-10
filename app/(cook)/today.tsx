@@ -8,8 +8,8 @@ import {
   ScrollView,
   ActivityIndicator,
 } from 'react-native';
-import type { User } from '@supabase/supabase-js';
 import { Ionicons } from '@expo/vector-icons';
+import { useAuth } from '@/src/services/auth-context';
 
 interface Order {
   id: string;
@@ -24,7 +24,7 @@ interface Order {
 type OrderStatus = 'new' | 'preparing' | 'ready';
 
 const Today: React.FC = () => {
-  const [user, setUser] = useState<User | null>(null);
+  const { user, initializing } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [activeTab, setActiveTab] = useState<OrderStatus>('new');
   const [loading, setLoading] = useState(false);
@@ -63,12 +63,14 @@ const Today: React.FC = () => {
 
   const getUserDisplayName = (): string => {
     if (!user) return 'Chef';
-    return (
+
+    const rawName =
       user.user_metadata?.full_name ||
       user.user_metadata?.name ||
       user.email?.split('@')[0] ||
-      'Chef'
-    );
+      'Chef';
+
+    return rawName.charAt(0).toUpperCase() + rawName.slice(1);
   };
 
   const handleFinishSetup = () => {

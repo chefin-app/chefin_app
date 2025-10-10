@@ -69,6 +69,7 @@ const SearchScreen = () => {
         <View style={{ alignItems: 'center' }}>
           <MealCard
             {...item}
+            image_url={item.image_url ?? ''}
             cookName={item.profiles.full_name}
             restaurantName={item.profiles.restaurant_name}
             isVerified={item.profiles.is_verified}
@@ -98,7 +99,7 @@ const SearchScreen = () => {
           )}
           {!restaurantLoading &&
             !restaurantError &&
-            restaurantData?.length > 0 &&
+            (restaurantData?.length ?? 0) > 0 &&
             searchQuery.trim() && (
               <View style={styles.resultsView}>
                 <Text>

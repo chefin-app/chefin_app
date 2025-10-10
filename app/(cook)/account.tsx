@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, ScrollView } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 interface MenuItem {
@@ -13,7 +13,7 @@ interface MenuItem {
 }
 
 const Account: React.FC = () => {
-  const navigation = useNavigation();
+  const router = useRouter();
 
   const menuItems: MenuItem[] = [
     {
@@ -65,7 +65,7 @@ const Account: React.FC = () => {
       title: 'Switch to customer mode',
       subtitle: 'Explore Chefins near you',
       icon: 'swap-horizontal-outline',
-      route: 'CustomerMode',
+      route: '/(user)/(tabs)/home',
       section: 'more',
     },
     {
@@ -86,7 +86,7 @@ const Account: React.FC = () => {
 
     // Navigate to the specific route
     try {
-      navigation.navigate(route as never);
+      router.push(route);
     } catch (error) {
       console.log(`Navigation to ${route} not configured yet`);
       // For development - you can remove this alert in production

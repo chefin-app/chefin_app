@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useRouter, useSegments } from 'expo-router';
 import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Entypo from '@expo/vector-icons/Entypo';
 import { createShadowStyle } from '../../utils/platform-utils';
-import type { User } from '@supabase/supabase-js';
+import { useAuth } from '@/src/services/auth-context';
 
 interface NavBarProps {
   options?: {
@@ -17,37 +17,10 @@ interface NavBarProps {
 export default function TopNavBarHomeCook({ options }: NavBarProps) {
   const router = useRouter();
   const segments = useSegments();
-  const [user, setUser] = useState<User | null>(null);
+  const { user, initializing } = useAuth();
 
   // Get current tab from segments or props
   const currentTab = options?.headerProps?.currentTab || segments[segments.length - 1];
-
-  useEffect(() => {
-    getUserInfo();
-  }, []);
-
-  const getUserInfo = async () => {
-    try {
-      const res = await fetch('http://localhost:8000/api/auth/session', {
-        method: 'GET',
-      });
-
-      if (!res.ok) {
-        throw new Error('Failed to get user info');
-      }
-
-      const data = await res.json();
-
-      if (data.session?.user) {
-        setUser(data.session.user);
-      } else {
-        setUser(null);
-      }
-    } catch (error) {
-      console.error('Failed to get user info:', error);
-      setUser(null);
-    }
-  };
 
   const getGreeting = (tab: string) => {
     switch (tab) {
@@ -73,7 +46,7 @@ export default function TopNavBarHomeCook({ options }: NavBarProps) {
 
   const getUserName = () => {
     if (!user) return 'Food Explorer';
-
+    console.log(user.user_metadata.full_name);
     return (
       user.user_metadata?.full_name ||
       user.user_metadata?.name ||

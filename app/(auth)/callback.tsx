@@ -12,7 +12,7 @@ export default function AuthCallback() {
         const { access_token, refresh_token } = params;
 
         if (access_token && refresh_token) {
-          const res = await fetch('http://localhost:8000/auth/callback', {
+          const res = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/auth/callback`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',

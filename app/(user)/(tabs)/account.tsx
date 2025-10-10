@@ -19,6 +19,27 @@ export default function AccountScreen() {
   const router = useRouter();
   const { user, initializing, loading } = useAuth();
   const [isSigningOut, setIsSigningOut] = React.useState(false);
+  const [userRole, setUserRole] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    const fetchUserRole = async () => {
+      if (!user) return;
+      try {
+        const { data, error } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id)
+          .single();
+
+        if (error && error.code !== 'PGRST116') throw error;
+        setUserRole(data?.role || 'guest');
+      } catch (err) {
+        console.error('Error fetching user role:', err);
+        setUserRole('guest');
+      }
+    };
+    fetchUserRole();
+  }, [user]);
 
   const handleSignOut = async () => {
     Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
@@ -114,9 +135,15 @@ export default function AccountScreen() {
     },
     {
       icon: 'restaurant-outline',
-      title: 'My Recipes',
-      subtitle: "Recipes you've shared",
-      onPress: () => {}, // TODO: Navigate to my recipes
+      title: userRole === 'cook' ? 'Switch to Cook Mode' : 'Start a Home Restaurant',
+      subtitle: userRole === 'cook' ? 'Go to cook dashboard' : 'Start earning with Chefin',
+      onPress: () => {
+        if (userRole === 'cook') {
+          router.push('/(cook)/today');
+        } else {
+          router.push('/(user)/(tabs)/home'); // change this after completing 'start a home restaurant' flow
+        }
+      },
     },
     {
       icon: 'notifications-outline',

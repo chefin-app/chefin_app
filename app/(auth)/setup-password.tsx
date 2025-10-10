@@ -37,7 +37,7 @@ export default function SetupPasswordStep3() {
     setIsLoading(true);
 
     try {
-      const res = await fetch('http://localhost:8000/api/auth/sign-up', {
+      const res = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/auth/sign-up`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password: password }),

@@ -92,7 +92,7 @@ export default function PhoneVerifyStep2() {
     setIsLoading(true);
 
     try {
-      const response = await fetch('http://localhost:8000/api/auth/verify-otp', {
+      const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/auth/verify-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone: phoneNumber, token: code }),
@@ -127,7 +127,7 @@ export default function PhoneVerifyStep2() {
     setIsResending(true);
 
     try {
-      const response = await fetch('http://localhost:8000/api/auth/sign-in-phone', {
+      const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/auth/sign-in-phone`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone: phoneNumber }),

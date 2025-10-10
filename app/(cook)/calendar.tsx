@@ -87,7 +87,7 @@ const Calendar: React.FC = () => {
       setLoading(true);
       const dateStr = selectedDate.toISOString().split('T')[0];
       const res = await fetch(
-        `http://localhost:8000/api/menu-availability?user_id=${user.id}&date=${dateStr}`
+        `${process.env.EXPO_PUBLIC_API_URL}/api/menu-availability?user_id=${user.id}&date=${dateStr}`
       );
       if (!res.ok) {
         throw new Error('Failed to fetch availability');
@@ -152,7 +152,7 @@ const Calendar: React.FC = () => {
       const existingRecord = menuAvailability.find(item => item.menu_item_id === menuItemId);
 
       if (existingRecord) {
-        const res = await fetch('http://localhost:8000/api/toggle-availability', {
+        const res = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/toggle-availability`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ id: existingRecord.id, is_available: newAvailability }),
