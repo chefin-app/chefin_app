@@ -115,11 +115,13 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 20 }}
       >
-        <SearchBar
-          value={searchValue}
-          onChangeText={setSearchValue}
-          onSubmitEditing={() => router.push('/search')}
-        />
+        <View style={styles.searchBarContainer}>
+          <SearchBar
+            value={searchValue}
+            onChangeText={setSearchValue}
+            onSubmitEditing={() => router.push('/search')}
+          />
+        </View>
 
         {/* Promo banner */}
         <View style={styles.promoBanner}>
@@ -162,7 +164,7 @@ export default function HomeScreen() {
               ItemSeparatorComponent={() => <View style={{ width: 10 }} />}
             />
           ) : (
-            <Text style={styles.noDataText}>No popular chefins found</Text>
+            <Text style={styles.noDataText}>No chefins found</Text>
           )}
         </View>
       </ScrollView>
@@ -196,6 +198,9 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
     paddingHorizontal: 10,
+  },
+  searchBarContainer: {
+    marginTop: 10,
   },
   header: {
     flexDirection: 'row',

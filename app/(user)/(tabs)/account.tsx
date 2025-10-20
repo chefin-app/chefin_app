@@ -4,11 +4,11 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  SafeAreaView,
   Alert,
   ActivityIndicator,
   ScrollView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { createShadowStyle } from '../../../src/utils/platform-utils';
@@ -128,13 +128,19 @@ export default function AccountScreen() {
       onPress: () => {}, // TODO: Navigate to edit profile
     },
     {
+      icon: 'card-outline',
+      title: 'Payment Methods',
+      subtitle: 'Manage your payment details',
+      onPress: () => {}, // TODO: Navigate to subscription
+    },
+    {
       icon: 'heart-outline',
-      title: 'Favorite Recipes',
-      subtitle: 'View your saved recipes',
+      title: 'Favourites',
+      subtitle: 'View your saved chefins',
       onPress: () => {}, // TODO: Navigate to favorites
     },
     {
-      icon: 'restaurant-outline',
+      icon: 'swap-horizontal-outline',
       title: userRole === 'cook' ? 'Switch to Cook Mode' : 'Start a Home Restaurant',
       subtitle: userRole === 'cook' ? 'Go to cook dashboard' : 'Start earning with Chefin',
       onPress: () => {
@@ -152,36 +158,16 @@ export default function AccountScreen() {
       onPress: () => {}, // TODO: Navigate to notifications
     },
     {
-      icon: 'card-outline',
-      title: 'Subscription',
-      subtitle: 'Manage your premium subscription',
-      onPress: () => {}, // TODO: Navigate to subscription
-    },
-    {
       icon: 'help-circle-outline',
       title: 'Help & Support',
       subtitle: 'Get help or contact us',
       onPress: () => {}, // TODO: Navigate to help
     },
-    {
-      icon: 'settings-outline',
-      title: 'Settings',
-      subtitle: 'App preferences and privacy',
-      onPress: () => {}, // TODO: Navigate to settings
-    },
   ];
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['left', 'right']}>
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Account</Text>
-          <TouchableOpacity style={styles.editButton}>
-            <Ionicons name="create-outline" size={20} color="#4CAF50" />
-          </TouchableOpacity>
-        </View>
-
         {/* User Info Card */}
         <View style={styles.userCard}>
           <View style={styles.avatarContainer}>
@@ -315,24 +301,6 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  editButton: {
-    padding: 8,
   },
   userCard: {
     backgroundColor: '#fff',
