@@ -21,12 +21,11 @@ const MealCard: React.FC<MealCardProps> = ({
   isVerified,
   cookImage,
   title,
-  price,
   cuisine,
   description,
   image_url,
   created_at,
-  id,
+  cook_id,
   reviews = [], // Default to empty array if undefined
   profiles, // Add profiles to destructured props
 }) => {
@@ -54,7 +53,7 @@ const MealCard: React.FC<MealCardProps> = ({
   return (
     <TouchableOpacity
       style={styles.card}
-      onPress={() => router.push(`/restaurant/${id}`)} // Fix the route
+      onPress={() => router.push(`/restaurant/${cook_id}`)} // Fix the route
     >
       <ImageBackground
         testID="meal-image"

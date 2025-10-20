@@ -40,13 +40,15 @@ export const fetchCooks = async ({ query }: { query: string }): Promise<ListingW
     }
 
     // CASE 2: Run separate queries for each filter
-    const [titleRes, descriptionRes, cuisineRes, restaurantRes, chefRes] = await Promise.all([
-      supabase.from('listings').select(baseSelect).ilike('title', search),
-      supabase.from('listings').select(baseSelect).ilike('description', search),
-      supabase.from('listings').select(baseSelect).ilike('cuisine', search),
-      supabase.from('listings').select(baseSelect).ilike('profiles.restaurant_name', search),
-      supabase.from('listings').select(baseSelect).ilike('profiles.full_name', search),
-    ]);
+    const [titleRes, descriptionRes, cuisineRes, restaurantRes, chefRes, locationRes] =
+      await Promise.all([
+        supabase.from('listings').select(baseSelect).ilike('title', search),
+        supabase.from('listings').select(baseSelect).ilike('description', search),
+        supabase.from('listings').select(baseSelect).ilike('cuisine', search),
+        supabase.from('listings').select(baseSelect).ilike('profiles.restaurant_name', search),
+        supabase.from('listings').select(baseSelect).ilike('profiles.full_name', search),
+        supabase.from('listings').select(baseSelect).ilike('pickup_location', search),
+      ]);
 
     // Collect results
     const allData = [
@@ -55,6 +57,7 @@ export const fetchCooks = async ({ query }: { query: string }): Promise<ListingW
       ...(cuisineRes.data ?? []),
       ...(restaurantRes.data ?? []),
       ...(chefRes.data ?? []),
+      ...(locationRes.data ?? []),
     ];
 
     // Combine and remove duplicates by ID
