@@ -11,6 +11,7 @@ import listingsRoutes from './routes/listings';
 import availabilityRoutes from './routes/availability';
 import ordersRoutes from './routes/orders';
 import homeRoutes from './routes/home';
+import idRoutes from './routes/id';
 
 const app = express();
 const PORT = process.env.PORT || 8000;
@@ -38,6 +39,7 @@ app.use('/api/home', homeRoutes);
 app.use('/api/listings', listingsRoutes);
 app.use('/api/availability', availabilityRoutes);
 app.use('/api/orders', ordersRoutes);
+app.use('/api/id', idRoutes);
 
 // 404 handler
 app.use('/{*any}', (req, res) => {
@@ -51,5 +53,5 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 });
 
 app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
+  console.log(`Server is running on port ${PORT}`);
 });

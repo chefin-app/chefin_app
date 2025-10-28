@@ -7,6 +7,7 @@ import { fetchCooks } from '@/src/utils/fetchCooks';
 import MealCard from '@/src/components/cards/MealCard';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import SearchHistoryCard from '@/src/components/cards/SearchHistoryCard';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const SearchScreen = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -63,102 +64,107 @@ const SearchScreen = () => {
   console.log('Restaurant Data:', restaurantData);
 
   return (
-    <FlatList
-      data={restaurantData}
-      renderItem={({ item }) => (
-        <View style={{ alignItems: 'center' }}>
-          <MealCard
-            {...item}
-            image_url={item.image_url ?? ''}
-            cookName={item.profiles.full_name}
-            restaurantName={item.profiles.restaurant_name}
-            isVerified={item.profiles.is_verified}
-            cookImage={item.profiles.profile_image}
-          />
-        </View>
-      )}
-      keyExtractor={item => item.id}
-      showsVerticalScrollIndicator={false}
-      contentContainerStyle={{
-        paddingHorizontal: 10,
-        paddingVertical: 10,
-      }}
-      ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
-      ListHeaderComponent={
-        <>
-          <View style={{ width: '100%', paddingHorizontal: 0 }}>
-            <SearchBar value={searchQuery} onChangeText={(text: string) => setSearchQuery(text)} />
+    <SafeAreaView style={styles.container} edges={['left', 'right']}>
+      <FlatList
+        data={restaurantData}
+        renderItem={({ item }) => (
+          <View style={{ alignItems: 'center' }}>
+            <MealCard
+              {...item}
+              image_url={item.image_url ?? ''}
+              cookName={item.profiles.full_name}
+              restaurantName={item.profiles.restaurant_name}
+              isVerified={item.profiles.is_verified}
+              cookImage={item.profiles.profile_image}
+            />
           </View>
-          {restaurantLoading && (
-            <Text style={{ textAlign: 'center', marginTop: 10 }}>Loading...</Text>
-          )}
-          {restaurantError && (
-            <Text style={{ textAlign: 'center', marginTop: 10, color: 'red' }}>
-              {restaurantError.message}
-            </Text>
-          )}
-          {!restaurantLoading &&
-            !restaurantError &&
-            (restaurantData?.length ?? 0) > 0 &&
-            searchQuery.trim() && (
-              <View style={styles.resultsView}>
-                <Text>
-                  Search results for <Text style={styles.searchResults}>{searchQuery}</Text>
-                </Text>
-              </View>
-            )}
-        </>
-      }
-      ListEmptyComponent={
-        !restaurantLoading && !restaurantError ? (
-          searchQuery.trim() ? (
-            <Text style={{ textAlign: 'center', marginTop: 20, color: '#555' }}>
-              No results found.
-            </Text>
-          ) : (
-            <View style={{ marginTop: 20 }}>
-              <View style={styles.rowContainer}>
-                <Text style={{ textAlign: 'left', color: '#555' }}>Recent Searches:</Text>
-                {searchHistory.length > 0 && (
-                  <Text
-                    style={{
-                      color: 'black',
-                      fontWeight: '500',
-                      textAlign: 'right',
-                      alignItems: 'flex-end',
-                    }}
-                    onPress={clearHistory}
-                  >
-                    Clear History
-                  </Text>
-                )}
-              </View>
-
-              {searchHistory.map((item, index) => {
-                const keyUsingItem = item;
-                const keyUsingIndex = String(index);
-                const keyUsingItemIndex = `${item}-${index}`;
-
-                // Add debug logs (remove after debugging)
-                console.log('[searchHistory render]', {
-                  item,
-                  index,
-                  keyUsingItem,
-                  keyUsingIndex,
-                  keyUsingItemIndex,
-                });
-
-                return (
-                  <View key={keyUsingItem} style={{ alignItems: 'flex-start' }}>
-                    <SearchHistoryCard query={item} onPress={() => setSearchQuery(item)} />
-                  </View>
-                );
-              })}
+        )}
+        keyExtractor={item => item.id}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{
+          paddingHorizontal: 10,
+          paddingVertical: 10,
+        }}
+        ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
+        ListHeaderComponent={
+          <>
+            <View>
+              <SearchBar
+                value={searchQuery}
+                onChangeText={(text: string) => setSearchQuery(text)}
+              />
             </View>
-          )
-        ) : null
-      }
-    />
+            {restaurantLoading && (
+              <Text style={{ textAlign: 'center', marginTop: 10 }}>Loading...</Text>
+            )}
+            {restaurantError && (
+              <Text style={{ textAlign: 'center', marginTop: 10, color: 'red' }}>
+                {restaurantError.message}
+              </Text>
+            )}
+            {!restaurantLoading &&
+              !restaurantError &&
+              (restaurantData?.length ?? 0) > 0 &&
+              searchQuery.trim() && (
+                <View style={styles.resultsView}>
+                  <Text>
+                    Search results for <Text style={styles.searchResults}>{searchQuery}</Text>
+                  </Text>
+                </View>
+              )}
+          </>
+        }
+        ListEmptyComponent={
+          !restaurantLoading && !restaurantError ? (
+            searchQuery.trim() ? (
+              <Text style={{ textAlign: 'center', marginTop: 20, color: '#555' }}>
+                No results found.
+              </Text>
+            ) : (
+              <View style={{ marginTop: 20 }}>
+                <View style={styles.rowContainer}>
+                  <Text style={{ textAlign: 'left', color: '#555' }}>Recent Searches:</Text>
+                  {searchHistory.length > 0 && (
+                    <Text
+                      style={{
+                        color: 'black',
+                        fontWeight: '500',
+                        textAlign: 'right',
+                        alignItems: 'flex-end',
+                      }}
+                      onPress={clearHistory}
+                    >
+                      Clear History
+                    </Text>
+                  )}
+                </View>
+
+                {searchHistory.map((item, index) => {
+                  const keyUsingItem = item;
+                  const keyUsingIndex = String(index);
+                  const keyUsingItemIndex = `${item}-${index}`;
+
+                  // Add debug logs (remove after debugging)
+                  console.log('[searchHistory render]', {
+                    item,
+                    index,
+                    keyUsingItem,
+                    keyUsingIndex,
+                    keyUsingItemIndex,
+                  });
+
+                  return (
+                    <View key={keyUsingItem} style={{ alignItems: 'flex-start' }}>
+                      <SearchHistoryCard query={item} onPress={() => setSearchQuery(item)} />
+                    </View>
+                  );
+                })}
+              </View>
+            )
+          ) : null
+        }
+      />
+    </SafeAreaView>
   );
 };
 export default SearchScreen;
@@ -166,9 +172,7 @@ export default SearchScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingHorizontal: 10,
-    alignItems: 'center',
-    backgroundColor: '#ffffffff',
+    backgroundColor: '#f8f9fa',
   },
   text: {
     fontSize: 20,

@@ -26,9 +26,9 @@ router.get('/popular-chefin-listings', async (req, res) => {
 
     res.json({ popularChefins: popularData });
   } catch (err: unknown) {
-    // const errorMessage = err instanceof Error ? err.message : 'Unknown error';
     console.error('Error fetching popular listings:', err);
-    res.status(500).json({ error: 'Internal Server Error' });
+    const message = err instanceof Error ? err.message : JSON.stringify(err);
+    res.status(500).json({ error: message });
   }
 });
 
