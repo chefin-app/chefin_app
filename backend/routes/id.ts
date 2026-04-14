@@ -19,10 +19,22 @@ router.get('/:id', async (req, res) => {
       return res.status(400).json({ erorr: profileError.message });
     }
 
-    // get their listings (menu)
+    // get their listings (menu) with reviews
     const { data: listings, error: listingsError } = await supabase
       .from('listings')
-      .select('id, title, description, price, image_url, cuisine, dietary_tags')
+      .select(
+        `
+    id,
+    title,
+    description,
+    price,
+    image_url,
+    cuisine,
+    dietary_tags,
+    location,
+    reviews:reviews(listing_id, rating)
+  `
+      )
       .eq('cook_id', id)
       .eq('is_active', true);
 

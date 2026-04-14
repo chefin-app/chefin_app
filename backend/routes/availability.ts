@@ -3,6 +3,43 @@ import { supabase } from '../supabaseClient';
 
 const router = express.Router();
 
+// GET listing_id
+router.get('/:listing_id', async (req, res) => {
+  const { listing_id } = req.params;
+
+  try {
+    const { data, error } = await supabase
+      .from('availability')
+      .select('*')
+      .eq('listing_id', listing_id)
+      .eq('is_available', true)
+      .order('available_date', { ascending: true });
+
+    if (error) throw error;
+
+    if (!data || data.length === 0) {
+      return res.status(404).json({ available: false, message: 'No availability found.' });
+    }
+
+    const today = new Date();
+    const availableToday = data.find(
+      record =>
+        new Date(record.available_date).toDateString() === today.toDateString() &&
+        record.orders_taken < record.max_orders
+    );
+
+    res.json({
+      available: !!availableToday,
+      remainingSlots: availableToday ? availableToday.max_orders - availableToday.orders_taken : 0,
+      availability: data,
+    });
+  } catch (err: unknown) {
+    console.error('Error fetching availability:', err);
+    const message = err instanceof Error ? err.message : JSON.stringify(err);
+    res.status(500).json({ error: message });
+  }
+});
+
 router.get('/menu-availability', async (req, res) => {
   try {
     const { user_id, date } = req.query;

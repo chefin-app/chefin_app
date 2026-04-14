@@ -7,7 +7,7 @@
     "build": "tsc",
     "watch": "tsc --watch",
     "start": "node dist/server.js",
-    "dev": "nodemon --watch 'src/**/*.ts' --exec ts-node server.ts"
+    "dev": "nodemon --watch './**/*.ts' --ignore node_modules/ --exec ts-node server.ts"
   },
   "keywords": [],
   "author": "",

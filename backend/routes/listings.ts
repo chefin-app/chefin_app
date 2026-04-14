@@ -27,4 +27,49 @@ router.get('/all-listings', async (req, res) => {
   }
 });
 
+// GET /api/listings/:id - Fetch a single dish with details
+router.get('/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const { data: listing, error: listingError } = await supabase
+      .from('listings')
+      .select(
+        `
+        *,
+        profiles!inner (
+          id,
+          full_name,
+          restaurant_name,
+          profile_image,
+          bio,
+          is_verified
+        ),
+        reviews (
+          id,
+          rating,
+          comment,
+          created_at,
+          profiles!inner (
+            id,
+            full_name,
+            profile_image
+          )
+        )
+      `
+      )
+      .eq('id', id)
+      .single();
+
+    if (listingError) {
+      console.error('Supabase query error:', JSON.stringify(listingError, null, 2));
+      throw new Error(listingError.message);
+    }
+
+    return res.json(listing);
+  } catch (err: any) {
+    console.error(`Error fetching listing ${id}:`, err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
 export default router;

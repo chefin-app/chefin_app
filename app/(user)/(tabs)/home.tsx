@@ -11,6 +11,7 @@ import LoadingSpinner from '@/src/components/feedback/LoadingSpinner';
 
 import PromoImage from '@/src/assets/images/promo-food.webp';
 import MealCard from '@/src/components/cards/MealCard';
+import StickyCartBar from '@/src/components/navigation/StickyCartBar';
 
 import { Listing, Profile, Review } from '@/src/types/models';
 
@@ -27,24 +28,52 @@ export default function HomeScreen() {
   const [error, setError] = useState<string | null>(null);
 
   const [selectedCuisine, setSelectedCuisine] = useState('all');
+  const [activeFilters, setActiveFilters] = useState<Record<string, boolean>>({});
+  const [selectedDietary, setSelectedDietary] = useState<string[]>([]);
   const [filteredChefins, setFilteredChefins] = useState<ListingWithProfile[]>([]);
+  const [nextAvailableDates, setNextAvailableDates] = useState<Record<string, string>>({});
 
   const handleCuisineSelect = (cuisine: string) => {
     setSelectedCuisine(cuisine);
+  };
 
-    if (cuisine === 'all') {
-      setFilteredChefins(popularChefins);
-    } else {
-      const filtered = popularChefins.filter(
-        chefin => chefin.cuisine?.toLowerCase() === cuisine.toLowerCase()
-      );
-      setFilteredChefins(filtered);
-    }
+  const handleMainFilterToggle = (filterId: string, active: boolean) => {
+    setActiveFilters(prev => ({ ...prev, [filterId]: active }));
+  };
+
+  const handleDietarySelect = (dietaryOptions: string[]) => {
+    setSelectedDietary(dietaryOptions);
   };
 
   useEffect(() => {
-    setFilteredChefins(popularChefins);
-  }, [popularChefins]);
+    let result = [...popularChefins];
+
+    // 1. Cuisine Filter
+    if (selectedCuisine !== 'all') {
+      result = result.filter(
+        chefin => chefin.cuisine?.toLowerCase() === selectedCuisine.toLowerCase()
+      );
+    }
+
+    // 2. Certified Filter (Must be verified)
+    if (activeFilters.certified) {
+      result = result.filter(chefin => chefin.profiles?.is_verified);
+    }
+
+    // 3. Dietary Filter (Must contain all selected dietary tags)
+    if (selectedDietary.length > 0) {
+      result = result.filter(chefin => {
+        if (!chefin.dietary_tags || !Array.isArray(chefin.dietary_tags)) return false;
+
+        // Ensure all selected dietary options are present in the dish's tags
+        return selectedDietary.every(diet =>
+          chefin.dietary_tags!.some(tag => tag.toLowerCase() === diet.toLowerCase())
+        );
+      });
+    }
+
+    setFilteredChefins(result);
+  }, [popularChefins, selectedCuisine, activeFilters, selectedDietary]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -70,7 +99,39 @@ export default function HomeScreen() {
           `${process.env.EXPO_PUBLIC_API_URL}/api/home/popular-chefin-listings`
         );
         const data = await response.json();
-        setPopularChefins(data.popularChefins || []);
+        const chefins: ListingWithProfile[] = data.popularChefins || [];
+        setPopularChefins(chefins);
+
+        // Fetch earliest available date per listing in parallel
+        const today = new Date().toISOString().split('T')[0];
+        const availabilityResults = await Promise.allSettled(
+          chefins.map(listing =>
+            fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/availability/${listing.id}`)
+              .then(r => r.json())
+              .then(d => ({ listingId: listing.id, availability: d.availability ?? [] }))
+              .catch(() => ({ listingId: listing.id, availability: [] }))
+          )
+        );
+
+        const dateMap: Record<string, string> = {};
+        availabilityResults.forEach(result => {
+          if (result.status !== 'fulfilled') return;
+          const { listingId, availability } = result.value as {
+            listingId: string;
+            availability: any[];
+          };
+          const futureDates = availability
+            .filter(
+              r =>
+                r.is_available &&
+                r.max_orders - (r.orders_taken ?? 0) > 0 &&
+                r.available_date >= today
+            )
+            .map(r => r.available_date.split('T')[0])
+            .sort();
+          if (futureDates.length > 0) dateMap[listingId] = futureDates[0];
+        });
+        setNextAvailableDates(dateMap);
       } catch (err) {
         console.error('Error fetching listings:', err);
         setError('Failed to load listings. Please try again later.');
@@ -113,16 +174,8 @@ export default function HomeScreen() {
       <ScrollView
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 20 }}
+        contentContainerStyle={{ paddingBottom: 100 }}
       >
-        <View style={styles.searchBarContainer}>
-          <SearchBar
-            value={searchValue}
-            onChangeText={setSearchValue}
-            onSubmitEditing={() => router.push('/search')}
-          />
-        </View>
-
         {/* Promo banner */}
         <View style={styles.promoBanner}>
           <View style={styles.promoContent}>
@@ -132,7 +185,7 @@ export default function HomeScreen() {
         </View>
 
         <CuisineFilter onCuisineSelect={handleCuisineSelect} />
-        <MainFilter />
+        <MainFilter onFilterToggle={handleMainFilterToggle} onDietarySelect={handleDietarySelect} />
 
         {/* Popular Chefins Section */}
         <View style={styles.section}>
@@ -154,6 +207,8 @@ export default function HomeScreen() {
                     isVerified={item.profiles.is_verified}
                     cookImage={item.profiles.profile_image}
                     reviews={item.reviews || []}
+                    listings={filteredChefins}
+                    nextAvailableDate={nextAvailableDates[item.id]}
                   />
                 );
               }}
@@ -168,6 +223,7 @@ export default function HomeScreen() {
           )}
         </View>
       </ScrollView>
+      <StickyCartBar />
     </SafeAreaView>
   );
 }

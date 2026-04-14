@@ -1,5 +1,7 @@
 import { Stack } from 'expo-router';
 import { AuthProvider } from '@/src/services/auth-context';
+import { CartProvider } from '@/src/context/CartContext';
+import { FavouritesProvider } from '@/src/context/FavouritesContext';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
@@ -28,13 +30,17 @@ export default function RootLayout() {
 
   return (
     <AuthProvider>
-      <StatusBar style="dark" />
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="(user)/(tabs)" />
-        <Stack.Screen name="(auth)" />
-        <Stack.Screen name="(cook)" />
-        <Stack.Screen name="+not-found" />
-      </Stack>
+      <CartProvider>
+        <FavouritesProvider>
+          <StatusBar style="dark" />
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="(user)/(tabs)" />
+            <Stack.Screen name="(auth)" />
+            <Stack.Screen name="(cook)" />
+            <Stack.Screen name="+not-found" />
+          </Stack>
+        </FavouritesProvider>
+      </CartProvider>
     </AuthProvider>
   );
 }

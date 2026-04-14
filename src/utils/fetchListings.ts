@@ -11,7 +11,7 @@ export type Listing = {
   image_url: string | null;
   cuisine: string | null;
   dietary_tags: string | null;
-  pickup_location: string | null;
+  location: string | null;
   created_at: string;
 };
 

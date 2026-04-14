@@ -32,7 +32,7 @@ model listings {
   image_url       String?
   cuisine         String?
   dietary_tags    String[]       @default([])
-  pickup_location String?
+  location String?
   is_active       Boolean?       @default(true)
   created_at      DateTime?      @default(now()) @db.Timestamptz(6)
   availability    availability[]

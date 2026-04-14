@@ -125,19 +125,19 @@ export default function AccountScreen() {
       icon: 'person-outline',
       title: 'Edit Profile',
       subtitle: 'Update your personal information',
-      onPress: () => {}, // TODO: Navigate to edit profile
+      onPress: () => router.push('/(user)/profile-info'),
     },
     {
       icon: 'card-outline',
       title: 'Payment Methods',
       subtitle: 'Manage your payment details',
-      onPress: () => {}, // TODO: Navigate to subscription
+      onPress: () => router.push('/(user)/payment-methods'),
     },
     {
       icon: 'heart-outline',
       title: 'Favourites',
       subtitle: 'View your saved chefins',
-      onPress: () => {}, // TODO: Navigate to favorites
+      onPress: () => router.push('/(user)/favourites'),
     },
     {
       icon: 'swap-horizontal-outline',
@@ -186,7 +186,7 @@ export default function AccountScreen() {
           <View style={styles.statsContainer}>
             <View style={styles.statItem}>
               <Text style={styles.statNumber}>42</Text>
-              <Text style={styles.statLabel}>Recipes</Text>
+              <Text style={styles.statLabel}>Chefins tried</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statItem}>

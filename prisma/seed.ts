@@ -194,7 +194,7 @@ const generateFoodListing = () => {
     price: parseFloat(faker.commerce.price({ min: 10, max: 80 })),
     image_url: getRandomItem(foodImages),
     dietary_tags: faker.helpers.arrayElements(dietaryTags, { min: 1, max: 4 }),
-    pickup_location: getRandomItem(klangValleyAreas),
+    location: getRandomItem(klangValleyAreas),
     restaurant_name: getRandomItem(restaurantNames),
   };
 };
@@ -293,7 +293,7 @@ async function main() {
           image_url: foodData.image_url,
           cuisine: foodData.cuisine,
           dietary_tags: foodData.dietary_tags,
-          pickup_location: foodData.pickup_location,
+          location: foodData.location,
           is_active: faker.datatype.boolean({ probability: 0.9 }),
         },
       });

@@ -10,7 +10,7 @@ import {
 import React, { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 
-interface CuisineFilterProps {
+interface MainFilterProps {
   onFilterToggle?: (filterId: string, active: boolean) => void;
   onDietarySelect?: (dietaryOptions: string[]) => void;
 }
@@ -30,7 +30,6 @@ interface DietaryOption {
 const initialFilters: FilterItem[] = [
   { id: 'certified', name: 'Certified', active: false },
   { id: 'dietary', name: 'Dietary', active: false },
-  { id: 'promotion', name: 'Promotion', active: false },
 ];
 
 const dietaryOptions: DietaryOption[] = [
@@ -43,7 +42,7 @@ const dietaryOptions: DietaryOption[] = [
   { id: 'keto', name: 'Keto', selected: false },
 ];
 
-export default function CuisineFilter({ onFilterToggle, onDietarySelect }: CuisineFilterProps) {
+export default function MainFilter({ onFilterToggle, onDietarySelect }: MainFilterProps) {
   const [filters, setFilters] = useState<FilterItem[]>(initialFilters);
   const [dietaryDropdownVisible, setDietaryDropdownVisible] = useState(false);
   const [selectedDietaryOptions, setSelectedDietaryOptions] =

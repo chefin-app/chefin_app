@@ -6,6 +6,7 @@ import { useRouter, useSegments } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { createShadowStyle } from '../../utils/platform-utils';
 import { useAuth } from '@/src/services/auth-context';
+import { useCart } from '@/src/context/CartContext';
 
 interface NavBarProps {
   options?: {
@@ -18,27 +19,10 @@ interface NavBarProps {
 export default function TopNavBarHomeUser({ options }: NavBarProps) {
   const router = useRouter();
   const { session } = useAuth();
+  const { cartCount } = useCart();
   const user = session?.user;
   const segments = useSegments();
   const currentTab = options?.headerProps?.currentTab || segments[segments.length - 1];
-
-  const renderRightButton = () => {
-    if (currentTab === 'account') {
-      return (
-        <TouchableOpacity style={styles.notificationButton} onPress={handleNotifPress}>
-          <Ionicons name="notifications" size={24} color="#333" />
-          {user && <View style={styles.notificationDot} />}
-        </TouchableOpacity>
-      );
-    } else {
-      return (
-        <TouchableOpacity style={styles.cartButton} onPress={handleCartPress}>
-          <Ionicons name="cart" size={24} color="#333" />
-          {user && <View style={styles.notificationDot} />}
-        </TouchableOpacity>
-      );
-    }
-  };
 
   const handleNotifPress = () => {
     router.push('/'); // Navigate to cart screen
@@ -48,9 +32,36 @@ export default function TopNavBarHomeUser({ options }: NavBarProps) {
     router.push('/(user)/cart'); // Navigate to cart screen
   };
 
+  const handleFavouritesPress = () => {
+    router.push('/(user)/favourites'); // Navigate to favourites screen
+  };
+
+  const renderRightButtons = () => {
+    if (currentTab === 'account') {
+      return (
+        <TouchableOpacity style={styles.iconButton} onPress={handleNotifPress}>
+          <Ionicons name="notifications" size={24} color="#333" />
+          {user && cartCount > 0 && <View style={styles.notificationDot} />}
+        </TouchableOpacity>
+      );
+    } else {
+      return (
+        <View style={styles.buttonRow}>
+          <TouchableOpacity style={styles.iconButton} onPress={handleFavouritesPress}>
+            <Ionicons name="heart-outline" size={24} color="#333" />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.iconButton} onPress={handleCartPress}>
+            <Ionicons name="cart-outline" size={24} color="#333" />
+            {user && cartCount > 0 && <View style={styles.notificationDot} />}
+          </TouchableOpacity>
+        </View>
+      );
+    }
+  };
+
   return (
     <SafeAreaView edges={['top']} style={styles.safeArea}>
-      <View style={styles.header}>{renderRightButton()}</View>
+      <View style={styles.header}>{renderRightButtons()}</View>
     </SafeAreaView>
   );
 }
@@ -59,14 +70,6 @@ const styles = StyleSheet.create({
   safeArea: {
     backgroundColor: '#fff',
   },
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  scrollView: {
-    flex: 1,
-    paddingHorizontal: 20,
-  },
   header: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
@@ -74,16 +77,12 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 16,
   },
-  greeting: {
-    fontSize: 16,
-    color: '#666',
+  buttonRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
-  userName: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  cartButton: {
+  iconButton: {
     width: 44,
     height: 44,
     justifyContent: 'center',
@@ -98,73 +97,5 @@ const styles = StyleSheet.create({
     height: 8,
     borderRadius: 4,
     backgroundColor: '#FF5252',
-  },
-  welcomeCard: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 24,
-  },
-  welcomeTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
-  },
-  welcomeSubtitle: {
-    fontSize: 14,
-    color: '#666',
-    lineHeight: 20,
-    marginBottom: 16,
-  },
-  joinButton: {
-    backgroundColor: '#4CAF50',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 10,
-    gap: 8,
-    alignSelf: 'flex-start',
-  },
-  joinButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  section: {
-    marginBottom: 24,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 16,
-  },
-  seeAllText: {
-    color: '#4CAF50',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  notificationButton: {
-    width: 44,
-    height: 44,
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
-    ...createShadowStyle({
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.1,
-      shadowRadius: 4,
-      elevation: 3,
-    }),
   },
 });

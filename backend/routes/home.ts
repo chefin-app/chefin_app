@@ -3,7 +3,7 @@ import { supabase } from '../supabaseClient';
 
 const router = express.Router();
 
-// fetch popular listings
+// GET popular listings
 router.get('/popular-chefin-listings', async (req, res) => {
   try {
     // fetch popular home restaurant listings
@@ -11,15 +11,20 @@ router.get('/popular-chefin-listings', async (req, res) => {
       .from('listings')
       .select(
         `
-                *,
-                profiles!inner (
-                    user_id,
-                    full_name,
-                    profile_image,
-                    is_verified,
-                    restaurant_name
-                )
-                `
+        *,
+        reviews (
+          id,
+          rating,
+          comment
+        ),
+        profiles!inner (
+          user_id,
+          full_name,
+          profile_image,
+          is_verified,
+          restaurant_name
+        )
+      `
       )
       .limit(10);
     if (popularError) throw popularError;

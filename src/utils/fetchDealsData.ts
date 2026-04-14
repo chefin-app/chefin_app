@@ -10,7 +10,7 @@ interface Listing {
   image_url?: string;
   created_at: string;
   dietary_tags?: string[];
-  pickup_location: string;
+  location: string;
 }
 
 interface Profile {

@@ -20,7 +20,7 @@ describe('MealCard', () => {
     price: 12.99,
     image_url: 'https://example.com/spaghetti.jpg',
     created_at: '2025-09-10T00:00:00.000Z',
-    pickup_location: 'Test Location',
+    location: 'Test Location',
     cookName: 'Chef John',
     restaurantName: 'Pasta Palace',
     isVerified: true,

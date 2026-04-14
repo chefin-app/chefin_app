@@ -33,4 +33,44 @@ router.get('/', async (req, res) => {
   }
 });
 
+// POST / - Place an order from the cart
+router.post('/', async (req, res) => {
+  const { userId, items } = req.body as {
+    userId?: string;
+    items: {
+      listingId: string;
+      quantity: number;
+      pickupDate: string;
+      priceAtOrder: number;
+    }[];
+  };
+
+  if (!items || items.length === 0) {
+    return res.status(400).json({ error: 'No items in order.' });
+  }
+
+  try {
+    const orderRows = items.map(item => ({
+      listing_id: item.listingId,
+      quantity: item.quantity,
+      pickup_date: item.pickupDate ? new Date(item.pickupDate).toISOString().split('T')[0] : null,
+      price_at_order: item.priceAtOrder,
+      user_id: userId ?? null,
+      status: 'pending',
+    }));
+
+    const { data, error } = await supabase.from('orders').insert(orderRows).select();
+
+    if (error) {
+      console.error('Error placing order:', error);
+      return res.status(400).json({ error: error.message });
+    }
+
+    res.status(201).json({ success: true, orders: data });
+  } catch (err: any) {
+    console.error('Error placing order:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 export default router;

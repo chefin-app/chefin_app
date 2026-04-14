@@ -10,7 +10,7 @@ interface Listing {
   image_url?: string;
   created_at: string;
   dietary_tags?: string[];
-  pickup_location: string;
+  location: string;
 }
 
 interface Profile {
@@ -47,7 +47,7 @@ export const fetchCooks = async ({ query }: { query: string }): Promise<ListingW
         supabase.from('listings').select(baseSelect).ilike('cuisine', search),
         supabase.from('listings').select(baseSelect).ilike('profiles.restaurant_name', search),
         supabase.from('listings').select(baseSelect).ilike('profiles.full_name', search),
-        supabase.from('listings').select(baseSelect).ilike('pickup_location', search),
+        supabase.from('listings').select(baseSelect).ilike('location', search),
       ]);
 
     // Collect results
