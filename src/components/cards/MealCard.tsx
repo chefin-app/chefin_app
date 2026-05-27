@@ -4,7 +4,7 @@ import React from 'react';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 
 import { images } from '@/src/constants/images';
-import type { Listing, Profile, Review } from '@/src/types/models';
+import type { Listing, ListingReview, Profile } from '@/src/types/models';
 import { useFavourites } from '@/src/context/FavouritesContext';
 import { useAuth } from '@/src/services/auth-context';
 
@@ -14,7 +14,7 @@ export interface MealCardProps extends Listing {
   isVerified?: boolean;
   cookImage?: string;
   profiles?: Profile;
-  reviews?: Review[];
+  reviews?: ListingReview[];
   averageRating?: number;
   listings?: Listing[];
   /** ISO date string (YYYY-MM-DD) of the earliest available slot for this chef's dishes */

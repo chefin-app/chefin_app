@@ -1,7 +1,7 @@
 /* Search bar component, styling and size etc. are here*/
 
 import React from 'react';
-import { View, TextInput, StyleSheet } from 'react-native';
+import { View, TextInput, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 type Props = {
@@ -33,6 +33,16 @@ const SearchBar = ({
         multiline={false}
         scrollEnabled={false}
       />
+      {value.length > 0 && (
+        <TouchableOpacity
+          onPress={() => onChangeText('')}
+          style={styles.clearButton}
+          accessibilityLabel="Clear search"
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Ionicons name="close-circle" size={18} color="#888" />
+        </TouchableOpacity>
+      )}
     </View>
   );
 };
@@ -63,5 +73,9 @@ const styles = StyleSheet.create({
     color: '#333',
     height: 25,
     paddingVertical: 0,
+  },
+  clearButton: {
+    marginLeft: 8,
+    alignSelf: 'center',
   },
 });

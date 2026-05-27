@@ -1,6 +1,7 @@
 // src/app/(user)/search.tsx
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, FlatList } from 'react-native';
+import { useLocalSearchParams } from 'expo-router';
 import SearchBar from '@/src/components/filters/SearchBar';
 import useFetch from '@/src/hooks/useFetch';
 import { fetchCooks } from '@/src/utils/fetchCooks';
@@ -10,7 +11,16 @@ import SearchHistoryCard from '@/src/components/cards/SearchHistoryCard';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const SearchScreen = () => {
-  const [searchQuery, setSearchQuery] = useState('');
+  const params = useLocalSearchParams<{ q?: string }>();
+  const [searchQuery, setSearchQuery] = useState(params.q ?? '');
+
+  // Sync incoming query param (e.g. when home pushes us a new search).
+  useEffect(() => {
+    if (typeof params.q === 'string' && params.q !== searchQuery) {
+      setSearchQuery(params.q);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.q]);
   const {
     data: restaurantData,
     loading: restaurantLoading,

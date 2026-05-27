@@ -9,12 +9,16 @@ export interface Listing {
   created_at: string;
   dietary_tags?: string[];
   location: string;
-  reviews?: { rating: number; comment?: string }[];
+  reviews?: ListingReview[];
   profiles?: Profile;
 }
 
+/** Slim subset of Review embedded under a listing — matches the fields selected
+ * by the home/search Supabase queries (id, rating, comment). */
+export type ListingReview = Pick<Review, 'id' | 'rating' | 'comment'>;
+
 export interface Profile {
-  id: string;
+  id?: string;
   user_id: string;
   full_name: string;
   profile_image?: string;
