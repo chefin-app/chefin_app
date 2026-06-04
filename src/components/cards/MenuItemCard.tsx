@@ -207,6 +207,7 @@ const MenuItemCard: React.FC<MenuItemCardProps> = ({
                 if (selectedDish?.id && selectedDate) {
                   addToCart({
                     listingId: selectedDish.id,
+                    cookId: selectedDish.cook_id,
                     title: selectedDish.title,
                     price: selectedDish.price,
                     imageUrl: selectedDish.image_url,

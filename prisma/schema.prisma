@@ -33,7 +33,9 @@ model listings {
   cuisine         String?
   dietary_tags    String[]       @default([])
   location String?
+  ingredients     String[]       @default([])
   is_active       Boolean?       @default(true)
+  status          String         @default("pending")
   created_at      DateTime?      @default(now()) @db.Timestamptz(6)
   availability    availability[]
   profiles        profiles       @relation(fields: [cook_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
@@ -61,19 +63,27 @@ model orders {
 }
 
 model profiles {
-  id              String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  user_id         String       @unique @db.Uuid
-  full_name       String
-  profile_image   String?
-  phone_number    String?      @db.VarChar(20)
-  bio             String?
-  is_verified     Boolean?     @default(false)
-  created_at      DateTime?    @default(now()) @db.Timestamptz(6)
-  restaurant_name String?
-  listings        listings[]
-  orders          orders[]
-  reviews         reviews[]
-  user_roles      user_roles[]
+  id                      String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id                 String       @unique @db.Uuid
+  full_name               String
+  profile_image           String?
+  phone_number            String?      @db.VarChar(20)
+  bio                     String?
+  is_verified             Boolean?     @default(false)
+  created_at              DateTime?    @default(now()) @db.Timestamptz(6)
+  restaurant_name         String?
+  free_delivery_threshold Decimal?     @db.Decimal(10, 2)
+  address_country         String?
+  address_flat            String?
+  address_property_name   String?
+  address_street          String?
+  address_locality        String?
+  address_town            String?
+  address_postcode        String?
+  listings                listings[]
+  orders                  orders[]
+  reviews                 reviews[]
+  user_roles              user_roles[]
 
   @@schema("public")
 }

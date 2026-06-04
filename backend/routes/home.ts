@@ -26,6 +26,7 @@ router.get('/popular-chefin-listings', async (req, res) => {
         )
       `
       )
+      .eq('status', 'approved')
       .limit(10);
     if (popularError) throw popularError;
 

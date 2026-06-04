@@ -61,18 +61,6 @@ const Today: React.FC = () => {
     return orders.filter(order => order.status === status).length;
   };
 
-  const getUserDisplayName = (): string => {
-    if (!user) return 'Chef';
-
-    const rawName =
-      user.user_metadata?.full_name ||
-      user.user_metadata?.name ||
-      user.email?.split('@')[0] ||
-      'Chef';
-
-    return rawName.charAt(0).toUpperCase() + rawName.slice(1);
-  };
-
   const handleFinishSetup = () => {
     // Navigate to setup completion or handle setup logic
     console.log('Finish setting up Chefin');
@@ -145,20 +133,6 @@ const Today: React.FC = () => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <View style={styles.headerTopRow}>
-          <TouchableOpacity
-            style={styles.bellButton}
-            onPress={() => console.log('Open notifications')}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <Ionicons name="notifications-outline" size={24} color="#000" />
-            <View style={styles.bellBadge}>
-              <Text style={styles.bellBadgeText}>3</Text>
-            </View>
-          </TouchableOpacity>
-        </View>
-        <Text style={styles.welcomeText}>Welcome, Chef {getUserDisplayName()}!</Text>
-
         {!isChefSetupComplete && (
           <TouchableOpacity style={styles.setupButton} onPress={handleFinishSetup}>
             <Text style={styles.setupButtonText}>Finish setting up your Chefin</Text>
@@ -196,7 +170,6 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 20,
-    paddingTop: 40,
     paddingBottom: 30,
   },
 

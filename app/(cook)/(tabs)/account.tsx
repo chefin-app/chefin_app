@@ -20,7 +20,7 @@ const Account: React.FC = () => {
       id: '1',
       title: 'Profile Information',
       icon: 'person-outline',
-      route: 'ProfileInformation',
+      route: '/(cook)/profile-information',
       section: 'main',
     },
     {
@@ -34,7 +34,7 @@ const Account: React.FC = () => {
       id: '3',
       title: 'Address',
       icon: 'location-outline',
-      route: 'Address',
+      route: '/(cook)/address',
       section: 'main',
     },
     {
@@ -140,13 +140,6 @@ const Account: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Account</Text>
-        <TouchableOpacity style={styles.notificationButton}>
-          <Ionicons name="notifications-outline" size={24} color="#666666" />
-        </TouchableOpacity>
-      </View>
-
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.section}>{mainItems.map(renderMenuItem)}</View>
 

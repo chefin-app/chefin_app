@@ -86,6 +86,7 @@ const DishDetailsScreen = () => {
     if (dish && selectedDate) {
       addToCart({
         listingId: dish.id,
+        cookId: dish.cook_id,
         title: dish.title,
         price: dish.price,
         imageUrl: dish.image_url,

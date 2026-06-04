@@ -7,6 +7,7 @@ import {
   Alert,
   ActivityIndicator,
   ScrollView,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -14,12 +15,27 @@ import { Ionicons } from '@expo/vector-icons';
 import { createShadowStyle } from '../../../src/utils/platform-utils';
 import { useAuth } from '@/src/services/auth-context';
 import { supabase } from '@/src/utils/supabaseClient';
+import { useFavourites } from '@/src/context/FavouritesContext';
+
+type ProfileData = {
+  id: string;
+  full_name: string | null;
+  profile_image: string | null;
+};
+
+const formatStat = (n: number): string => {
+  if (n < 1000) return String(n);
+  return `${(n / 1000).toFixed(1).replace(/\.0$/, '')}k`;
+};
 
 export default function AccountScreen() {
   const router = useRouter();
   const { user, initializing, loading } = useAuth();
+  const { favourites } = useFavourites();
   const [isSigningOut, setIsSigningOut] = React.useState(false);
   const [userRole, setUserRole] = React.useState<string | null>(null);
+  const [profile, setProfile] = React.useState<ProfileData | null>(null);
+  const [stats, setStats] = React.useState({ orders: 0, reviews: 0 });
 
   React.useEffect(() => {
     const fetchUserRole = async () => {
@@ -39,6 +55,42 @@ export default function AccountScreen() {
       }
     };
     fetchUserRole();
+  }, [user]);
+
+  React.useEffect(() => {
+    if (!user) return;
+    (async () => {
+      try {
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('id, full_name, profile_image')
+          .eq('user_id', user.id)
+          .single();
+
+        if (profileError && profileError.code !== 'PGRST116') throw profileError;
+        if (!profileData) return;
+
+        setProfile(profileData);
+
+        const [ordersRes, reviewsRes] = await Promise.all([
+          supabase
+            .from('orders')
+            .select('id', { count: 'exact', head: true })
+            .eq('customer_id', profileData.id),
+          supabase
+            .from('reviews')
+            .select('id', { count: 'exact', head: true })
+            .eq('customer_id', profileData.id),
+        ]);
+
+        setStats({
+          orders: ordersRes.count ?? 0,
+          reviews: reviewsRes.count ?? 0,
+        });
+      } catch (err) {
+        console.error('Error fetching profile/stats:', err);
+      }
+    })();
   }, [user]);
 
   const handleSignOut = async () => {
@@ -111,8 +163,8 @@ export default function AccountScreen() {
 
   const getUserName = () => {
     if (!user) return 'User';
-
     return (
+      profile?.full_name ||
       user.user_metadata?.full_name ||
       user.user_metadata?.name ||
       user.email?.split('@')[0] ||
@@ -145,7 +197,7 @@ export default function AccountScreen() {
       subtitle: userRole === 'cook' ? 'Go to cook dashboard' : 'Start earning with Chefin',
       onPress: () => {
         if (userRole === 'cook') {
-          router.push('/(cook)/today');
+          router.push('/(cook)/(tabs)/today');
         } else {
           router.push('/(user)/(tabs)/home'); // change this after completing 'start a home restaurant' flow
         }
@@ -170,14 +222,19 @@ export default function AccountScreen() {
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* User Info Card */}
         <View style={styles.userCard}>
-          <View style={styles.avatarContainer}>
+          <TouchableOpacity
+            style={styles.avatarContainer}
+            onPress={() => router.push('/(user)/profile-info')}
+            activeOpacity={0.8}
+          >
             <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{getUserName().charAt(0).toUpperCase()}</Text>
+              {profile?.profile_image ? (
+                <Image source={{ uri: profile.profile_image }} style={styles.avatarImage} />
+              ) : (
+                <Text style={styles.avatarText}>{getUserName().charAt(0).toUpperCase()}</Text>
+              )}
             </View>
-            <View style={styles.premiumBadge}>
-              <Text style={styles.premiumText}>PRO</Text>
-            </View>
-          </View>
+          </TouchableOpacity>
 
           <Text style={styles.userName}>{getUserName()}</Text>
 
@@ -185,18 +242,21 @@ export default function AccountScreen() {
 
           <View style={styles.statsContainer}>
             <View style={styles.statItem}>
-              <Text style={styles.statNumber}>42</Text>
-              <Text style={styles.statLabel}>Chefins tried</Text>
+              <Text style={styles.statNumber}>{formatStat(stats.orders)}</Text>
+              <Text style={styles.statLabel}>Orders</Text>
             </View>
             <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <Text style={styles.statNumber}>128</Text>
+            <TouchableOpacity
+              style={styles.statItem}
+              onPress={() => router.push('/(user)/favourites')}
+            >
+              <Text style={styles.statNumber}>{formatStat(favourites.length)}</Text>
               <Text style={styles.statLabel}>Favourites</Text>
-            </View>
+            </TouchableOpacity>
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
-              <Text style={styles.statNumber}>1.2k</Text>
-              <Text style={styles.statLabel}>Followers</Text>
+              <Text style={styles.statNumber}>{formatStat(stats.reviews)}</Text>
+              <Text style={styles.statLabel}>Reviews</Text>
             </View>
           </View>
         </View>
@@ -278,7 +338,7 @@ export default function AccountScreen() {
         </View>
 
         {/* App Version */}
-        <Text style={styles.versionText}>Food App v1.0.0</Text>
+        <Text style={styles.versionText}>Chefin v1.0.0</Text>
       </ScrollView>
     </SafeAreaView>
   );
@@ -327,25 +387,16 @@ const styles = StyleSheet.create({
     backgroundColor: '#4CAF50',
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'hidden',
   },
   avatarText: {
     fontSize: 32,
     fontWeight: 'bold',
     color: '#fff',
   },
-  premiumBadge: {
-    position: 'absolute',
-    top: -4,
-    right: -4,
-    backgroundColor: '#FFD700',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 8,
-  },
-  premiumText: {
-    fontSize: 10,
-    fontWeight: 'bold',
-    color: '#333',
+  avatarImage: {
+    width: '100%',
+    height: '100%',
   },
   userName: {
     fontSize: 20,

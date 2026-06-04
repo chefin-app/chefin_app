@@ -14,7 +14,10 @@ export const fetchCooks = async ({ query }: { query: string }): Promise<ListingW
   try {
     // CASE 1: No query — fetch everything
     if (!query || query.trim() === '') {
-      const { data, error } = await supabase.from('listings').select(baseSelect);
+      const { data, error } = await supabase
+        .from('listings')
+        .select(baseSelect)
+        .eq('status', 'approved');
       if (error) throw error;
       return (data ?? []) as ListingWithProfile[];
     }
@@ -22,12 +25,36 @@ export const fetchCooks = async ({ query }: { query: string }): Promise<ListingW
     // CASE 2: Run separate queries for each filter
     const [titleRes, descriptionRes, cuisineRes, restaurantRes, chefRes, locationRes] =
       await Promise.all([
-        supabase.from('listings').select(baseSelect).ilike('title', search),
-        supabase.from('listings').select(baseSelect).ilike('description', search),
-        supabase.from('listings').select(baseSelect).ilike('cuisine', search),
-        supabase.from('listings').select(baseSelect).ilike('profiles.restaurant_name', search),
-        supabase.from('listings').select(baseSelect).ilike('profiles.full_name', search),
-        supabase.from('listings').select(baseSelect).ilike('location', search),
+        supabase
+          .from('listings')
+          .select(baseSelect)
+          .eq('status', 'approved')
+          .ilike('title', search),
+        supabase
+          .from('listings')
+          .select(baseSelect)
+          .eq('status', 'approved')
+          .ilike('description', search),
+        supabase
+          .from('listings')
+          .select(baseSelect)
+          .eq('status', 'approved')
+          .ilike('cuisine', search),
+        supabase
+          .from('listings')
+          .select(baseSelect)
+          .eq('status', 'approved')
+          .ilike('profiles.restaurant_name', search),
+        supabase
+          .from('listings')
+          .select(baseSelect)
+          .eq('status', 'approved')
+          .ilike('profiles.full_name', search),
+        supabase
+          .from('listings')
+          .select(baseSelect)
+          .eq('status', 'approved')
+          .ilike('location', search),
       ]);
 
     // Collect results

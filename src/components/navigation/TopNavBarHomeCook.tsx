@@ -1,6 +1,7 @@
 import React from 'react';
 import { useRouter, useSegments } from 'expo-router';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import Entypo from '@expo/vector-icons/Entypo';
 import { createShadowStyle } from '../../utils/platform-utils';
@@ -44,15 +45,16 @@ export default function TopNavBarHomeCook({ options }: NavBarProps) {
     return 'Good evening';
   };
 
-  const getUserName = () => {
-    if (!user) return 'Food Explorer';
-    console.log(user.user_metadata.full_name);
-    return (
+  const getUserName = (): string => {
+    if (!user) return 'Chef';
+
+    const rawName =
       user.user_metadata?.full_name ||
       user.user_metadata?.name ||
       user.email?.split('@')[0] ||
-      'Food Explorer'
-    );
+      'Chef';
+
+    return rawName.charAt(0).toUpperCase() + rawName.slice(1);
   };
 
   const getTabTitle = (tab: string) => {
@@ -95,6 +97,16 @@ export default function TopNavBarHomeCook({ options }: NavBarProps) {
         </View>
       );
     }
+
+    if (currentTab === 'account') {
+      // Account tab - minimal header with just title
+      return (
+        <View style={styles.calendarHeader}>
+          <Text style={styles.calendarTitle}>Account</Text>
+        </View>
+      );
+    }
+
     // Other tabs - show greeting and user name
     return (
       <View>
@@ -107,7 +119,13 @@ export default function TopNavBarHomeCook({ options }: NavBarProps) {
   const renderRightButton = () => {
     if (currentTab === 'menu') {
       return (
-        <TouchableOpacity style={styles.plusButton} onPress={() => router.push('/')}>
+        <TouchableOpacity
+          style={styles.plusButton}
+          onPress={() => {
+            console.log('[+] add-dish pressed');
+            router.push('/add-dish');
+          }}
+        >
           <Entypo name="plus" size={24} color="black" />
         </TouchableOpacity>
       );
@@ -122,32 +140,25 @@ export default function TopNavBarHomeCook({ options }: NavBarProps) {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {/* Header */}
-        <View style={styles.header}>
-          {renderContent()}
-          {renderRightButton()}
-        </View>
-      </ScrollView>
+    <SafeAreaView edges={['top']} style={styles.container}>
+      <View style={styles.header}>
+        {renderContent()}
+        {renderRightButton()}
+      </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
     backgroundColor: '#f8f9fa',
-  },
-  scrollView: {
-    flex: 1,
-    paddingHorizontal: 20,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
   },
   greeting: {
     fontSize: 16,

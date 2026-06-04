@@ -11,7 +11,7 @@ import {
   Image,
   Alert,
 } from 'react-native';
-import DateTimePickerModal from '../../src/components/inputs/DateTimePickerModal'; // Adjust path as needed
+import DateTimePickerModal from '../../../src/components/inputs/DateTimePickerModal'; // Adjust path as needed
 import type { User } from '@supabase/supabase-js';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;

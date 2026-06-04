@@ -41,23 +41,47 @@ router.post('/', async (req, res) => {
       listingId: string;
       quantity: number;
       pickupDate: string;
-      priceAtOrder: number;
+      priceAtOrder: number; // unit price
     }[];
   };
 
+  if (!userId) {
+    return res.status(401).json({ error: 'userId is required to place an order.' });
+  }
   if (!items || items.length === 0) {
     return res.status(400).json({ error: 'No items in order.' });
   }
 
   try {
-    const orderRows = items.map(item => ({
-      listing_id: item.listingId,
-      quantity: item.quantity,
-      pickup_date: item.pickupDate ? new Date(item.pickupDate).toISOString().split('T')[0] : null,
-      price_at_order: item.priceAtOrder,
-      user_id: userId ?? null,
-      status: 'pending',
-    }));
+    // orders.customer_id references profiles.id, not auth.users.id — look it up.
+    const { data: profile, error: profileErr } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('user_id', userId)
+      .single();
+
+    if (profileErr || !profile) {
+      console.error('No profile for user', userId, profileErr);
+      return res.status(404).json({ error: 'Profile not found for this user.' });
+    }
+
+    const orderRows = items.map(item => {
+      const scheduled = item.pickupDate
+        ? new Date(item.pickupDate).toISOString().split('T')[0]
+        : null;
+      if (!scheduled) {
+        throw new Error('Each item must have a pickupDate.');
+      }
+      return {
+        customer_id: profile.id,
+        listing_id: item.listingId,
+        quantity: item.quantity,
+        total_price: +(item.priceAtOrder * item.quantity).toFixed(2),
+        scheduled_date: scheduled,
+        status: 'pending',
+        payment_status: 'paid', // mock-paid via locally-saved card
+      };
+    });
 
     const { data, error } = await supabase.from('orders').insert(orderRows).select();
 

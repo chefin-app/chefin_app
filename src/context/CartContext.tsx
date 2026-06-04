@@ -2,6 +2,7 @@ import React, { createContext, useCallback, useContext, useMemo, useState } from
 
 export interface CartItem {
   listingId: string;
+  cookId: string;
   title: string;
   price: number;
   imageUrl?: string;

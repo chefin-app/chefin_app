@@ -1,0 +1,40 @@
+import { Tabs, useRouter } from 'expo-router';
+import { useAuth } from '@/src/services/auth-context';
+import TopNavBarHomeCook from '../../../src/components/navigation/TopNavBarHomeCook';
+import BottomTabBarCook from '../../../src/components/navigation/BottomTabBarCook';
+
+const NavBar = (props: any) => <TopNavBarHomeCook {...props} />;
+const TabBar = (props: any) => <BottomTabBarCook {...props} />;
+
+export default function CookTabsLayout() {
+  const router = useRouter();
+  const { session } = useAuth();
+  const isLoggedIn = !!session?.user;
+
+  return (
+    <Tabs
+      tabBar={TabBar}
+      screenOptions={{
+        header: NavBar,
+      }}
+    >
+      <Tabs.Screen name="today" options={{ title: 'Today' }} />
+      <Tabs.Screen name="calendar" options={{ title: 'Calendar' }} />
+      <Tabs.Screen name="menu" options={{ title: 'Menu' }} />
+      <Tabs.Screen
+        name="account"
+        options={{
+          title: isLoggedIn ? 'Account' : 'Log In',
+        }}
+        listeners={{
+          tabPress: e => {
+            if (!isLoggedIn) {
+              e.preventDefault();
+              router.push('/(auth)/login');
+            }
+          },
+        }}
+      />
+    </Tabs>
+  );
+}

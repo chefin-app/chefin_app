@@ -7,7 +7,7 @@ const router = express.Router();
 router.get('/all-listings', async (req, res) => {
   const query = req.query.query as string | undefined;
   try {
-    let request = supabase.from('listings').select('*');
+    let request = supabase.from('listings').select('*').eq('status', 'approved');
 
     if (query && query.trim() !== '') {
       // ilike is case-insensitive LIKE (good for search)
