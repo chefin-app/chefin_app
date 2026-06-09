@@ -19,6 +19,13 @@ export default function LoginScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={24} color="#333" />
+        </TouchableOpacity>
+      </View>
+
       <View style={styles.content}>
         {/* Food Image */}
         <View style={styles.imageContainer}>
@@ -83,6 +90,14 @@ export default function LoginScreen() {
           <TouchableOpacity style={styles.phoneButton} onPress={handlePhoneLogin}>
             <Text style={styles.phoneButtonText}>Log in with phone number</Text>
           </TouchableOpacity>
+
+          {/* Sign Up Button */}
+          {/* <TouchableOpacity 
+            style={styles.signupButton} 
+            onPress={() => router.push({ pathname: '/(auth)/email-login', params: { isSignUp: 'true' } })}
+          >
+            <Text style={styles.signupButtonText}>Sign Up with Email</Text>
+          </TouchableOpacity> */}
         </View>
 
         {/* Terms and Privacy */}
@@ -101,6 +116,13 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
+  },
+  header: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  backButton: {
+    padding: 8,
   },
   content: {
     flex: 1,
@@ -208,6 +230,18 @@ const styles = StyleSheet.create({
   },
   phoneButtonText: {
     color: '#333',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  signupButton: {
+    backgroundColor: '#1A1A1A',
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  signupButtonText: {
+    color: '#fff',
     fontSize: 16,
     fontWeight: '600',
   },

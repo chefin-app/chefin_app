@@ -33,6 +33,8 @@ export default function CookProfileInformationScreen() {
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [hostingType, setHostingType] = useState<string | null>(null);
+  const [hasLicense, setHasLicense] = useState<boolean | null>(null);
 
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<EditingField>(null);
@@ -49,7 +51,9 @@ export default function CookProfileInformationScreen() {
       try {
         const { data, error } = await supabase
           .from('profiles')
-          .select('full_name, restaurant_name, bio, phone_number, profile_image')
+          .select(
+            'full_name, restaurant_name, bio, phone_number, profile_image, hosting_type, has_food_safety_license'
+          )
           .eq('user_id', user.id)
           .single();
         if (error && error.code !== 'PGRST116') throw error;
@@ -58,6 +62,10 @@ export default function CookProfileInformationScreen() {
         setBio(data?.bio ?? '');
         setPhone(data?.phone_number ?? '');
         setAvatarUrl(data?.profile_image ?? null);
+        setHostingType(data?.hosting_type ?? null);
+        setHasLicense(
+          typeof data?.has_food_safety_license === 'boolean' ? data.has_food_safety_license : null
+        );
         setEmail(user.email ?? '');
       } catch (e: any) {
         Alert.alert('Could not load profile', e.message ?? 'Unknown error');
@@ -360,6 +368,32 @@ export default function CookProfileInformationScreen() {
               placeholder: '+60 12 345 6789',
               maxLength: 20,
             })}
+
+            {/* Food safety — read-only summary, taps into the food-safety screen */}
+            <TouchableOpacity
+              style={styles.inputContainer}
+              onPress={() => router.push('/(cook)/food-safety')}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.inputLabel}>FOOD SAFETY</Text>
+              <View style={styles.inputRow}>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.inputValue, !hostingType && styles.inputValueEmpty]}>
+                    {hostingType === 'private'
+                      ? 'Private individual'
+                      : hostingType === 'business'
+                        ? 'Business / licensed kitchen'
+                        : 'Not set'}
+                  </Text>
+                  {hasLicense === true && <Text style={styles.licenseHint}>✓ License on file</Text>}
+                  {hasLicense === false && (
+                    <Text style={styles.licenseHintMuted}>No license uploaded</Text>
+                  )}
+                </View>
+                <Ionicons name="chevron-forward" size={18} color="#999" />
+              </View>
+              <View style={styles.divider} />
+            </TouchableOpacity>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -457,4 +491,6 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
   divider: { height: 1, backgroundColor: '#e0e0e0', marginTop: 14 },
+  licenseHint: { fontSize: 12, color: '#2E7D32', fontWeight: '600', marginTop: 4 },
+  licenseHintMuted: { fontSize: 12, color: '#888', marginTop: 4 },
 });

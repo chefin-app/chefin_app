@@ -36,7 +36,8 @@ router.get('/:id', async (req, res) => {
   `
       )
       .eq('cook_id', id)
-      .eq('is_active', true);
+      .eq('is_active', true)
+      .eq('status', 'approved');
 
     if (listingsError) {
       console.error('Error fetching listings:', listingsError);

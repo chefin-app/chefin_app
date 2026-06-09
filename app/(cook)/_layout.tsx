@@ -80,6 +80,10 @@ export default function CookLayout() {
       />
       <Stack.Screen name="profile-information" />
       <Stack.Screen name="edit-dish" />
+      <Stack.Screen
+        name="food-safety"
+        options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
+      />
     </Stack>
   );
 }

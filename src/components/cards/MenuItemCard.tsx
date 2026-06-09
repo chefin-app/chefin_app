@@ -214,6 +214,7 @@ const MenuItemCard: React.FC<MenuItemCardProps> = ({
                     cookName: profiles?.full_name,
                     quantity,
                     selectedDate: new Date(selectedDate),
+                    pickupSlotStart: selectedSlot?.startTime,
                   });
                   setAddedFeedback(true);
                   setTimeout(() => {

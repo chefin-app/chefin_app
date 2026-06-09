@@ -16,6 +16,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/src/utils/supabaseClient';
 import { useAuth } from '@/src/services/auth-context';
+import { useOnboarding } from '@/src/context/OnboardingContext';
 
 type AddressFields = {
   country: string;
@@ -70,11 +71,14 @@ export default function CookAddressScreen() {
   const { user } = useAuth();
   // When mounted as a gate, the caller passes ?next=/add-dish so we know
   // where to bounce the cook after they save.
-  const { next } = useLocalSearchParams<{ next?: string }>();
+  const { next, onboarding } = useLocalSearchParams<{ next?: string; onboarding?: string }>();
+  const isOnboarding = onboarding === '1' || onboarding === 'true';
+  const { setAddress: stashAddress } = useOnboarding();
 
   const [fields, setFields] = useState<AddressFields>(EMPTY);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [showErrors, setShowErrors] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [suggestions, setSuggestions] = useState<NominatimResult[]>([]);
@@ -95,7 +99,7 @@ export default function CookAddressScreen() {
       abortRef.current = controller;
       setSearching(true);
       try {
-        const url = `${NOMINATIM_URL}?q=${encodeURIComponent(q)}&format=json&addressdetails=1&limit=5`;
+        const url = `${NOMINATIM_URL}?q=${encodeURIComponent(q)}&format=json&addressdetails=1&limit=5&countrycodes=my`;
         const res = await fetch(url, {
           headers: { 'User-Agent': NOMINATIM_UA, 'Accept-Language': 'en' },
           signal: controller.signal,
@@ -171,7 +175,28 @@ export default function CookAddressScreen() {
     fields.postcode.trim() !== '';
 
   const handleSave = async () => {
-    if (!user || !isComplete) return;
+    if (!user) return;
+    if (!isComplete) {
+      setShowErrors(true);
+      return;
+    }
+
+    // ── Onboarding path: stash to context and continue to food safety.
+    // The actual DB write happens at the final payment-methods step.
+    if (isOnboarding) {
+      stashAddress({
+        country: fields.country.trim(),
+        flat: fields.flat.trim(),
+        property_name: fields.property_name.trim(),
+        street: fields.street.trim(),
+        locality: fields.locality.trim(),
+        town: fields.town.trim(),
+        postcode: fields.postcode.trim(),
+      });
+      router.push({ pathname: '/(cook)/food-safety', params: { onboarding: '1' } });
+      return;
+    }
+
     setSaving(true);
     try {
       const { error } = await supabase
@@ -204,21 +229,34 @@ export default function CookAddressScreen() {
     key: keyof AddressFields,
     label: string,
     opts?: { optional?: boolean; keyboardType?: 'default' | 'number-pad' }
-  ) => (
-    <View style={styles.fieldWrap}>
-      <Text style={styles.fieldLabel}>{label}</Text>
-      <TextInput
-        style={styles.fieldInput}
-        value={fields[key]}
-        onChangeText={text => setFields(prev => ({ ...prev, [key]: text }))}
-        placeholder={opts?.optional ? '(optional)' : ''}
-        placeholderTextColor="#bbb"
-        keyboardType={opts?.keyboardType ?? 'default'}
-        autoCapitalize="words"
-        editable={!saving}
-      />
-    </View>
-  );
+  ) => {
+    const isRequired = !opts?.optional;
+    const showError = showErrors && isRequired && fields[key].trim() === '';
+
+    return (
+      <View style={styles.fieldWrap}>
+        <Text style={styles.fieldLabel}>
+          {label} {isRequired && <Text style={styles.requiredAsterisk}>*</Text>}
+        </Text>
+        <TextInput
+          style={[styles.fieldInput, showError && styles.fieldInputError]}
+          value={fields[key]}
+          onChangeText={text => {
+            setFields(prev => ({ ...prev, [key]: text }));
+            if (showErrors && text.trim() !== '') {
+              // Re-check completion to clear errors optionally, or just clear all
+            }
+          }}
+          placeholder={opts?.optional ? '(optional)' : ''}
+          placeholderTextColor="#bbb"
+          keyboardType={opts?.keyboardType ?? 'default'}
+          autoCapitalize="words"
+          editable={!saving}
+        />
+        {showError && <Text style={styles.errorText}>This field is required.</Text>}
+      </View>
+    );
+  };
 
   if (loading) {
     return (
@@ -293,13 +331,13 @@ export default function CookAddressScreen() {
 
           <Text style={styles.manualLabel}>Or enter manually</Text>
 
-          {field('country', 'Country / region')}
-          {field('flat', 'Flat, floor, bldg', { optional: true })}
-          {field('property_name', 'Property name', { optional: true })}
-          {field('street', 'Street address')}
-          {field('locality', 'Locality', { optional: true })}
-          {field('town', 'Town')}
-          {field('postcode', 'Postcode', { keyboardType: 'number-pad' })}
+          {field('street', 'House No., Building, Street Name')}
+          {field('flat', 'Unit No.', { optional: true })}
+          {field('property_name', 'Building / Property Name', { optional: true })}
+          {field('postcode', 'Postal Code', { keyboardType: 'number-pad' })}
+          {field('town', 'City')}
+          {field('locality', 'Area', { optional: true })}
+          {field('country', 'Country / Region')}
         </ScrollView>
 
         <View style={styles.footer}>
@@ -378,8 +416,9 @@ const styles = StyleSheet.create({
     marginTop: 12,
     marginBottom: 4,
   },
-  fieldWrap: { gap: 4 },
+  fieldWrap: { gap: 4, marginBottom: 8 },
   fieldLabel: { fontSize: 11, color: '#888', fontWeight: '600', letterSpacing: 0.4 },
+  requiredAsterisk: { color: '#FF5252' },
   fieldInput: {
     borderWidth: 1,
     borderColor: '#E0E0E0',
@@ -388,6 +427,16 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     fontSize: 16,
     color: '#1A1A1A',
+  },
+  fieldInputError: {
+    borderColor: '#FF5252',
+    backgroundColor: '#FFEBEE',
+  },
+  errorText: {
+    color: '#FF5252',
+    fontSize: 12,
+    marginTop: 2,
+    marginLeft: 4,
   },
   footer: { padding: 20, paddingBottom: 28 },
   saveBtn: {

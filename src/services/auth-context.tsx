@@ -15,7 +15,7 @@ interface AuthContextType {
   signInWithFacebook: () => Promise<any>;
   signInWithGoogle: () => Promise<any>;
   signInWithApple: () => Promise<any>;
-  signInWithPhone: () => Promise<{ error: string }>;
+  signInWithPhone: (phone: string) => Promise<{ error: string }>;
   verifyOTP: () => Promise<{ error: string }>;
   updateProfile: () => Promise<{ error: string }>;
 }
@@ -146,7 +146,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     signInWithFacebook: async () => Promise.resolve(),
     signInWithGoogle: async () => Promise.resolve(),
     signInWithApple: async () => Promise.resolve(),
-    signInWithPhone: async () => Promise.resolve({ error: 'Not implemented' }),
+    signInWithPhone: async (_phone: string) => Promise.resolve({ error: 'Not implemented' }),
     verifyOTP: async () => Promise.resolve({ error: 'Not implemented' }),
     updateProfile: async () => Promise.resolve({ error: 'Not implemented' }),
   };

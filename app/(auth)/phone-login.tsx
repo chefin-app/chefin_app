@@ -4,6 +4,8 @@ import React, { useState } from 'react';
 import { PhoneNumberInput } from '@/src/components/inputs/PhoneNumberInput';
 import {
   ActivityIndicator,
+  Keyboard,
+  TouchableWithoutFeedback,
   Alert,
   FlatList,
   Modal,
@@ -67,7 +69,7 @@ const COUNTRY_CODES = [
 export default function PhoneLoginScreen() {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [showCountryPicker, setShowCountryPicker] = useState(false);
-  const [selectedCountry, setSelectedCountry] = useState(COUNTRY_CODES[0]); // Default to US
+  const [selectedCountry, setSelectedCountry] = useState(COUNTRY_CODES[40]); // Default to MY
   const [searchQuery, setSearchQuery] = useState('');
 
   const { signInWithPhone, loading } = useAuth();
@@ -153,41 +155,42 @@ export default function PhoneLoginScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={24} color="#333" />
-          </TouchableOpacity>
-        </View>
-
-        {/* Title */}
-        <Text style={styles.title}>Enter your mobile number</Text>
-
-        {/* Phone Input Container */}
-        <View style={styles.phoneContainer}>
-          {/* Country Code Selector */}
-          <TouchableOpacity
-            style={styles.countrySelector}
-            onPress={() => setShowCountryPicker(true)}
-          >
-            <Text style={styles.selectedFlag}>{selectedCountry.flag}</Text>
-            <Ionicons name="chevron-down" size={16} color="#666" />
-          </TouchableOpacity>
-
-          {/* Country Code Display */}
-          <View style={styles.countryCodeContainer}>
-            <Text style={styles.countryCodeText}>{selectedCountry.code}</Text>
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+      <SafeAreaView style={styles.container}>
+        <View style={styles.content}>
+          {/* Header */}
+          <View style={styles.header}>
+            <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+              <Ionicons name="arrow-back" size={24} color="#333" />
+            </TouchableOpacity>
           </View>
 
-          {/* Phone Number Input */}
-          <PhoneNumberInput
-            value={phoneNumber}
-            onChangeText={handlePhoneNumberChange}
-            selectedCountry={selectedCountry}
-          />
-          {/* <TextInput
+          {/* Title */}
+          <Text style={styles.title}>Enter your mobile number</Text>
+
+          {/* Phone Input Container */}
+          <View style={styles.phoneContainer}>
+            {/* Country Code Selector */}
+            <TouchableOpacity
+              style={styles.countrySelector}
+              onPress={() => setShowCountryPicker(true)}
+            >
+              <Text style={styles.selectedFlag}>{selectedCountry.flag}</Text>
+              <Ionicons name="chevron-down" size={16} color="#666" />
+            </TouchableOpacity>
+
+            {/* Country Code Display */}
+            <View style={styles.countryCodeContainer}>
+              <Text style={styles.countryCodeText}>{selectedCountry.code}</Text>
+            </View>
+
+            {/* Phone Number Input */}
+            <PhoneNumberInput
+              value={phoneNumber}
+              onChangeText={handlePhoneNumberChange}
+              selectedCountry={selectedCountry}
+            />
+            {/* <TextInput
             style={styles.phoneInput}
             placeholder="Mobile number"
             placeholderTextColor="#999"
@@ -196,68 +199,72 @@ export default function PhoneLoginScreen() {
             keyboardType="phone-pad"
             maxLength={selectedCountry.code === '+1' ? 14 : 15}
           /> */}
+          </View>
+
+          {/* Next Button */}
+          <TouchableOpacity
+            style={[
+              styles.nextButton,
+              (loading || !phoneNumber.trim()) && styles.nextButtonDisabled,
+            ]}
+            onPress={sendOTP}
+            disabled={loading || !phoneNumber.trim()}
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <>
+                <Text style={styles.nextButtonText}>Next</Text>
+                <Ionicons name="arrow-forward" size={20} color="#fff" />
+              </>
+            )}
+          </TouchableOpacity>
+
+          {/* Disclaimer */}
+          <Text style={styles.disclaimer}>
+            By proceeding, you consent to get calls, WhatsApp or SMS messages, including by
+            automated means, from our app and its affiliates to the number provided.
+          </Text>
         </View>
 
-        {/* Next Button */}
-        <TouchableOpacity
-          style={[styles.nextButton, (loading || !phoneNumber.trim()) && styles.nextButtonDisabled]}
-          onPress={sendOTP}
-          disabled={loading || !phoneNumber.trim()}
-        >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <>
-              <Text style={styles.nextButtonText}>Next</Text>
-              <Ionicons name="arrow-forward" size={20} color="#fff" />
-            </>
-          )}
-        </TouchableOpacity>
+        {/* Country Picker Modal */}
+        <Modal visible={showCountryPicker} animationType="slide" presentationStyle="pageSheet">
+          <SafeAreaView style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <TouchableOpacity
+                onPress={() => setShowCountryPicker(false)}
+                style={styles.modalCloseButton}
+              >
+                <Text style={styles.modalCloseText}>Cancel</Text>
+              </TouchableOpacity>
+              <Text style={styles.modalTitle}>Select Country</Text>
+              <View style={styles.modalPlaceholder} />
+            </View>
 
-        {/* Disclaimer */}
-        <Text style={styles.disclaimer}>
-          By proceeding, you consent to get calls, WhatsApp or SMS messages, including by automated
-          means, from our app and its affiliates to the number provided.
-        </Text>
-      </View>
+            {/* Search */}
+            <View style={styles.searchContainer}>
+              <Ionicons name="search" size={20} color="#666" />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search countries..."
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholderTextColor="#999"
+              />
+            </View>
 
-      {/* Country Picker Modal */}
-      <Modal visible={showCountryPicker} animationType="slide" presentationStyle="pageSheet">
-        <SafeAreaView style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
-            <TouchableOpacity
-              onPress={() => setShowCountryPicker(false)}
-              style={styles.modalCloseButton}
-            >
-              <Text style={styles.modalCloseText}>Cancel</Text>
-            </TouchableOpacity>
-            <Text style={styles.modalTitle}>Select Country</Text>
-            <View style={styles.modalPlaceholder} />
-          </View>
-
-          {/* Search */}
-          <View style={styles.searchContainer}>
-            <Ionicons name="search" size={20} color="#666" />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Search countries..."
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              placeholderTextColor="#999"
+            {/* Country List */}
+            <FlatList
+              data={filteredCountries}
+              renderItem={renderCountryItem}
+              keyExtractor={(item, index) => `${item.country}-${index}`}
+              style={styles.countryList}
+              showsVerticalScrollIndicator={false}
             />
-          </View>
-
-          {/* Country List */}
-          <FlatList
-            data={filteredCountries}
-            renderItem={renderCountryItem}
-            keyExtractor={(item, index) => `${item.country}-${index}`}
-            style={styles.countryList}
-            showsVerticalScrollIndicator={false}
-          />
-        </SafeAreaView>
-      </Modal>
-    </SafeAreaView>
+          </SafeAreaView>
+        </Modal>
+      </SafeAreaView>
+    </TouchableWithoutFeedback>
   );
 }
 

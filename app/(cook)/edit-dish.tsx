@@ -78,6 +78,9 @@ export default function EditDishScreen() {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   // Track the existing storage path so we can clean up on photo replace / remove.
   const [existingImagePath, setExistingImagePath] = useState<string | null>(null);
+  // Pending-review dishes are read-only until an admin approves them.
+  const [status, setStatus] = useState<string>('approved');
+  const isPending = status === 'pending';
 
   // Snapshot of the moderation-relevant fields at load time, so we can detect
   // changes that require re-review on save. Price is intentionally excluded.
@@ -99,7 +102,9 @@ export default function EditDishScreen() {
       try {
         const { data, error } = await supabase
           .from('listings')
-          .select('title, description, ingredients, cuisine, dietary_tags, price, image_url')
+          .select(
+            'title, description, ingredients, cuisine, dietary_tags, price, image_url, status'
+          )
           .eq('id', id)
           .single();
         if (error) throw error;
@@ -120,6 +125,7 @@ export default function EditDishScreen() {
         setPriceText(String(data.price ?? ''));
         setImageUrl(loadedImageUrl);
         setExistingImagePath(extractStoragePath(data.image_url));
+        setStatus(data.status ?? 'approved');
 
         setOriginal({
           title: loadedTitle,
@@ -330,13 +336,22 @@ export default function EditDishScreen() {
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
         >
+          {isPending && (
+            <View style={styles.pendingBanner}>
+              <Ionicons name="time-outline" size={16} color="#B26B00" />
+              <Text style={styles.pendingBannerText}>
+                This dish is pending review. You can edit it once an admin approves it.
+              </Text>
+            </View>
+          )}
+
           {/* Photo */}
           <View style={styles.card}>
             <Text style={styles.cardLabel}>Photo</Text>
             <TouchableOpacity
               style={styles.photoArea}
               onPress={pickAndUploadPhoto}
-              disabled={uploadingPhoto}
+              disabled={uploadingPhoto || isPending}
               activeOpacity={0.8}
             >
               {imageUrl ? (
@@ -369,6 +384,7 @@ export default function EditDishScreen() {
               placeholder="The American Burger"
               placeholderTextColor="#bbb"
               maxLength={32}
+              editable={!isPending}
             />
           </View>
 
@@ -384,6 +400,7 @@ export default function EditDishScreen() {
               multiline
               maxLength={200}
               textAlignVertical="top"
+              editable={!isPending}
             />
             <Text style={styles.counter}>{description.length}/200</Text>
           </View>
@@ -400,6 +417,7 @@ export default function EditDishScreen() {
               multiline
               maxLength={500}
               textAlignVertical="top"
+              editable={!isPending}
             />
           </View>
 
@@ -416,6 +434,7 @@ export default function EditDishScreen() {
                 inputMode="decimal"
                 placeholder="0.00"
                 placeholderTextColor="#bbb"
+                editable={!isPending}
               />
             </View>
           </View>
@@ -435,7 +454,12 @@ export default function EditDishScreen() {
                   <TouchableOpacity
                     key={kw}
                     onPress={() => toggleCuisine(kw)}
-                    style={[styles.chip, selected && styles.chipSelected]}
+                    disabled={isPending}
+                    style={[
+                      styles.chip,
+                      selected && styles.chipSelected,
+                      isPending && !selected && styles.chipDisabled,
+                    ]}
                   >
                     <Text
                       style={[styles.chipText, selected && styles.chipTextSelected]}
@@ -457,7 +481,7 @@ export default function EditDishScreen() {
             <View style={styles.chipGrid}>
               {DIETARY_TAG_OPTIONS.map(kw => {
                 const selected = dietaryTags.includes(kw);
-                const disabled = !selected && dietaryTags.length >= MAX_DIETARY_TAGS;
+                const disabled = isPending || (!selected && dietaryTags.length >= MAX_DIETARY_TAGS);
                 return (
                   <TouchableOpacity
                     key={kw}
@@ -487,14 +511,16 @@ export default function EditDishScreen() {
 
           {/* Save */}
           <TouchableOpacity
-            style={[styles.saveBtn, saving && styles.saveBtnDisabled]}
+            style={[styles.saveBtn, (saving || isPending) && styles.saveBtnDisabled]}
             onPress={handleSave}
-            disabled={saving || removing}
+            disabled={saving || removing || isPending}
           >
             {saving ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.saveBtnText}>Save changes</Text>
+              <Text style={styles.saveBtnText}>
+                {isPending ? 'Locked until approved' : 'Save changes'}
+              </Text>
             )}
           </TouchableOpacity>
 
@@ -539,6 +565,22 @@ const styles = StyleSheet.create({
   },
   headerTitle: { fontSize: 18, fontWeight: '700', color: '#1A1A1A' },
   backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  pendingBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    backgroundColor: '#FFF3E0',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 4,
+  },
+  pendingBannerText: {
+    flex: 1,
+    fontSize: 13,
+    color: '#B26B00',
+    fontWeight: '600',
+    lineHeight: 18,
+  },
   scrollContent: { padding: 16, gap: 12, paddingBottom: 40 },
 
   card: {

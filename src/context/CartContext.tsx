@@ -9,6 +9,8 @@ export interface CartItem {
   cookName?: string;
   quantity: number;
   selectedDate: Date;
+  /** ISO string of the customer's 1-hour pickup slot start. */
+  pickupSlotStart?: string;
 }
 
 interface CartContextType {

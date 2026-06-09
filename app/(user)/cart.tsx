@@ -127,6 +127,7 @@ export default function CartScreen() {
             listingId: item.listingId,
             quantity: item.quantity,
             pickupDate: item.selectedDate,
+            pickupTime: item.pickupSlotStart,
             priceAtOrder: item.price,
           })),
         }),

@@ -1,9 +1,11 @@
 import { useAuth } from '@/src/services/auth-context';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
+  Keyboard,
+  TouchableWithoutFeedback,
   Alert,
   KeyboardAvoidingView,
   Platform,
@@ -16,10 +18,11 @@ import {
 } from 'react-native';
 
 export default function EmailLoginScreen() {
+  const { isSignUp: isSignUpParam } = useLocalSearchParams<{ isSignUp?: string }>();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [isSignUp, setIsSignUp] = useState(false);
+  const [isSignUp, setIsSignUp] = useState(isSignUpParam === 'true');
 
   const { signUp, signIn, resetPassword, loading } = useAuth();
 
@@ -83,97 +86,103 @@ export default function EmailLoginScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardView}
-      >
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={24} color="#333" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>{isSignUp ? 'Create Account' : 'Welcome Back'}</Text>
-          <View style={styles.placeholder} />
-        </View>
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+      <SafeAreaView style={styles.container}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.keyboardView}
+        >
+          {/* Header */}
+          <View style={styles.header}>
+            <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+              <Ionicons name="arrow-back" size={24} color="#333" />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>{isSignUp ? 'Create Account' : 'Welcome Back'}</Text>
+            <View style={styles.placeholder} />
+          </View>
 
-        <View style={styles.content}>
-          <View style={styles.form}>
-            <Text style={styles.subtitle}>
-              {isSignUp ? 'Create your account to get started' : 'Sign in to your account'}
-            </Text>
+          <View style={styles.content}>
+            <View style={styles.form}>
+              <Text style={styles.subtitle}>
+                {isSignUp ? 'Create your account to get started' : 'Sign in to your account'}
+              </Text>
 
-            {/* Email Input */}
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Email</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter your email"
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoComplete="email"
-              />
-            </View>
-
-            {/* Password Input */}
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Password</Text>
-              <View style={styles.passwordContainer}>
+              {/* Email Input */}
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>Email</Text>
                 <TextInput
-                  style={styles.passwordInput}
-                  placeholder="Enter your password"
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry={!showPassword}
-                  autoComplete="password"
+                  style={styles.input}
+                  placeholder="Enter your email"
+                  placeholderTextColor="#c3c3c3ff"
+                  value={email}
+                  onChangeText={setEmail}
+                  onBlur={Keyboard.dismiss}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoComplete="email"
                 />
-                <TouchableOpacity
-                  style={styles.eyeButton}
-                  onPress={() => setShowPassword(!showPassword)}
-                >
-                  <Ionicons name={showPassword ? 'eye' : 'eye-off'} size={20} color="#666" />
+              </View>
+
+              {/* Password Input */}
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>Password</Text>
+                <View style={styles.passwordContainer}>
+                  <TextInput
+                    style={styles.passwordInput}
+                    placeholder="Enter your password"
+                    placeholderTextColor="#c3c3c3ff"
+                    value={password}
+                    onChangeText={setPassword}
+                    onBlur={Keyboard.dismiss}
+                    secureTextEntry={!showPassword}
+                    autoComplete="password"
+                  />
+                  <TouchableOpacity
+                    style={styles.eyeButton}
+                    onPress={() => setShowPassword(!showPassword)}
+                  >
+                    <Ionicons name={showPassword ? 'eye' : 'eye-off'} size={20} color="#666" />
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* Forgot Password */}
+              {!isSignUp && (
+                <TouchableOpacity style={styles.forgotPassword} onPress={handleForgotPassword}>
+                  <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+                </TouchableOpacity>
+              )}
+
+              {/* Submit Button */}
+              <TouchableOpacity
+                testID="create-account-button"
+                style={[styles.submitButton, loading && styles.submitButtonDisabled]}
+                onPress={handleEmailAuth}
+                disabled={loading}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.submitButtonText}>
+                    {isSignUp ? 'Create Account' : 'Sign In'}
+                  </Text>
+                )}
+              </TouchableOpacity>
+
+              {/* Toggle Sign Up/Login */}
+              <View style={styles.toggleContainer}>
+                <Text style={styles.toggleText}>
+                  {isSignUp ? 'Already have an account?' : "Don't have an account?"}
+                </Text>
+                <TouchableOpacity onPress={() => setIsSignUp(!isSignUp)}>
+                  <Text style={styles.toggleLink}>{isSignUp ? 'Sign In' : 'Sign Up'}</Text>
                 </TouchableOpacity>
               </View>
             </View>
-
-            {/* Forgot Password */}
-            {!isSignUp && (
-              <TouchableOpacity style={styles.forgotPassword} onPress={handleForgotPassword}>
-                <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-              </TouchableOpacity>
-            )}
-
-            {/* Submit Button */}
-            <TouchableOpacity
-              testID="create-account-button"
-              style={[styles.submitButton, loading && styles.submitButtonDisabled]}
-              onPress={handleEmailAuth}
-              disabled={loading}
-            >
-              {loading ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={styles.submitButtonText}>
-                  {isSignUp ? 'Create Account' : 'Sign In'}
-                </Text>
-              )}
-            </TouchableOpacity>
-
-            {/* Toggle Sign Up/Login */}
-            <View style={styles.toggleContainer}>
-              <Text style={styles.toggleText}>
-                {isSignUp ? 'Already have an account?' : "Don't have an account?"}
-              </Text>
-              <TouchableOpacity onPress={() => setIsSignUp(!isSignUp)}>
-                <Text style={styles.toggleLink}>{isSignUp ? 'Sign In' : 'Sign Up'}</Text>
-              </TouchableOpacity>
-            </View>
           </View>
-        </View>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </TouchableWithoutFeedback>
   );
 }
 

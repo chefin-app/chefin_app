@@ -198,9 +198,15 @@ export default function AccountScreen() {
       onPress: () => {
         if (userRole === 'cook') {
           router.push('/(cook)/(tabs)/today');
-        } else {
-          router.push('/(user)/(tabs)/home'); // change this after completing 'start a home restaurant' flow
+          return;
         }
+        if (!user) {
+          router.push('/(auth)/login');
+          return;
+        }
+        // Open the unified onboarding wizard. The cook role is only granted
+        // at the end of the wizard, after the application is submitted.
+        router.push('/start-restaurant');
       },
     },
     {

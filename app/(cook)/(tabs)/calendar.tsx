@@ -1,640 +1,775 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Dimensions } from 'react-native';
-
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
   StyleSheet,
-  SafeAreaView,
   ScrollView,
   Image,
+  ActivityIndicator,
+  Switch,
   Alert,
+  Modal,
+  TouchableOpacity,
+  TextInput,
 } from 'react-native';
-import DateTimePickerModal from '../../../src/components/inputs/DateTimePickerModal'; // Adjust path as needed
-import type { User } from '@supabase/supabase-js';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Calendar, DateData } from 'react-native-calendars';
+import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from 'expo-router';
+import DateTimePickerModal from 'react-native-modal-datetime-picker';
+import { supabase } from '@/src/utils/supabaseClient';
+import { useAuth } from '@/src/services/auth-context';
 
-const SCREEN_WIDTH = Dimensions.get('window').width;
-const DAY_CELL_SIZE = SCREEN_WIDTH / 7; // exactly 7 columns
+const DEFAULT_START_HOUR = 11;
+const DEFAULT_END_HOUR = 13;
+const DEFAULT_MAX_ORDERS = 5;
 
-interface MenuItem {
+// Returns a Date at the given local hour:minute on the given YYYY-MM-DD.
+const dateAt = (dateStr: string, hour: number, minute = 0): Date => {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  return new Date(y, m - 1, d, hour, minute, 0);
+};
+
+const formatTime = (date: Date): string => {
+  const h = date.getHours();
+  const m = date.getMinutes();
+  const period = h < 12 ? 'AM' : 'PM';
+  const hour12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+  const minStr = m.toString().padStart(2, '0');
+  return `${hour12}:${minStr} ${period}`;
+};
+
+const formatSlotRange = (startISO: string, endISO: string): string =>
+  `${formatTime(new Date(startISO))} – ${formatTime(new Date(endISO))}`;
+
+type Listing = {
   id: string;
-  name: string;
-  image_url: string;
-  description?: string;
-  price: number;
-}
+  title: string;
+  image_url: string | null;
+  status: string;
+};
 
-interface MenuAvailability {
-  id?: string;
-  menu_item_id: string;
-  date: string;
+type AvailabilityRow = {
+  id: string;
+  listing_id: string;
+  available_date: string;
+  start_time: string;
+  end_time: string;
   is_available: boolean;
-  start_time?: string;
-  end_time?: string;
-  user_id: string;
-}
+};
 
-const Calendar: React.FC = () => {
-  const [user, setUser] = useState<User | null>(null);
-  const [selectedDate, setSelectedDate] = useState(new Date());
-  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
-  const [menuAvailability, setMenuAvailability] = useState<MenuAvailability[]>([]);
-  const [loading, setLoading] = useState(false);
+const todayISO = () => new Date().toISOString().split('T')[0];
 
-  // Mock data for demonstration
-  const mockMenuItems: MenuItem[] = [
-    {
-      id: '1',
-      name: 'The American Burger',
-      image_url:
-        'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=100&h=100&fit=crop&crop=center',
-      description: 'Classic American burger with cheese',
-      price: 12.99,
-    },
-    {
-      id: '2',
-      name: 'The American Burger',
-      image_url:
-        'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=100&h=100&fit=crop&crop=center',
-      description: 'Classic American burger with cheese',
-      price: 12.99,
-    },
-    {
-      id: '3',
-      name: 'The American Burger',
-      image_url:
-        'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=100&h=100&fit=crop&crop=center',
-      description: 'Classic American burger with cheese',
-      price: 12.99,
-    },
-    {
-      id: '4',
-      name: 'The American Burger',
-      image_url:
-        'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=100&h=100&fit=crop&crop=center',
-      description: 'Classic American burger with cheese',
-      price: 12.99,
-    },
-  ];
-  // useEffect(() => {
-  //   getCurrentUser();
-  // }, []);
+const monthBounds = (yearMonth: string): { start: string; end: string } => {
+  // yearMonth is "YYYY-MM". Return inclusive start (1st) and exclusive end (1st of next month).
+  const [y, m] = yearMonth.split('-').map(Number);
+  const start = `${yearMonth}-01`;
+  const next = m === 12 ? `${y + 1}-01-01` : `${y}-${String(m + 1).padStart(2, '0')}-01`;
+  return { start, end: next };
+};
 
-  const fetchMenuAvailability = useCallback(async () => {
+// Combine a YYYY-MM-DD date with a local hour/minute and produce an ISO timestamp.
+const isoAt = (dateStr: string, hour: number, minute = 0) => {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  return new Date(y, m - 1, d, hour, minute, 0).toISOString();
+};
+
+const isoAtTime = (dateStr: string, time: Date) =>
+  isoAt(dateStr, time.getHours(), time.getMinutes());
+
+export default function CookCalendarScreen() {
+  const { user } = useAuth();
+  const [selectedDate, setSelectedDate] = useState<string>(todayISO());
+  const [currentMonth, setCurrentMonth] = useState<string>(todayISO().slice(0, 7));
+  // Cooks can view past availability but can't edit it.
+  const isPastDate = selectedDate < todayISO();
+  const [listings, setListings] = useState<Listing[]>([]);
+  const [availability, setAvailability] = useState<AvailabilityRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  // Listings being toggled — local override so the UI is responsive.
+  const [pending, setPending] = useState<Set<string>>(new Set());
+  // Slot picker state — the listing whose slot is currently being edited.
+  const [slotEditing, setSlotEditing] = useState<Listing | null>(null);
+  const [draftStart, setDraftStart] = useState<Date>(new Date());
+  const [draftEnd, setDraftEnd] = useState<Date>(new Date());
+  const [draftMaxOrders, setDraftMaxOrders] = useState<string>(String(DEFAULT_MAX_ORDERS));
+  const [showStartPicker, setShowStartPicker] = useState(false);
+  const [showEndPicker, setShowEndPicker] = useState(false);
+  const [slotSaving, setSlotSaving] = useState(false);
+
+  const openSlotEditor = (listing: Listing) => {
+    const row = availability.find(
+      a => a.listing_id === listing.id && a.available_date === selectedDate && a.is_available
+    );
+    setDraftStart(row ? new Date(row.start_time) : dateAt(selectedDate, DEFAULT_START_HOUR));
+    setDraftEnd(row ? new Date(row.end_time) : dateAt(selectedDate, DEFAULT_END_HOUR));
+    // max_orders isn't in the AvailabilityRow type — fetch it from the row if present.
+    setDraftMaxOrders(String((row as any)?.max_orders ?? DEFAULT_MAX_ORDERS));
+    setSlotEditing(listing);
+  };
+
+  // ── Load cook's listings (approved + pending, since both are theirs) ──
+  const loadListings = useCallback(async () => {
     if (!user) return;
-    try {
-      setLoading(true);
-      const dateStr = selectedDate.toISOString().split('T')[0];
-      const res = await fetch(
-        `${process.env.EXPO_PUBLIC_API_URL}/api/menu-availability?user_id=${user.id}&date=${dateStr}`
-      );
-      if (!res.ok) {
-        throw new Error('Failed to fetch availability');
-      }
-      const data = await res.json();
-      setMenuAvailability(data.availability || []);
-    } catch (error) {
-      console.error('Error fetching menu availability:', error);
-    } finally {
-      setLoading(false);
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('user_id', user.id)
+      .single();
+    if (!profile) return;
+    const { data, error } = await supabase
+      .from('listings')
+      .select('id, title, image_url, status')
+      .eq('cook_id', profile.id)
+      .order('created_at', { ascending: false });
+    if (error) {
+      console.warn('Listings load failed', error.message);
+      return;
     }
-  }, [user, selectedDate]);
+    setListings((data ?? []) as Listing[]);
+  }, [user]);
 
-  useEffect(() => {
-    if (user && selectedDate) {
-      fetchMenuAvailability();
-    }
-  }, [user, selectedDate, fetchMenuAvailability]);
+  // ── Load availability rows for the visible month ──────────────────
+  const loadAvailability = useCallback(
+    async (month: string) => {
+      if (!user) return;
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+      if (!profile) return;
 
-  // const getCurrentUser = async () => {
-  //   try {
-  //     const res = await fetch('http://localhost:8000/api/auth/session');
-  //     if (!res.ok) {
-  //       throw new Error('Failed to fetch session');
-  //     }
-  //     const data = await res.json();
-  //     setUser(data.session?.user ?? null);
-  //   } catch (error) {
-  //     console.error('Error fetching user session:', error);
-  //   }
-  // };
-
-  // Commented out database fetch - uncomment when ready
-  /*
-  const fetchMenuItems = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('menu_items') // Assuming table name is 'menu_items'
-        .select('*')
-        .eq('user_id', user?.id); // Filter by current user
-
-      if (error) {
-        console.error('Error fetching menu items:', error);
+      // First fetch listing ids for this cook, then filter availability.
+      // (Postgrest doesn't easily join availability→listings with a where clause.)
+      const { data: cookListings } = await supabase
+        .from('listings')
+        .select('id')
+        .eq('cook_id', profile.id);
+      const ids = (cookListings ?? []).map(l => l.id);
+      if (ids.length === 0) {
+        setAvailability([]);
         return;
       }
 
-      setMenuItems(data || []);
-    } catch (error) {
-      console.error('Error fetching menu items:', error);
-    }
-  };
-  */
+      const { start, end } = monthBounds(month);
+      const { data, error } = await supabase
+        .from('availability')
+        .select('id, listing_id, available_date, start_time, end_time, is_available')
+        .in('listing_id', ids)
+        .gte('available_date', start)
+        .lt('available_date', end);
+      if (error) {
+        console.warn('Availability load failed', error.message);
+        return;
+      }
+      setAvailability((data ?? []) as AvailabilityRow[]);
+    },
+    [user]
+  );
 
-  const toggleAvailability = async (menuItemId: string, currentlyAvailable: boolean) => {
-    if (!user) return;
+  useFocusEffect(
+    useCallback(() => {
+      (async () => {
+        setLoading(true);
+        await loadListings();
+        await loadAvailability(currentMonth);
+        setLoading(false);
+      })();
+    }, [loadListings, loadAvailability, currentMonth])
+  );
+
+  useEffect(() => {
+    // When month changes (user paginates), refetch availability for that month.
+    if (!loading) loadAvailability(currentMonth);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentMonth]);
+
+  // ── Toggle availability for a (listing, date) pair ─────────────────
+  const isOnFor = (listingId: string, date: string): AvailabilityRow | undefined =>
+    availability.find(
+      a => a.listing_id === listingId && a.available_date === date && a.is_available
+    );
+
+  const handleToggle = async (listing: Listing, value: boolean) => {
+    const date = selectedDate;
+    const key = `${listing.id}_${date}`;
+    if (pending.has(key)) return;
+    setPending(prev => new Set(prev).add(key));
 
     try {
-      const dateStr = selectedDate.toISOString().split('T')[0];
-      const newAvailability = !currentlyAvailable;
+      const existing = availability.find(
+        a => a.listing_id === listing.id && a.available_date === date
+      );
 
-      // Check if record exists
-      const existingRecord = menuAvailability.find(item => item.menu_item_id === menuItemId);
-
-      if (existingRecord) {
-        const res = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/toggle-availability`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: existingRecord.id, is_available: newAvailability }),
-        });
-
-        if (!res.ok) {
-          throw new Error('Failed to update availability');
+      if (value) {
+        // Turning ON — insert or flip is_available back to true
+        if (existing) {
+          const { data, error } = await supabase
+            .from('availability')
+            .update({ is_available: true })
+            .eq('id', existing.id)
+            .select()
+            .single();
+          if (error) throw error;
+          setAvailability(prev =>
+            prev.map(a => (a.id === existing.id ? (data as AvailabilityRow) : a))
+          );
+        } else {
+          const row = {
+            listing_id: listing.id,
+            available_date: date,
+            start_time: isoAt(date, DEFAULT_START_HOUR),
+            end_time: isoAt(date, DEFAULT_END_HOUR),
+            max_orders: DEFAULT_MAX_ORDERS,
+            is_available: true,
+          };
+          const { data, error } = await supabase.from('availability').insert(row).select().single();
+          if (error) throw error;
+          setAvailability(prev => [...prev, data as AvailabilityRow]);
         }
-
-        const data = await res.json();
-
-        // Update local state
-        setMenuAvailability(prev =>
-          prev.map(item => (item.id === existingRecord.id ? data.availability : item))
-        );
       } else {
-        Alert.alert('Error', 'No availability record exists yet for this menu item');
+        // Turning OFF — flip is_available to false (keep the row in case of past orders).
+        if (existing) {
+          const { error } = await supabase
+            .from('availability')
+            .update({ is_available: false })
+            .eq('id', existing.id);
+          if (error) throw error;
+          setAvailability(prev =>
+            prev.map(a => (a.id === existing.id ? { ...a, is_available: false } : a))
+          );
+        }
       }
-    } catch (error) {
-      console.error('Error toggling availability:', error);
-      Alert.alert('Error', 'Failed to update availability');
+    } catch (e: any) {
+      Alert.alert('Could not update', e.message ?? 'Unknown error');
+    } finally {
+      setPending(prev => {
+        const next = new Set(prev);
+        next.delete(key);
+        return next;
+      });
     }
   };
 
-  const updateTimeSlot = (menuItemId: string, timeType: 'start' | 'end', time: string) => {
-    // This function can be expanded to handle time slot updates
-    console.log(`Updating ${timeType} time for ${menuItemId} to ${time}`);
-  };
-
-  const isItemAvailable = (menuItemId: string): boolean => {
-    const availability = menuAvailability.find(item => item.menu_item_id === menuItemId);
-    return availability?.is_available ?? false;
-  };
-
-  const getTimeSlot = (menuItemId: string): string => {
-    const availability = menuAvailability.find(item => item.menu_item_id === menuItemId);
-    if (availability && availability.start_time && availability.end_time) {
-      return `${availability.start_time} - ${availability.end_time}`;
-    }
-    return '12 - 13:00pm';
-  };
-
-  const navigateMonth = (direction: 'prev' | 'next') => {
-    const newDate = new Date(selectedDate);
-    if (direction === 'prev') {
-      newDate.setMonth(newDate.getMonth() - 1);
-    } else {
-      newDate.setMonth(newDate.getMonth() + 1);
-    }
-    setSelectedDate(newDate);
-  };
-
-  const renderCalendarHeader = () => {
-    const monthNames = [
-      'January',
-      'February',
-      'March',
-      'April',
-      'May',
-      'June',
-      'July',
-      'August',
-      'September',
-      'October',
-      'November',
-      'December',
-    ];
-
-    const currentMonth = monthNames[selectedDate.getMonth()];
-    const currentYear = selectedDate.getFullYear();
-
-    return (
-      <View style={styles.calendarHeader}>
-        <TouchableOpacity style={styles.navButton} onPress={() => navigateMonth('prev')}>
-          <Text style={styles.navButtonText}>‹</Text>
-        </TouchableOpacity>
-
-        <View style={styles.monthYearContainer}>
-          <Text style={styles.monthText}>{currentMonth}</Text>
-          <Text style={styles.yearText}>{currentYear}</Text>
-        </View>
-
-        <TouchableOpacity style={styles.navButton} onPress={() => navigateMonth('next')}>
-          <Text style={styles.navButtonText}>›</Text>
-        </TouchableOpacity>
-      </View>
+  const handleSlotSave = async () => {
+    if (!slotEditing) return;
+    const date = selectedDate;
+    const existing = availability.find(
+      a => a.listing_id === slotEditing.id && a.available_date === date && a.is_available
     );
-  };
+    if (!existing) return;
 
-  const renderCalendar = () => {
-    const today = new Date();
-    const currentMonth = selectedDate.getMonth();
-    const currentYear = selectedDate.getFullYear();
-
-    // Get first day of month and number of days
-    const firstDay = new Date(currentYear, currentMonth, 1);
-    const lastDay = new Date(currentYear, currentMonth + 1, 0);
-    const daysInMonth = lastDay.getDate();
-    const startingDayOfWeek = firstDay.getDay();
-
-    // Days of week header
-    const daysOfWeek = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-
-    const calendarDays = [];
-
-    // Add previous month's last days (inactive)
-    const prevMonth = new Date(currentYear, currentMonth, 0);
-    const startDay = startingDayOfWeek === 0 ? 6 : startingDayOfWeek - 1; // Adjust for Monday start
-
-    for (let i = startDay - 1; i >= 0; i--) {
-      const day = prevMonth.getDate() - i;
-      calendarDays.push(
-        <TouchableOpacity key={`prev-${day}`} style={styles.calendarDay} disabled>
-          <Text style={styles.inactiveDayText}>{day}</Text>
-        </TouchableOpacity>
-      );
+    if (draftEnd <= draftStart) {
+      Alert.alert('Invalid time range', 'End time must be after start time.');
+      return;
+    }
+    const max = parseInt(draftMaxOrders, 10);
+    if (isNaN(max) || max < 1) {
+      Alert.alert('Invalid max orders', 'Please enter a number greater than 0.');
+      return;
     }
 
-    // Add current month days
-    for (let day = 1; day <= daysInMonth; day++) {
-      const isToday =
-        today.getDate() === day &&
-        today.getMonth() === currentMonth &&
-        today.getFullYear() === currentYear;
-      const isSelected =
-        selectedDate.getDate() === day &&
-        selectedDate.getMonth() === currentMonth &&
-        selectedDate.getFullYear() === currentYear;
-      const date = new Date(currentYear, currentMonth, day);
-
-      // Check if this date has any menu availability
-      const dateStr = date.toISOString().split('T')[0];
-      const hasAvailability = menuAvailability.some(
-        item => item.date === dateStr && item.is_available
+    setSlotSaving(true);
+    try {
+      const { data, error } = await supabase
+        .from('availability')
+        .update({
+          start_time: isoAtTime(date, draftStart),
+          end_time: isoAtTime(date, draftEnd),
+          max_orders: max,
+        })
+        .eq('id', existing.id)
+        .select()
+        .single();
+      if (error) throw error;
+      setAvailability(prev =>
+        prev.map(a => (a.id === existing.id ? (data as AvailabilityRow) : a))
       );
-
-      calendarDays.push(
-        <TouchableOpacity
-          key={day}
-          style={[styles.calendarDay, isSelected && styles.selectedDay]}
-          onPress={() => setSelectedDate(date)}
-        >
-          {/* <View style={[isSelected && styles.selectedDayCircle]}> */}
-          <Text
-            style={[
-              styles.dayText,
-              isSelected && styles.selectedDayText,
-              isToday && styles.todayText,
-            ]}
-          >
-            {day}
-          </Text>
-          {/* </View> */}
-          {hasAvailability && <View style={styles.dayIndicator} />}
-        </TouchableOpacity>
-      );
+      setSlotEditing(null);
+    } catch (e: any) {
+      Alert.alert('Could not save', e.message ?? 'Unknown error');
+    } finally {
+      setSlotSaving(false);
     }
-
-    // Add next month's first days to fill the grid
-    const totalCells = Math.ceil(calendarDays.length / 7) * 7;
-    let nextMonthDay = 1;
-    console.log(calendarDays.length, totalCells);
-    while (calendarDays.length < totalCells) {
-      calendarDays.push(
-        <TouchableOpacity key={`next-${nextMonthDay}`} style={styles.calendarDay} disabled>
-          <Text style={styles.inactiveDayText}>{nextMonthDay}</Text>
-        </TouchableOpacity>
-      );
-      nextMonthDay++;
-    }
-
-    return (
-      <View style={styles.calendar}>
-        <View style={styles.daysOfWeekHeader}>
-          {daysOfWeek.map(day => (
-            <Text key={day} style={styles.dayOfWeekText}>
-              {day}
-            </Text>
-          ))}
-        </View>
-        <View style={styles.calendarGrid}>{calendarDays}</View>
-      </View>
-    );
   };
 
-  const renderMenuItem = (item: MenuItem) => {
-    const isAvailable = isItemAvailable(item.id);
-    const timeSlot = getTimeSlot(item.id);
+  // Apply the current draft slot to the selected date + the next 6 days.
+  // Existing rows for any of those dates get updated in-place; missing ones
+  // get inserted with is_available=true.
+  const handleApplyToWeek = async () => {
+    if (!slotEditing) return;
+    if (draftEnd <= draftStart) {
+      Alert.alert('Invalid time range', 'End time must be after start time.');
+      return;
+    }
+    const max = parseInt(draftMaxOrders, 10);
+    if (isNaN(max) || max < 1) {
+      Alert.alert('Invalid max orders', 'Please enter a number greater than 0.');
+      return;
+    }
 
-    return (
-      <View key={item.id} style={styles.menuItem}>
-        <View style={styles.menuItemLeft}>
-          <Image source={{ uri: item.image_url }} style={styles.menuItemImage} />
-          <Text style={styles.menuItemName}>{item.name}</Text>
-        </View>
+    setSlotSaving(true);
+    try {
+      // Build the 7 target dates starting from the selected date.
+      const [y, mo, da] = selectedDate.split('-').map(Number);
+      const dates: string[] = [];
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(y, mo - 1, da + i);
+        const ds = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        dates.push(ds);
+      }
 
-        <View style={styles.menuItemCenter}>
-          <TouchableOpacity
-            style={[styles.availabilityToggle, isAvailable && styles.availabilityToggleActive]}
-            onPress={() => toggleAvailability(item.id, isAvailable)}
-          >
-            <View style={[styles.toggleSwitch, isAvailable && styles.toggleSwitchActive]} />
-          </TouchableOpacity>
-          <Text style={styles.availabilityText}>Available</Text>
-        </View>
+      // Find which of those dates already have an availability row.
+      const { data: existingRows, error: fetchErr } = await supabase
+        .from('availability')
+        .select('id, available_date')
+        .eq('listing_id', slotEditing.id)
+        .in('available_date', dates);
+      if (fetchErr) throw fetchErr;
+      const existingByDate = new Map<string, string>(
+        (existingRows ?? []).map(r => [r.available_date as string, r.id as string])
+      );
 
-        <View style={styles.menuItemRight}>
-          <TouchableOpacity style={styles.timeSlotButton}>
-            <Text style={[styles.timeSlotText, !isAvailable && styles.timeSlotTextInactive]}>
-              {timeSlot} ▼
-            </Text>
-          </TouchableOpacity>
-          <Text style={styles.timeSlotLabel}>Time slot</Text>
-        </View>
-      </View>
-    );
+      const inserts: any[] = [];
+      const updateOps: { id: string; payload: any }[] = [];
+      for (const date of dates) {
+        const payload = {
+          start_time: isoAtTime(date, draftStart),
+          end_time: isoAtTime(date, draftEnd),
+          max_orders: max,
+          is_available: true,
+        };
+        const existingId = existingByDate.get(date);
+        if (existingId) {
+          updateOps.push({ id: existingId, payload });
+        } else {
+          inserts.push({ listing_id: slotEditing.id, available_date: date, ...payload });
+        }
+      }
+
+      for (const { id: rowId, payload } of updateOps) {
+        const { error } = await supabase.from('availability').update(payload).eq('id', rowId);
+        if (error) throw error;
+      }
+      if (inserts.length > 0) {
+        const { error } = await supabase.from('availability').insert(inserts);
+        if (error) throw error;
+      }
+
+      // Reload availability for the current month to pick up everything we
+      // just wrote. The 7-day window could spill into next month, but those
+      // rows will show up when the cook navigates there.
+      await loadAvailability(currentMonth);
+      setSlotEditing(null);
+    } catch (e: any) {
+      Alert.alert('Could not apply to week', e.message ?? 'Unknown error');
+    } finally {
+      setSlotSaving(false);
+    }
   };
+
+  // ── markedDates for the Calendar ───────────────────────────────────
+  const markedDates = useMemo(() => {
+    const map: Record<string, any> = {};
+    for (const a of availability) {
+      if (!a.is_available) continue;
+      const existing = map[a.available_date] ?? {};
+      map[a.available_date] = { ...existing, marked: true, dotColor: '#4CAF50' };
+    }
+    map[selectedDate] = {
+      ...(map[selectedDate] ?? {}),
+      selected: true,
+      selectedColor: '#4CAF50',
+      selectedTextColor: '#fff',
+    };
+    return map;
+  }, [availability, selectedDate]);
 
   return (
-    <SafeAreaView style={styles.container}>
-      {renderCalendarHeader()}
+    <SafeAreaView style={styles.container} edges={['left', 'right']}>
+      <Calendar
+        current={selectedDate}
+        onDayPress={(day: DateData) => setSelectedDate(day.dateString)}
+        onMonthChange={(month: DateData) => setCurrentMonth(month.dateString.slice(0, 7))}
+        markedDates={markedDates}
+        theme={{
+          todayTextColor: '#4CAF50',
+          arrowColor: '#1A1A1A',
+          textMonthFontWeight: '700',
+          textDayFontWeight: '500',
+          textDayHeaderFontWeight: '600',
+        }}
+        firstDay={1}
+      />
 
-      {renderCalendar()}
+      <View style={styles.divider} />
 
-      <View style={styles.menuSection}>
-        <View style={styles.menuSectionHeader}>
-          <Text style={styles.sectionTitle}>Your meals</Text>
-          <Text style={styles.sectionTitle}>Available</Text>
-          <Text style={styles.sectionTitle}>Time slot</Text>
+      {isPastDate && (
+        <View style={styles.pastBanner}>
+          <Ionicons name="lock-closed-outline" size={14} color="#888" />
+          <Text style={styles.pastBannerText}>Past dates are read-only.</Text>
+        </View>
+      )}
+
+      <View style={styles.sectionHeader}>
+        <Text style={[styles.sectionLabel, { flex: 1 }]}>Your meals</Text>
+        <Text style={[styles.sectionLabel, { width: 80, textAlign: 'center' }]}>Available</Text>
+        <Text style={[styles.sectionLabel, { width: 110, textAlign: 'right' }]}>Time slot</Text>
+      </View>
+
+      <ScrollView contentContainerStyle={{ paddingBottom: 80 }}>
+        {loading ? (
+          <View style={styles.empty}>
+            <ActivityIndicator color="#4CAF50" />
+          </View>
+        ) : listings.length === 0 ? (
+          <View style={styles.empty}>
+            <Ionicons name="restaurant-outline" size={32} color="#bbb" />
+            <Text style={styles.emptyText}>
+              Add dishes from the Menu tab before scheduling availability.
+            </Text>
+          </View>
+        ) : (
+          listings.map(listing => {
+            const on = !!isOnFor(listing.id, selectedDate);
+            const key = `${listing.id}_${selectedDate}`;
+            const busy = pending.has(key);
+            const notApproved = listing.status !== 'approved';
+            const locked = isPastDate || notApproved;
+            return (
+              <View key={listing.id} style={[styles.row, notApproved && styles.rowMuted]}>
+                <View style={styles.mealCell}>
+                  {listing.image_url ? (
+                    <Image source={{ uri: listing.image_url }} style={styles.thumb} />
+                  ) : (
+                    <View style={[styles.thumb, styles.thumbPlaceholder]}>
+                      <Ionicons name="image-outline" size={16} color="#bbb" />
+                    </View>
+                  )}
+                  <View style={{ flexShrink: 1 }}>
+                    <Text style={styles.mealTitle} numberOfLines={1}>
+                      {listing.title}
+                    </Text>
+                    {notApproved && (
+                      <Text style={styles.pendingHint} numberOfLines={1}>
+                        {listing.status === 'rejected' ? 'Rejected' : 'Pending review'}
+                      </Text>
+                    )}
+                  </View>
+                </View>
+                <View style={styles.toggleCell}>
+                  {busy ? (
+                    <ActivityIndicator size="small" color="#4CAF50" />
+                  ) : (
+                    <Switch
+                      value={on}
+                      onValueChange={v => handleToggle(listing, v)}
+                      trackColor={{ false: '#E0E0E0', true: '#4CAF50' }}
+                      thumbColor="#fff"
+                      disabled={locked}
+                    />
+                  )}
+                </View>
+                <View style={styles.slotCell}>
+                  <TouchableOpacity
+                    style={[styles.slotPill, (!on || locked) && styles.slotPillDisabled]}
+                    onPress={() => on && !locked && openSlotEditor(listing)}
+                    disabled={!on || locked}
+                    activeOpacity={0.7}
+                  >
+                    <Text
+                      style={[styles.slotText, !on && styles.slotTextDisabled]}
+                      numberOfLines={1}
+                    >
+                      {(() => {
+                        const row = isOnFor(listing.id, selectedDate);
+                        return row ? formatSlotRange(row.start_time, row.end_time) : 'Set time';
+                      })()}
+                    </Text>
+                    <Ionicons name="chevron-down" size={12} color={on ? '#666' : '#BBB'} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            );
+          })
+        )}
+      </ScrollView>
+
+      {/* Slot picker */}
+      <Modal
+        visible={slotEditing != null}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setSlotEditing(null)}
+      >
+        <TouchableOpacity
+          style={styles.modalBackdrop}
+          activeOpacity={1}
+          onPress={() => setSlotEditing(null)}
+        />
+        <View style={styles.modalSheet}>
+          <Text style={styles.modalTitle}>Edit availability</Text>
+          <Text style={styles.modalSubtitle}>
+            {slotEditing?.title} · {selectedDate}
+          </Text>
+
+          {/* Start / End time pickers */}
+          <View style={styles.timeRow}>
+            <View style={styles.timeCol}>
+              <Text style={styles.timeLabel}>Start</Text>
+              <TouchableOpacity style={styles.timeButton} onPress={() => setShowStartPicker(true)}>
+                <Text style={styles.timeButtonText}>{formatTime(draftStart)}</Text>
+                <Ionicons name="time-outline" size={16} color="#666" />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.timeCol}>
+              <Text style={styles.timeLabel}>End</Text>
+              <TouchableOpacity style={styles.timeButton} onPress={() => setShowEndPicker(true)}>
+                <Text style={styles.timeButtonText}>{formatTime(draftEnd)}</Text>
+                <Ionicons name="time-outline" size={16} color="#666" />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Max orders */}
+          <Text style={styles.timeLabel}>Max orders for this slot</Text>
+          <View style={styles.maxOrdersRow}>
+            <TouchableOpacity
+              style={styles.stepperBtn}
+              onPress={() => {
+                const n = parseInt(draftMaxOrders, 10);
+                if (!isNaN(n) && n > 1) setDraftMaxOrders(String(n - 1));
+              }}
+            >
+              <Ionicons name="remove" size={18} color="#1A1A1A" />
+            </TouchableOpacity>
+            <TextInput
+              style={styles.maxOrdersInput}
+              value={draftMaxOrders}
+              onChangeText={t => setDraftMaxOrders(t.replace(/\D/g, ''))}
+              keyboardType="number-pad"
+              inputMode="numeric"
+              maxLength={3}
+            />
+            <TouchableOpacity
+              style={styles.stepperBtn}
+              onPress={() => {
+                const n = parseInt(draftMaxOrders, 10);
+                setDraftMaxOrders(String((isNaN(n) ? 0 : n) + 1));
+              }}
+            >
+              <Ionicons name="add" size={18} color="#1A1A1A" />
+            </TouchableOpacity>
+          </View>
+
+          <TouchableOpacity
+            style={[styles.saveBtn, slotSaving && styles.saveBtnDisabled]}
+            onPress={handleSlotSave}
+            disabled={slotSaving}
+          >
+            {slotSaving ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.saveBtnText}>Save</Text>
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.weekBtn, slotSaving && styles.weekBtnDisabled]}
+            onPress={handleApplyToWeek}
+            disabled={slotSaving}
+          >
+            <Ionicons name="repeat" size={16} color="#2E7D32" />
+            <Text style={styles.weekBtnText}>Apply to next 7 days</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.modalCancel} onPress={() => setSlotEditing(null)}>
+            <Text style={styles.modalCancelText}>Cancel</Text>
+          </TouchableOpacity>
         </View>
 
-        <ScrollView contentContainerStyle={{ paddingTop: 0 }} style={styles.menuList}>
-          {menuItems.map(renderMenuItem)}
-        </ScrollView>
-      </View>
+        <DateTimePickerModal
+          isVisible={showStartPicker}
+          mode="time"
+          date={draftStart}
+          onConfirm={t => {
+            setDraftStart(t);
+            setShowStartPicker(false);
+          }}
+          onCancel={() => setShowStartPicker(false)}
+        />
+        <DateTimePickerModal
+          isVisible={showEndPicker}
+          mode="time"
+          date={draftEnd}
+          onConfirm={t => {
+            setDraftEnd(t);
+            setShowEndPicker(false);
+          }}
+          onCancel={() => setShowEndPicker(false)}
+        />
+      </Modal>
     </SafeAreaView>
   );
-};
+}
 
 const styles = StyleSheet.create({
-  container: {
-    paddingTop: 30,
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    justifyContent: 'flex-start',
-    gap: 0, // consistent vertical gap between calendar + menu
-  },
-  calendarHeader: {
+  container: { flex: 1, backgroundColor: '#fff' },
+  divider: { height: 1, backgroundColor: '#F0F0F0' },
+  pastBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 10,
-    paddingBottom: 20,
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: '#F5F5F5',
   },
-  navButton: {
-    padding: 10,
-  },
-  navButtonText: {
-    fontSize: 24,
-    color: '#000000',
-    fontWeight: '300',
-  },
-  monthYearContainer: {
-    alignItems: 'center',
-  },
-  groupText: {
-    fontSize: 12,
-    color: '#999999',
-    marginBottom: 2,
-  },
-  monthText: {
-    fontSize: 24,
-    fontWeight: '600',
-    color: '#000000',
-  },
-  yearText: {
-    fontSize: 16,
-    color: '#999999',
-  },
-  calendar: {
-    paddingHorizontal: 20,
-    marginBottom: 0,
-    height: 'auto',
-  },
-  daysOfWeekHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginBottom: 15,
-  },
-  dayOfWeekText: {
-    fontSize: 14,
-    color: '#999999',
-    fontWeight: '500',
-    width: 40,
-    textAlign: 'center',
-  },
-  // calendarGrid: {
-  //   flexDirection: 'row',
-  //   flexWrap: 'wrap',
-  //   justifyContent: 'space-around',
-  // },
-
-  selectedDayCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#4CAF50',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  dayText: {
-    fontSize: 16,
-    color: '#000000',
-    fontWeight: '400',
-  },
-  selectedDayText: {
-    color: '#FFFFFF',
-    fontWeight: '600',
-  },
-
-  calendarDay: {
-    width: '14.28%', // exactly 100 / 7 = 14.28%
-    aspectRatio: 1, // keep squares
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 5,
-    position: 'relative',
-  },
-  calendarGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'flex-start', // keep items tight
-    rowGap: 5,
-    height: 260,
-  },
-
-  selectedDay: {
-    backgroundColor: '#4CAF50',
-    borderRadius: 20,
-  },
-
-  todayText: {
-    fontWeight: '600',
-  },
-  inactiveDayText: {
-    color: '#CCCCCC',
-    fontSize: 16,
-  },
-  dayIndicator: {
-    position: 'absolute',
-    bottom: -5,
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: '#4CAF50',
-  },
-  menuSection: {
-    flex: 1,
-    paddingHorizontal: 20,
-    paddingTop: 0,
-  },
-  menuSectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingBottom: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
-    marginBottom: 15,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#000000',
-    flex: 1,
-  },
-  menuList: {
-    flex: 1,
-  },
-  menuItem: {
+  pastBannerText: { fontSize: 12, color: '#666', fontWeight: '500' },
+  sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 15,
-    borderBottomWidth: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: '#F0F0F0',
   },
-  menuItemLeft: {
+  sectionLabel: { fontSize: 13, fontWeight: '700', color: '#1A1A1A' },
+  row: {
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#F0F0F0',
   },
-  menuItemImage: {
+  mealCell: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  thumb: { width: 28, height: 28, borderRadius: 14 },
+  thumbPlaceholder: {
+    backgroundColor: '#F0F0F0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mealTitle: { fontSize: 14, color: '#1A1A1A', flexShrink: 1 },
+  rowMuted: { opacity: 0.55 },
+  pendingHint: { fontSize: 11, color: '#B26B00', fontWeight: '600', marginTop: 2 },
+  toggleCell: { width: 80, alignItems: 'center', justifyContent: 'center' },
+  slotCell: { width: 110, alignItems: 'flex-end' },
+  slotPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F0F0F0',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    gap: 4,
+  },
+  slotPillDisabled: { opacity: 0.5 },
+  slotText: { fontSize: 12, color: '#1A1A1A', fontWeight: '500' },
+  slotTextDisabled: { color: '#888' },
+  empty: { alignItems: 'center', paddingVertical: 48, paddingHorizontal: 32, gap: 10 },
+  emptyText: { fontSize: 13, color: '#888', textAlign: 'center', lineHeight: 18 },
+
+  modalBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.4)' },
+  modalSheet: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 20,
+    paddingBottom: 36,
+  },
+  modalTitle: { fontSize: 18, fontWeight: '800', color: '#1A1A1A' },
+  modalSubtitle: { fontSize: 12, color: '#888', marginBottom: 12, marginTop: 2 },
+  slotOption: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    marginBottom: 8,
+  },
+  slotOptionSelected: { borderColor: '#4CAF50', backgroundColor: '#F1F8F4' },
+  slotOptionText: { fontSize: 15, fontWeight: '600', color: '#1A1A1A' },
+  slotOptionTextSelected: { color: '#2E7D32' },
+  modalCancel: { paddingVertical: 14, alignItems: 'center', marginTop: 4 },
+  modalCancelText: { fontSize: 14, fontWeight: '600', color: '#666' },
+
+  timeRow: { flexDirection: 'row', gap: 12, marginTop: 8, marginBottom: 16 },
+  timeCol: { flex: 1, gap: 6 },
+  timeLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#888',
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
+  },
+  timeButton: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+  },
+  timeButtonText: { fontSize: 15, fontWeight: '600', color: '#1A1A1A' },
+
+  maxOrdersRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 6,
+    marginBottom: 16,
+  },
+  stepperBtn: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    marginRight: 12,
-  },
-  menuItemName: {
-    fontSize: 14,
-    color: '#000000',
-    fontWeight: '500',
-    flex: 1,
-  },
-  menuItemCenter: {
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
     alignItems: 'center',
-    flex: 1,
-  },
-  availabilityToggle: {
-    width: 50,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: '#E0E0E0',
     justifyContent: 'center',
-    padding: 2,
-    marginBottom: 5,
   },
-  availabilityToggleActive: {
-    backgroundColor: '#4CAF50',
-  },
-  toggleSwitch: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: '#FFFFFF',
-    alignSelf: 'flex-start',
-  },
-  toggleSwitchActive: {
-    alignSelf: 'flex-end',
-  },
-  availabilityText: {
-    fontSize: 10,
-    color: '#666666',
-  },
-  menuItemRight: {
-    alignItems: 'center',
+  maxOrdersInput: {
     flex: 1,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    borderRadius: 12,
+    paddingVertical: 10,
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1A1A1A',
+    textAlign: 'center',
   },
-  timeSlotButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-    backgroundColor: '#F8F8F8',
-    marginBottom: 5,
-  },
-  timeSlotText: {
-    fontSize: 12,
-    color: '#000000',
-    fontWeight: '500',
-  },
-  timeSlotTextInactive: {
-    color: '#CCCCCC',
-  },
-  timeSlotLabel: {
-    fontSize: 10,
-    color: '#666666',
-  },
-  tabBar: {
-    flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
-    borderTopWidth: 1,
-    borderTopColor: '#E0E0E0',
-    paddingVertical: 8,
-  },
-  tabItem: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: 8,
-  },
-  activeTabItem: {
-    opacity: 1,
-  },
-  tabText: {
-    fontSize: 10,
-    color: '#999999',
-    marginTop: 2,
-  },
-  activeTabText: {
-    fontSize: 10,
-    color: '#4CAF50',
-    marginTop: 2,
-  },
-});
 
-export default Calendar;
+  saveBtn: {
+    backgroundColor: '#4CAF50',
+    borderRadius: 24,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  saveBtnDisabled: { backgroundColor: '#A5D6A7' },
+  saveBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+  weekBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 12,
+    borderRadius: 24,
+    borderWidth: 1.5,
+    borderColor: '#4CAF50',
+    marginTop: 8,
+  },
+  weekBtnDisabled: { opacity: 0.5 },
+  weekBtnText: { color: '#2E7D32', fontSize: 14, fontWeight: '700' },
+});

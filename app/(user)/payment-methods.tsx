@@ -12,11 +12,17 @@ import {
   ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { supabase } from '@/src/utils/supabaseClient';
+import { useAuth } from '@/src/services/auth-context';
+import { useOnboarding } from '@/src/context/OnboardingContext';
 
-const STORAGE_KEY = '@chefin:payment-method';
+const DISH_IMAGES_BUCKET = 'dish-images';
+const FOOD_SAFETY_BUCKET = 'food-safety-licenses';
+
+const getStorageKey = (userId?: string) => `@chefin:payment-method-${userId || 'guest'}`;
 
 type SavedCard = {
   brand: string;
@@ -57,6 +63,17 @@ const formatExpiry = (digits: string): string =>
 
 export default function PaymentMethodScreen() {
   const router = useRouter();
+  // The cook onboarding chain lands here last. When that param is set we skip
+  // the empty state, relabel the CTA, and finish the application on save.
+  const { onboarding } = useLocalSearchParams<{ onboarding?: string }>();
+  const isCookOnboarding = onboarding === 'cook';
+  const { user } = useAuth();
+  const {
+    dish: onboardingDish,
+    address: onboardingAddress,
+    foodSafety: onboardingFoodSafety,
+    reset: resetOnboarding,
+  } = useOnboarding();
   const [savedCard, setSavedCard] = useState<SavedCard | null>(null);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -73,15 +90,23 @@ export default function PaymentMethodScreen() {
   useEffect(() => {
     (async () => {
       try {
-        const raw = await AsyncStorage.getItem(STORAGE_KEY);
-        if (raw) setSavedCard(JSON.parse(raw));
+        const raw = await AsyncStorage.getItem(getStorageKey(user?.id));
+        if (raw) {
+          setSavedCard(JSON.parse(raw));
+        } else if (isCookOnboarding) {
+          // In onboarding the empty state isn't useful — there's only one
+          // thing to do, which is enter card details. Skip straight to it.
+          setShowForm(true);
+          setTimeout(() => cardRef.current?.focus(), 50);
+        }
       } catch (e) {
         console.warn('Failed to load saved card', e);
       } finally {
         setLoading(false);
       }
     })();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
   const resetForm = () => {
     setCardDigits('');
@@ -138,7 +163,121 @@ export default function PaymentMethodScreen() {
         expMonth: expDigits.slice(0, 2),
         expYear: expDigits.slice(2),
       };
-      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(card));
+
+      // ── Onboarding commit: write the dish + food safety to the DB now that
+      // the cook has reached the final step. If any step fails the whole
+      // submission is aborted so we don't leave half-application rows behind.
+      if (isCookOnboarding) {
+        if (!user) {
+          Alert.alert('Sign in required', 'Please sign in to finish your application.');
+          return;
+        }
+        if (!onboardingDish || !onboardingAddress || !onboardingFoodSafety) {
+          Alert.alert(
+            'Missing details',
+            'Some onboarding details are missing. Please go back and complete each step.'
+          );
+          return;
+        }
+
+        const { data: profile, error: profileErr } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('user_id', user.id)
+          .single();
+        if (profileErr || !profile) throw new Error('Profile not found for your account.');
+
+        // 1. Upload dish photo (if any) → public URL.
+        let dishImageUrl: string | null = null;
+        if (onboardingDish.photoUri) {
+          const ext = (onboardingDish.photoUri.split('.').pop() || 'jpg').toLowerCase();
+          const contentType = `image/${ext === 'jpg' ? 'jpeg' : ext}`;
+          const path = `${profile.id}/${Date.now()}.${ext}`;
+          const response = await fetch(onboardingDish.photoUri);
+          const arrayBuffer = await response.arrayBuffer();
+          const { error: uploadErr } = await supabase.storage
+            .from(DISH_IMAGES_BUCKET)
+            .upload(path, arrayBuffer, { contentType, upsert: false });
+          if (uploadErr) throw uploadErr;
+          const { data: pub } = supabase.storage.from(DISH_IMAGES_BUCKET).getPublicUrl(path);
+          dishImageUrl = pub.publicUrl;
+        }
+
+        // 2. Insert listing row. The rough public-facing location comes from
+        // the onboarding address the cook just entered.
+        const { error: insertErr } = await supabase.from('listings').insert({
+          cook_id: profile.id,
+          title: onboardingDish.title,
+          description: onboardingDish.description,
+          price: onboardingDish.price,
+          image_url: dishImageUrl,
+          cuisine: onboardingDish.cuisine,
+          dietary_tags: onboardingDish.dietaryTags,
+          ingredients: onboardingDish.ingredients,
+          location: onboardingAddress.locality || null,
+          is_active: true,
+        });
+        if (insertErr) throw insertErr;
+
+        // 3. Upload license file (if any) → storage path.
+        let licensePath: string | null = null;
+        if (onboardingFoodSafety.hasLicense && onboardingFoodSafety.licenseUri) {
+          const fallbackExt =
+            onboardingFoodSafety.licenseFileName?.split('.').pop()?.toLowerCase() ?? 'pdf';
+          const path = `${user.id}/license-${Date.now()}.${fallbackExt}`;
+          const response = await fetch(onboardingFoodSafety.licenseUri);
+          const arrayBuffer = await response.arrayBuffer();
+          const { error: uploadErr } = await supabase.storage
+            .from(FOOD_SAFETY_BUCKET)
+            .upload(path, arrayBuffer, {
+              contentType: onboardingFoodSafety.licenseMimeType ?? 'application/pdf',
+              upsert: false,
+            });
+          if (uploadErr) throw uploadErr;
+          licensePath = path;
+        }
+
+        // 4. Update profile with address + food safety details in one go.
+        const { error: profileUpdateErr } = await supabase
+          .from('profiles')
+          .update({
+            address_country: onboardingAddress.country,
+            address_flat: onboardingAddress.flat || null,
+            address_property_name: onboardingAddress.property_name || null,
+            address_street: onboardingAddress.street,
+            address_locality: onboardingAddress.locality || null,
+            address_town: onboardingAddress.town,
+            address_postcode: onboardingAddress.postcode,
+            hosting_type: onboardingFoodSafety.hostingType,
+            has_food_safety_license: onboardingFoodSafety.hasLicense,
+            food_safety_license_url: licensePath,
+          })
+          .eq('user_id', user.id);
+        if (profileUpdateErr) throw profileUpdateErr;
+
+        // Save the card locally (last so the DB-side state is the source
+        // of truth — the card never lands without the application landing).
+        await AsyncStorage.setItem(getStorageKey(user?.id), JSON.stringify(card));
+        setSavedCard(card);
+        setShowForm(false);
+        resetForm();
+        resetOnboarding();
+
+        Alert.alert(
+          'Application submitted!',
+          "Thanks! Your dishes and food-safety details are under admin review. We'll notify you once you're approved to start cooking.",
+          [
+            {
+              text: 'OK',
+              onPress: () => router.replace('/(user)/(tabs)/home'),
+            },
+          ]
+        );
+        return;
+      }
+
+      // ── Normal "add a card" path (not onboarding).
+      await AsyncStorage.setItem(getStorageKey(user?.id), JSON.stringify(card));
       setSavedCard(card);
       setShowForm(false);
       resetForm();
@@ -157,7 +296,7 @@ export default function PaymentMethodScreen() {
         text: 'Remove',
         style: 'destructive',
         onPress: async () => {
-          await AsyncStorage.removeItem(STORAGE_KEY);
+          await AsyncStorage.removeItem(getStorageKey(user?.id));
           setSavedCard(null);
         },
       },
@@ -174,7 +313,15 @@ export default function PaymentMethodScreen() {
   const Header = ({ title }: { title: string }) => (
     <View style={styles.header}>
       <TouchableOpacity
-        onPress={() => (showForm ? setShowForm(false) : router.back())}
+        onPress={() => {
+          // In onboarding the empty state is hidden, so toggling back to it
+          // is pointless — instead step out to food-safety.
+          if (showForm && !isCookOnboarding) {
+            setShowForm(false);
+          } else {
+            router.back();
+          }
+        }}
         style={styles.backButton}
       >
         <Ionicons name="chevron-back" size={24} color="#000" />
@@ -277,7 +424,9 @@ export default function PaymentMethodScreen() {
               {saving ? (
                 <ActivityIndicator color="#fff" />
               ) : (
-                <Text style={styles.primaryButtonText}>Add Card</Text>
+                <Text style={styles.primaryButtonText}>
+                  {isCookOnboarding ? 'Submit application' : 'Add Card'}
+                </Text>
               )}
             </TouchableOpacity>
 

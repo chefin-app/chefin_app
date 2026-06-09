@@ -80,6 +80,9 @@ model profiles {
   address_locality        String?
   address_town            String?
   address_postcode        String?
+  hosting_type            String?
+  has_food_safety_license Boolean?
+  food_safety_license_url String?
   listings                listings[]
   orders                  orders[]
   reviews                 reviews[]

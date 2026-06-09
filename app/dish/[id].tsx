@@ -6,12 +6,15 @@ import {
   ScrollView,
   Image,
   ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import AvailabilityPicker from '@/src/components/inputs/AvailabilityPicker';
+import AvailabilityPicker, {
+  AvailabilityPickerHandle,
+} from '@/src/components/inputs/AvailabilityPicker';
 import { useCart } from '@/src/context/CartContext';
 import { useFavourites } from '@/src/context/FavouritesContext';
 import StickyCartBar from '@/src/components/navigation/StickyCartBar';
@@ -37,25 +40,41 @@ const DishDetailsScreen = () => {
   } | null>(null);
   const isSlotSelected = !!selectedDate && !!selectedSlot && !selectedSlot.isFull;
 
-  useEffect(() => {
-    if (!id) return;
+  const pickerRef = useRef<AvailabilityPickerHandle>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
-    const fetchDish = async () => {
+  const fetchDish = useCallback(
+    async (showLoading = true) => {
+      if (!id) return;
       try {
+        if (showLoading) setLoading(true);
         const res = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/listings/${id}`);
         if (!res.ok) throw new Error('Failed to fetch dish details');
         const data = await res.json();
         setDish(data);
+        setError(null);
       } catch (err) {
         console.error('Error fetching dish:', err);
         setError('Could not load dish details.');
       } finally {
-        setLoading(false);
+        if (showLoading) setLoading(false);
       }
-    };
+    },
+    [id]
+  );
 
+  useEffect(() => {
     fetchDish();
-  }, [id]);
+  }, [fetchDish]);
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([fetchDish(false), pickerRef.current?.refresh()]);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [fetchDish]);
 
   if (loading) {
     return (
@@ -93,6 +112,7 @@ const DishDetailsScreen = () => {
         cookName: profiles?.full_name,
         quantity,
         selectedDate: new Date(selectedDate),
+        pickupSlotStart: selectedSlot?.startTime,
       });
     }
   };
@@ -113,8 +133,18 @@ const DishDetailsScreen = () => {
     <View style={styles.container}>
       <ScrollView
         contentContainerStyle={styles.scrollContent}
-        bounces={false}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor="#2E7D32"
+            colors={['#2E7D32']}
+            progressBackgroundColor="#fff"
+            title="Refreshing…"
+            titleColor="#2E7D32"
+          />
+        }
       >
         {/* Banner Section */}
         <View style={styles.bannerContainer}>
@@ -167,6 +197,7 @@ const DishDetailsScreen = () => {
           <View style={styles.sectionContainer}>
             <Text style={styles.sectionTitle}>Select Date & Time</Text>
             <AvailabilityPicker
+              ref={pickerRef}
               listingId={dish.id}
               onSelect={(date, slot) => {
                 setSelectedDate(date);

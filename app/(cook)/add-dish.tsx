@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -13,11 +13,12 @@ import {
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { supabase } from '@/src/utils/supabaseClient';
 import { useAuth } from '@/src/services/auth-context';
+import { useOnboarding } from '@/src/context/OnboardingContext';
 
 type Step = 'photo' | 'title' | 'description' | 'ingredients' | 'keywords' | 'price';
 const STEPS: Step[] = ['photo', 'title', 'description', 'ingredients', 'keywords', 'price'];
@@ -69,11 +70,15 @@ const DIETARY_TAG_OPTIONS = [
 export default function AddDishScreen() {
   const router = useRouter();
   const { user } = useAuth();
+  const params = useLocalSearchParams<{ onboarding?: string }>();
+  const isOnboarding = params.onboarding === '1' || params.onboarding === 'true';
+  const { setDish: stashDish } = useOnboarding();
   const [addressChecked, setAddressChecked] = useState(false);
 
   // Gate: require an address before letting the cook create a dish.
+  // (Skipped during onboarding — new cooks haven't set up their kitchen yet.)
   useEffect(() => {
-    if (!user) {
+    if (!user || isOnboarding) {
       setAddressChecked(true);
       return;
     }
@@ -117,7 +122,7 @@ export default function AddDishScreen() {
     return () => {
       cancelled = true;
     };
-  }, [user, router]);
+  }, [user, router, isOnboarding]);
 
   const [stepIdx, setStepIdx] = useState(0);
   const [photoUri, setPhotoUri] = useState<string | null>(null);
@@ -128,6 +133,7 @@ export default function AddDishScreen() {
   const [dietaryTags, setDietaryTags] = useState<string[]>([]);
   const [priceText, setPriceText] = useState('5');
   const [submitting, setSubmitting] = useState(false);
+  const priceInputRef = useRef<TextInput>(null);
 
   const ingredientsList = ingredientsText
     .split('\n')
@@ -217,6 +223,25 @@ export default function AddDishScreen() {
       Alert.alert('Sign in required', 'Please sign in to publish dishes.');
       return;
     }
+
+    // ── Onboarding path: nothing hits the DB yet. Stash the draft on the
+    // OnboardingContext so the final payment-methods step can commit it.
+    if (isOnboarding) {
+      stashDish({
+        title: title.trim(),
+        description: description.trim(),
+        ingredients: ingredientsList,
+        cuisine,
+        dietaryTags,
+        price: priceNum,
+        photoUri,
+      });
+      // Next step: kitchen address (still inside onboarding).
+      router.push({ pathname: '/(cook)/address', params: { onboarding: '1' } });
+      return;
+    }
+
+    // ── Normal "add another dish" path: write straight to DB.
     setSubmitting(true);
     try {
       const { data: profile, error: profileErr } = await supabase
@@ -444,6 +469,7 @@ export default function AddDishScreen() {
                 <View style={styles.priceRow}>
                   <Text style={styles.priceCurrency}>RM </Text>
                   <TextInput
+                    ref={priceInputRef}
                     style={styles.priceInput}
                     value={priceText}
                     onChangeText={text => setPriceText(text.replace(/[^0-9.]/g, ''))}
@@ -451,9 +477,14 @@ export default function AddDishScreen() {
                     inputMode="decimal"
                     selectTextOnFocus
                   />
-                  <View style={styles.pricePencil}>
+                  <TouchableOpacity
+                    style={styles.pricePencil}
+                    onPress={() => priceInputRef.current?.focus()}
+                    activeOpacity={0.7}
+                  >
                     <Ionicons name="pencil" size={12} color="#1A1A1A" />
-                  </View>
+                    <Text style={styles.priceEditText}>Edit</Text>
+                  </TouchableOpacity>
                 </View>
               </View>
             )}
@@ -631,15 +662,22 @@ const styles = StyleSheet.create({
     padding: 0,
   },
   pricePencil: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+    flexDirection: 'row',
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: '#1A1A1A',
     alignItems: 'center',
     justifyContent: 'center',
-    marginLeft: 6,
-    marginTop: 22,
+    marginLeft: 8,
+    marginTop: 16,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    gap: 4,
+  },
+  priceEditText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#1A1A1A',
   },
 
   // Footer
