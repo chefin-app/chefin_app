@@ -1,5 +1,13 @@
 import React from 'react';
-import { Image, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+  Image,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  ScrollView,
+} from 'react-native';
 
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -17,45 +25,50 @@ export default function LoginScreen() {
     router.push('/(auth)/phone-login');
   };
 
+  const handleSignUp = () => {
+    router.push({ pathname: '/(auth)/email-login', params: { isSignUp: 'true' } });
+  };
+
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color="#333" />
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.content}>
-        {/* Food Image */}
-        <View style={styles.imageContainer}>
-          <Image
-            source={{
-              uri: 'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=400&h=300&fit=crop',
-            }}
-            style={styles.foodImage}
-            resizeMode="cover"
-          />
+    <ScrollView showsVerticalScrollIndicator={false} bounces={false}>
+      <SafeAreaView style={styles.container}>
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={24} color="#333" />
+          </TouchableOpacity>
         </View>
 
-        {/* Login Header */}
-        <View style={styles.headerContainer}>
-          <Text style={styles.loginText}>
-            <Text style={styles.loginGreen}>Login</Text>
-            <Text style={styles.loginBlack}> to Continue</Text>
-          </Text>
-          <Text style={styles.subtitle}>Taste the World, One Home at a Time.</Text>
-        </View>
+        <View style={styles.content}>
+          {/* Food Image */}
+          <View style={styles.imageContainer}>
+            <Image
+              source={{
+                uri: 'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=400&h=300&fit=crop',
+              }}
+              style={styles.foodImage}
+              resizeMode="cover"
+            />
+          </View>
 
-        {/* Login Buttons */}
-        <View style={styles.buttonContainer}>
-          {/* Facebook Login */}
-          <SocialMediaButtons buttonName={'facebook'} onPress={signInWithFacebook} />
-          <SocialMediaButtons buttonName={'apple'} onPress={signInWithApple} />
-          <SocialMediaButtons buttonName={'google'} onPress={signInWithGoogle} />
-          <SocialMediaButtons buttonName={'email'} onPress={handleEmailLogin} />
+          {/* Login Header */}
+          <View style={styles.headerContainer}>
+            <Text style={styles.loginText}>
+              <Text style={styles.loginGreen}>Login</Text>
+              <Text style={styles.loginBlack}> to Continue</Text>
+            </Text>
+            <Text style={styles.subtitle}>Taste the World, One Home at a Time.</Text>
+          </View>
 
-          {/* <TouchableOpacity style={styles.facebookButton} onPress={signInWithFacebook}>
+          {/* Login Buttons */}
+          <View style={styles.buttonContainer}>
+            {/* Facebook Login */}
+            <SocialMediaButtons buttonName={'facebook'} onPress={signInWithFacebook} />
+            <SocialMediaButtons buttonName={'apple'} onPress={signInWithApple} />
+            <SocialMediaButtons buttonName={'google'} onPress={signInWithGoogle} />
+            <SocialMediaButtons buttonName={'email'} onPress={handleEmailLogin} />
+
+            {/* <TouchableOpacity style={styles.facebookButton} onPress={signInWithFacebook}>
             <View style={styles.socialButtonContent}>
               <Ionicons name="logo-facebook" size={20} color="#fff" />
               <Text style={styles.facebookButtonText}>Continue with Facebook</Text>
@@ -63,52 +76,54 @@ export default function LoginScreen() {
           </TouchableOpacity>
 
           {/* Google Login */}
-          {/* <TouchableOpacity style={styles.googleButton} onPress={signInWithGoogle}>
+            {/* <TouchableOpacity style={styles.googleButton} onPress={signInWithGoogle}>
             <View style={styles.socialButtonContent}>
               <Ionicons name="logo-google" size={20} color="#DB4437" />
               <Text style={styles.googleButtonText}>Continue with Google</Text>
             </View>
           </TouchableOpacity> */}
 
-          {/* Apple Login */}
-          {/* <TouchableOpacity style={styles.appleButton} onPress={signInWithApple}>
+            {/* Apple Login */}
+            {/* <TouchableOpacity style={styles.appleButton} onPress={signInWithApple}>
             <View style={styles.socialButtonContent}>
               <Ionicons name="logo-apple" size={20} color="#fff" />
               <Text style={styles.appleButtonText}>Continue with Apple</Text>
             </View>
           </TouchableOpacity> */}
 
-          {/* Email Login */}
-          {/* <TouchableOpacity style={styles.emailButton} onPress={handleEmailLogin}>
+            {/* Email Login */}
+            {/* <TouchableOpacity style={styles.emailButton} onPress={handleEmailLogin}>
             <View style={styles.socialButtonContent}>
               <Ionicons name="mail" size={20} color="#fff" />
               <Text style={styles.emailButtonText}>Continue with email</Text>
             </View>
           </TouchableOpacity> */}
 
-          {/* Phone Login */}
-          <TouchableOpacity style={styles.phoneButton} onPress={handlePhoneLogin}>
-            <Text style={styles.phoneButtonText}>Log in with phone number</Text>
-          </TouchableOpacity>
+            {/* Phone Login */}
+            <TouchableOpacity style={styles.phoneButton} onPress={handlePhoneLogin}>
+              <Text style={styles.phoneButtonText}>Log in with phone number</Text>
+            </TouchableOpacity>
+          </View>
 
-          {/* Sign Up Button */}
-          {/* <TouchableOpacity 
-            style={styles.signupButton} 
-            onPress={() => router.push({ pathname: '/(auth)/email-login', params: { isSignUp: 'true' } })}
-          >
-            <Text style={styles.signupButtonText}>Sign Up with Email</Text>
-          </TouchableOpacity> */}
-        </View>
+          {/* Sign Up */}
+          <View style={styles.signupContainer}>
+            <Text style={styles.signupPrompt}>Don&apos;t have an account?</Text>
+            <TouchableOpacity onPress={handleSignUp}>
+              <Text style={styles.signupLink}> Sign Up</Text>
+            </TouchableOpacity>
+          </View>
 
-        {/* Terms and Privacy */}
-        <View style={styles.termsContainer}>
-          <Text style={styles.termsText}>
-            By signing up you agree to our <Text style={styles.linkText}>Terms and Conditions</Text>{' '}
-            and <Text style={styles.linkText}>Privacy Policy</Text>
-          </Text>
+          {/* Terms and Privacy */}
+          <View style={styles.termsContainer}>
+            <Text style={styles.termsText}>
+              By signing up you agree to our{' '}
+              <Text style={styles.linkText}>Terms and Conditions</Text> and{' '}
+              <Text style={styles.linkText}>Privacy Policy</Text>
+            </Text>
+          </View>
         </View>
-      </View>
-    </SafeAreaView>
+      </SafeAreaView>
+    </ScrollView>
   );
 }
 
@@ -233,16 +248,19 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  signupButton: {
-    backgroundColor: '#1A1A1A',
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderRadius: 12,
+  signupContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
     alignItems: 'center',
+    paddingBottom: 16,
   },
-  signupButtonText: {
-    color: '#fff',
-    fontSize: 16,
+  signupPrompt: {
+    fontSize: 14,
+    color: '#666',
+  },
+  signupLink: {
+    fontSize: 14,
+    color: '#4CAF50',
     fontWeight: '600',
   },
   termsContainer: {

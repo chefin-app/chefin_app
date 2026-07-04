@@ -42,7 +42,9 @@ const INGREDIENTS_LIMIT = 500;
 const MAX_DIETARY_TAGS = 4;
 const DISH_IMAGES_BUCKET = 'dish-images';
 const FOOD_SAFETY_BUCKET = 'food-safety-licenses';
-const PAYMENT_STORAGE_KEY = '@chefin:payment-method';
+// Must match the per-user key scheme in /(user)/payment-methods.tsx so a card
+// saved here shows up there, and so one user's card never appears for another.
+const getPaymentStorageKey = (userId?: string) => `@chefin:payment-method-${userId || 'guest'}`;
 
 const CUISINE_OPTIONS = [
   'Chinese',
@@ -229,9 +231,9 @@ export default function StartRestaurantWizard() {
 
   // Address step
   const [addr, setAddr] = useState({
-    country: '',
-    unit_number: '',
-    building: '',
+    country: 'Malaysia',
+    flat: '',
+    property_name: '',
     street: '',
     locality: '',
     town: '',
@@ -256,7 +258,7 @@ export default function StartRestaurantWizard() {
       addrAbortRef.current = controller;
       setAddrSearching(true);
       try {
-        const url = `${NOMINATIM_URL}?q=${encodeURIComponent(q)}&format=json&addressdetails=1&limit=5`;
+        const url = `${NOMINATIM_URL}?q=${encodeURIComponent(q)}&format=json&addressdetails=1&limit=5&countrycodes=my`;
         const res = await fetch(url, {
           headers: { 'User-Agent': NOMINATIM_UA, 'Accept-Language': 'en' },
           signal: controller.signal,
@@ -457,7 +459,27 @@ export default function StartRestaurantWizard() {
   };
   const adjustPrice = (delta: number) => {
     const next = Math.max(0, Math.round((priceNum + delta) * 100) / 100);
-    setPriceText(String(next));
+    setPriceText(next.toFixed(2));
+  };
+  const onPriceChange = (text: string) => {
+    // Keep digits and a single decimal point, capped at 2 decimal places.
+    let cleaned = text.replace(/[^0-9.]/g, '');
+    const firstDot = cleaned.indexOf('.');
+    if (firstDot !== -1) {
+      cleaned =
+        cleaned.slice(0, firstDot + 1) +
+        cleaned
+          .slice(firstDot + 1)
+          .replace(/\./g, '')
+          .slice(0, 2);
+    }
+    setPriceText(cleaned);
+  };
+  const onPriceBlur = () => {
+    if (priceText.trim() === '') return;
+    // Always land on a proper 2-decimal price so "26" becomes "26.00" and
+    // "26.9" becomes "26.90" — matches how prices are shown everywhere else.
+    setPriceText(priceNum.toFixed(2));
   };
 
   // ── Final commit ─────────────────────────────────────────────────
@@ -525,8 +547,8 @@ export default function StartRestaurantWizard() {
         .from('profiles')
         .update({
           address_country: addr.country.trim(),
-          address_unit_number: addr.unit_number.trim() || null,
-          address_building: addr.building.trim() || null,
+          address_flat: addr.flat.trim() || null,
+          address_property_name: addr.property_name.trim() || null,
           address_street: addr.street.trim(),
           address_locality: addr.locality.trim() || null,
           address_town: addr.town.trim(),
@@ -561,7 +583,7 @@ export default function StartRestaurantWizard() {
         expMonth: expDigits.slice(0, 2),
         expYear: expDigits.slice(2),
       };
-      await AsyncStorage.setItem(PAYMENT_STORAGE_KEY, JSON.stringify(card));
+      await AsyncStorage.setItem(getPaymentStorageKey(user?.id), JSON.stringify(card));
 
       Alert.alert(
         'Application submitted!',
@@ -746,12 +768,15 @@ export default function StartRestaurantWizard() {
               <TextInput
                 style={styles.priceInput}
                 value={priceText}
-                onChangeText={t => setPriceText(t.replace(/[^0-9.]/g, ''))}
+                onChangeText={onPriceChange}
+                onBlur={onPriceBlur}
                 keyboardType="decimal-pad"
                 inputMode="decimal"
                 selectTextOnFocus
               />
+              <Ionicons name="pencil" size={20} color="#888" style={styles.priceEditIcon} />
             </View>
+            <Text style={styles.priceEditHint}>Tap the price to edit it</Text>
             <View style={styles.priceAdjustRow}>
               <TouchableOpacity style={styles.priceAdjustBtn} onPress={() => adjustPrice(-1)}>
                 <Text style={styles.priceAdjustText}>−1</Text>
@@ -809,27 +834,36 @@ export default function StartRestaurantWizard() {
             <Text style={styles.manualLabel}>Or enter manually</Text>
 
             {[
-              { key: 'country', label: 'Country', required: true },
-              { key: 'unit_number', label: 'Unit No (optional)', required: false },
-              { key: 'building', label: 'Building', required: false },
-              { key: 'street', label: 'Street Name', required: true },
-              { key: 'locality', label: 'Locality', required: false },
+              { key: 'street', label: 'House No. & Street Name', required: true },
+              { key: 'flat', label: 'Unit No.', required: false },
+              { key: 'property_name', label: 'Building name', required: false },
+              { key: 'locality', label: 'Area / Taman', required: false },
+              { key: 'postcode', label: 'Postcode', required: true, numeric: true },
               { key: 'town', label: 'City', required: true },
-              { key: 'postcode', label: 'Postal Code', required: true, numeric: true },
-            ].map(({ key, label, required, numeric }) => (
-              <View key={key} style={styles.fieldWrap}>
-                <Text style={styles.fieldLabel}>{label}</Text>
-                <TextInput
-                  style={styles.fieldInput}
-                  value={(addr as any)[key]}
-                  onChangeText={text => setAddr(prev => ({ ...prev, [key]: text }))}
-                  placeholder={required ? '' : '(optional)'}
-                  placeholderTextColor="#bbb"
-                  keyboardType={numeric ? 'number-pad' : 'default'}
-                  autoCapitalize="words"
-                />
-              </View>
-            ))}
+              { key: 'country', label: 'State / Country', required: true },
+            ].map(({ key, label, required, numeric }) => {
+              const value = (addr as any)[key] as string;
+              const showWarning = required && value.trim() === '';
+              return (
+                <View key={key} style={styles.fieldWrap}>
+                  <Text style={styles.fieldLabel}>
+                    {label} {required && <Text style={styles.requiredAsterisk}>*</Text>}
+                  </Text>
+                  <TextInput
+                    style={[styles.fieldInput, showWarning && styles.fieldInputWarning]}
+                    value={value}
+                    onChangeText={text => setAddr(prev => ({ ...prev, [key]: text }))}
+                    placeholder={required ? '' : '(optional)'}
+                    placeholderTextColor="#bbb"
+                    keyboardType={numeric ? 'number-pad' : 'default'}
+                    autoCapitalize="words"
+                  />
+                  {showWarning && (
+                    <Text style={styles.warningText}>This field is required to continue.</Text>
+                  )}
+                </View>
+              );
+            })}
           </View>
         );
 
@@ -1146,6 +1180,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     padding: 0,
   },
+  priceEditIcon: { marginLeft: 8, alignSelf: 'center' },
+  priceEditHint: { fontSize: 12, color: '#888', marginTop: 8, fontWeight: '500' },
   priceAdjustRow: { flexDirection: 'row', gap: 10, marginTop: 28 },
   priceAdjustBtn: {
     paddingHorizontal: 16,
@@ -1192,6 +1228,7 @@ const styles = StyleSheet.create({
   },
   fieldWrap: { gap: 4 },
   fieldLabel: { fontSize: 11, color: '#888', fontWeight: '600', letterSpacing: 0.4 },
+  requiredAsterisk: { color: '#FF5252' },
   fieldInput: {
     borderWidth: 1,
     borderColor: '#E0E0E0',
@@ -1201,6 +1238,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#1A1A1A',
   },
+  fieldInputWarning: { borderColor: '#FFB74D', backgroundColor: '#FFF8E1' },
+  warningText: { color: '#B26B00', fontSize: 12, marginTop: 2, marginLeft: 4 },
 
   fsQuestion: { fontSize: 16, fontWeight: '700', color: '#1A1A1A', marginBottom: 8, marginTop: 8 },
   fsHint: { fontSize: 13, color: '#888', marginBottom: 12, marginTop: -4, lineHeight: 18 },

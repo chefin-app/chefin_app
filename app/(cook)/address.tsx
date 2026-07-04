@@ -331,13 +331,13 @@ export default function CookAddressScreen() {
 
           <Text style={styles.manualLabel}>Or enter manually</Text>
 
-          {field('street', 'House No., Building, Street Name')}
+          {field('street', 'House No. & Street Name')}
           {field('flat', 'Unit No.', { optional: true })}
-          {field('property_name', 'Building / Property Name', { optional: true })}
-          {field('postcode', 'Postal Code', { keyboardType: 'number-pad' })}
+          {field('property_name', 'Building name', { optional: true })}
+          {field('postcode', 'Postcode', { keyboardType: 'number-pad' })}
           {field('town', 'City')}
-          {field('locality', 'Area', { optional: true })}
-          {field('country', 'Country / Region')}
+          {field('locality', 'Area / Taman', { optional: true })}
+          {field('country', 'State / Country')}
         </ScrollView>
 
         <View style={styles.footer}>

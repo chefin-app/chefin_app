@@ -4,6 +4,7 @@ import React, {
   useEffect,
   useImperativeHandle,
   useMemo,
+  useRef,
   useState,
 } from 'react';
 import {
@@ -13,6 +14,8 @@ import {
   StyleSheet,
   ActivityIndicator,
   ScrollView,
+  NativeSyntheticEvent,
+  NativeScrollEvent,
 } from 'react-native';
 import { Calendar, DateData } from 'react-native-calendars';
 import { Ionicons } from '@expo/vector-icons';
@@ -54,8 +57,10 @@ const formatTime = (isoString: string): string => {
 
 /** Expand a single availability row into hour-aligned pickup slots between
  *  start_time and end_time. Each emitted slot shares the row's remaining
- *  capacity, since max_orders applies to the whole window. */
-const expandToHourSlots = (record: AvailabilityRecord): TimeSlot[] => {
+ *  capacity, since max_orders applies to the whole window. Slots that have
+ *  already started (relative to `now`) are disabled — you can't pick up
+ *  food in the past — even if capacity is still open. */
+const expandToHourSlots = (record: AvailabilityRecord, now: Date): TimeSlot[] => {
   const start = new Date(record.start_time);
   const end = new Date(record.end_time);
   const remaining = Math.max(0, record.max_orders - (record.orders_taken ?? 0));
@@ -67,12 +72,13 @@ const expandToHourSlots = (record: AvailabilityRecord): TimeSlot[] => {
     const slotEnd = new Date(cursor);
     slotEnd.setHours(slotEnd.getHours() + 1);
     if (slotEnd > end) break;
+    const isPast = cursor < now;
     slots.push({
       id: `${record.id}_${cursor.getTime()}`,
       startTime: cursor.toISOString(),
       endTime: slotEnd.toISOString(),
       remainingSlots: remaining,
-      isFull,
+      isFull: isFull || isPast,
     });
     cursor.setHours(cursor.getHours() + 1);
   }
@@ -85,6 +91,14 @@ const AvailabilityPicker = forwardRef<AvailabilityPickerHandle, AvailabilityPick
     const [records, setRecords] = useState<AvailabilityRecord[]>([]);
     const [selectedDate, setSelectedDate] = useState<string | null>(null);
     const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
+
+    // Right-edge "more slots" arrow — shown while the chip row can still
+    // scroll further right, hidden once the user reaches the end.
+    const slotsScrollRef = useRef<ScrollView>(null);
+    const slotsContentWidth = useRef(0);
+    const slotsContainerWidth = useRef(0);
+
+    const handleSlotsScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {};
 
     const fetchAvailability = useCallback(
       async (showLoading = true) => {
@@ -162,12 +176,14 @@ const AvailabilityPicker = forwardRef<AvailabilityPickerHandle, AvailabilityPick
       return marks;
     }, [records, selectedDate]);
 
-    // Hour-by-hour pickup slots for the selected date.
+    // Hour-by-hour pickup slots for the selected date. Recomputed whenever the
+    // date changes so slots that just moved into the past get disabled.
     const timeSlots: TimeSlot[] = useMemo(() => {
       if (!selectedDate) return [];
+      const now = new Date();
       return records
         .filter(r => r.available_date.split('T')[0] === selectedDate)
-        .flatMap(expandToHourSlots)
+        .flatMap(r => expandToHourSlots(r, now))
         .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
     }, [records, selectedDate]);
 
@@ -184,6 +200,12 @@ const AvailabilityPicker = forwardRef<AvailabilityPickerHandle, AvailabilityPick
       const anyOpen = rowsToday.some(r => r.is_available);
       return { remaining, isFull: !anyOpen || remaining <= 0 };
     }, [records, selectedDate]);
+
+    // Reset the scroll-arrow affordance whenever the slot list changes (new
+    // date picked) — otherwise it can show stale state from the prior date.
+    useEffect(() => {
+      slotsScrollRef.current?.scrollTo({ x: 0, animated: false });
+    }, [timeSlots]);
 
     const handleDateSelect = (day: DateData) => {
       setSelectedDate(day.dateString);
@@ -256,43 +278,45 @@ const AvailabilityPicker = forwardRef<AvailabilityPickerHandle, AvailabilityPick
             {timeSlots.length === 0 ? (
               <Text style={styles.noSlotsText}>No time slots for this date.</Text>
             ) : (
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.slotsRow}
-              >
-                {timeSlots.map(slot => (
-                  <TouchableOpacity
-                    key={slot.id}
-                    disabled={slot.isFull}
-                    style={[
-                      styles.slotChip,
-                      slot.isFull && styles.slotChipDisabled,
-                      selectedSlot?.id === slot.id && styles.slotChipSelected,
-                    ]}
-                    onPress={() => handleSlotSelect(slot)}
-                  >
-                    <Text
+              <View style={styles.slotsWrap}>
+                <ScrollView
+                  ref={slotsScrollRef}
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.slotsRow}
+                  onScroll={handleSlotsScroll}
+                  scrollEventThrottle={32}
+                  onLayout={e => {
+                    slotsContainerWidth.current = e.nativeEvent.layout.width;
+                  }}
+                  onContentSizeChange={w => {
+                    slotsContentWidth.current = w;
+                  }}
+                >
+                  {timeSlots.map(slot => (
+                    <TouchableOpacity
+                      key={slot.id}
+                      disabled={slot.isFull}
                       style={[
-                        styles.slotTime,
-                        slot.isFull && styles.slotTimeDisabled,
-                        selectedSlot?.id === slot.id && styles.slotTimeSelected,
+                        styles.slotChip,
+                        slot.isFull && styles.slotChipDisabled,
+                        selectedSlot?.id === slot.id && styles.slotChipSelected,
                       ]}
+                      onPress={() => handleSlotSelect(slot)}
                     >
-                      {formatTime(slot.startTime)}
-                    </Text>
-                    {/* <Text
-                    style={[
-                      styles.slotCapacity,
-                      slot.isFull && styles.slotCapacityDisabled,
-                      selectedSlot?.id === slot.id && styles.slotCapacitySelected,
-                    ]}
-                  >
-                    1hr pickup
-                  </Text> */}
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
+                      <Text
+                        style={[
+                          styles.slotTime,
+                          slot.isFull && styles.slotTimeDisabled,
+                          selectedSlot?.id === slot.id && styles.slotTimeSelected,
+                        ]}
+                      >
+                        {formatTime(slot.startTime)}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
             )}
           </View>
         )}
@@ -346,9 +370,24 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontStyle: 'italic',
   },
+  slotsWrap: {
+    position: 'relative',
+  },
   slotsRow: {
-    gap: 10,
+    gap: 5,
     paddingBottom: 4,
+    paddingRight: 28,
+  },
+  slotsScrollHint: {
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    bottom: 4,
+    width: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(46,125,50,0.55)',
+    borderRadius: 14,
   },
   capacityNote: {
     fontSize: 12,

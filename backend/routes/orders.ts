@@ -16,9 +16,9 @@ router.get('/', async (req, res) => {
       .lte('created_at', `${today}T23:59:59`)
       .order('created_at', { ascending: false });
 
-    // For preparing orders, also filter by pickup date
-    if (status === 'preparing') {
-      query = query.eq('pickup_date', today);
+    // For confirmed orders, also filter by pickup date
+    if (status === 'confirmed') {
+      query = query.eq('scheduled_date', today);
     }
 
     const { data, error } = await query;
@@ -148,6 +148,63 @@ router.post('/', async (req, res) => {
     res.status(201).json({ success: true, orders: data });
   } catch (err: any) {
     console.error('Error placing order:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+const ORDER_STATUSES = ['pending', 'confirmed', 'ready', 'completed', 'cancelled'];
+
+// PATCH /:id/status - Cook advances/cancels an order.
+// Runs through the service-role client because orders are owned (RLS-wise) by
+// the customer, not the cook — a cook updating status has no row-level grant
+// from the client, so this has to be a privileged, server-verified write.
+router.patch('/:id/status', async (req, res) => {
+  const { id } = req.params;
+  const { status, userId } = req.body as { status?: string; userId?: string };
+
+  if (!userId) {
+    return res.status(401).json({ error: 'userId is required.' });
+  }
+  if (!status || !ORDER_STATUSES.includes(status)) {
+    return res.status(400).json({ error: 'Invalid status.' });
+  }
+
+  try {
+    const { data: profile, error: profileErr } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('user_id', userId)
+      .single();
+    if (profileErr || !profile) {
+      return res.status(404).json({ error: 'Profile not found for this user.' });
+    }
+
+    // Verify the order belongs to a listing owned by the requesting cook
+    // before allowing the write.
+    const { data: order, error: orderErr } = await supabase
+      .from('orders')
+      .select('id, listings(cook_id)')
+      .eq('id', id)
+      .single();
+    if (orderErr || !order) {
+      return res.status(404).json({ error: 'Order not found.' });
+    }
+    const cookId = (order as any).listings?.cook_id;
+    if (cookId !== profile.id) {
+      return res.status(403).json({ error: 'You do not have permission to update this order.' });
+    }
+
+    const { data, error } = await supabase
+      .from('orders')
+      .update({ status })
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw error;
+
+    res.json({ success: true, order: data });
+  } catch (err: any) {
+    console.error('Error updating order status:', err);
     res.status(500).json({ error: err.message });
   }
 });

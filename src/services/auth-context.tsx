@@ -7,7 +7,10 @@ interface AuthContextType {
   session: Session | null;
   loading: boolean;
   initializing: boolean;
-  signUp: (email: string, password: string) => Promise<{ error: string | null }>;
+  signUp: (
+    email: string,
+    password: string
+  ) => Promise<{ error: string | null; userExists?: boolean }>;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<{ error: string | null }>;
   resetPassword: (email: string) => Promise<{ error: string | null }>;
@@ -61,8 +64,18 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         email: email.toLowerCase().trim(),
         password,
       });
-      if (error) return { error: error.message };
-      return { error: null };
+      if (error) {
+        // Supabase returns an explicit error for this when email confirmation
+        // is off. When it's on, it returns 200 with no error instead (see below).
+        const userExists = /already registered|already exists|already in use/i.test(error.message);
+        return { error: error.message, userExists };
+      }
+      // When "Confirm email" is enabled, Supabase deliberately does NOT error
+      // for an already-registered email (to avoid leaking which emails have
+      // accounts) — it instead returns a user with an empty identities array
+      // and no session. That's the only signal we get.
+      const userExists = !!data.user && (data.user.identities?.length ?? 0) === 0;
+      return { error: null, userExists };
     } catch (err: any) {
       return { error: err.message ?? 'An error occurred' };
     } finally {

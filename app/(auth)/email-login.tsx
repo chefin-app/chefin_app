@@ -34,7 +34,23 @@ export default function EmailLoginScreen() {
 
     try {
       if (isSignUp) {
-        const { error } = await signUp(email, password);
+        const { error, userExists } = await signUp(email, password);
+
+        if (userExists) {
+          // Email already has an account — see if the entered password is
+          // actually theirs before bothering them with an error.
+          const { error: signInError } = await signIn(email, password);
+          if (!signInError) {
+            router.replace('/(user)/(tabs)/home');
+            return;
+          }
+          Alert.alert(
+            'Account already exists',
+            'This email is already registered. Please log in instead.',
+            [{ text: 'OK', onPress: () => setIsSignUp(false) }]
+          );
+          return;
+        }
 
         if (error) throw new Error(error);
 

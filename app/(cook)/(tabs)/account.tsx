@@ -25,8 +25,8 @@ const Account: React.FC = () => {
     },
     {
       id: '2',
-      title: 'Credit/Debit Card',
-      icon: 'card-outline',
+      title: 'Payment Settings',
+      icon: 'wallet-outline',
       route: 'PaymentMethods',
       section: 'main',
     },

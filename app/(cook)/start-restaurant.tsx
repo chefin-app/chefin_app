@@ -42,7 +42,7 @@ const INGREDIENTS_LIMIT = 500;
 const MAX_DIETARY_TAGS = 4;
 const DISH_IMAGES_BUCKET = 'dish-images';
 const FOOD_SAFETY_BUCKET = 'food-safety-licenses';
-const PAYMENT_STORAGE_KEY = '@chefin:payment-method';
+const getPaymentStorageKey = (userId?: string) => `@chefin:payment-method-${userId || 'guest'}`;
 
 const CUISINE_OPTIONS = [
   'Chinese',
@@ -545,7 +545,7 @@ export default function StartRestaurantWizard() {
         expMonth: expDigits.slice(0, 2),
         expYear: expDigits.slice(2),
       };
-      await AsyncStorage.setItem(PAYMENT_STORAGE_KEY, JSON.stringify(card));
+      await AsyncStorage.setItem(getPaymentStorageKey(user?.id), JSON.stringify(card));
 
       Alert.alert(
         'Application submitted!',
