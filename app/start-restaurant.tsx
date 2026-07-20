@@ -1,16 +1,3 @@
-/**
- * Single-screen "Start a Home Restaurant" onboarding wizard.
- *
- * Walks the cook through 9 steps under a consistent chrome (Save & exit pill,
- * progress bar, Back/Next). Nothing is written to the DB or storage until the
- * final Submit application step.
- *
- * Why this lives in one file instead of recycling /(cook)/add-dish, /(cook)/address,
- * /(cook)/food-safety and /(user)/payment-methods: those screens each have their
- * own header/back/Save-Exit treatment, and bouncing between them mid-flow
- * breaks the "single wizard" UX. This file owns the entire flow's state.
- */
-
 import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
@@ -28,11 +15,12 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import { supabase } from '@/src/utils/supabaseClient';
 import { useAuth } from '@/src/services/auth-context';
+import { TIER1_DOCUMENTS, VerificationDocType } from '@/src/constants/verification';
+import { BankSelect } from '@/src/components/inputs/BankSelect';
 
 // ── Constants ───────────────────────────────────────────────────────
 const RESTAURANT_NAME_LIMIT = 40;
@@ -42,9 +30,6 @@ const INGREDIENTS_LIMIT = 500;
 const MAX_DIETARY_TAGS = 4;
 const DISH_IMAGES_BUCKET = 'dish-images';
 const FOOD_SAFETY_BUCKET = 'food-safety-licenses';
-// Must match the per-user key scheme in /(user)/payment-methods.tsx so a card
-// saved here shows up there, and so one user's card never appears for another.
-const getPaymentStorageKey = (userId?: string) => `@chefin:payment-method-${userId || 'guest'}`;
 
 const CUISINE_OPTIONS = [
   'Chinese',
@@ -169,36 +154,9 @@ const STEP_HEADINGS: Record<Step, { title: string; subtitle: string }> = {
     subtitle: '',
   },
   payment: {
-    title: 'Add a payment method',
-    subtitle: 'Payment will be credited to your account once your order is completed.',
+    title: 'Add your payout details',
+    subtitle: 'Earnings are transferred to this bank account once your orders are completed.',
   },
-};
-
-// ── Helpers ─────────────────────────────────────────────────────────
-const formatCardNumber = (digits: string): string => digits.replace(/(.{4})/g, '$1 ').trim();
-const formatExpiry = (digits: string): string =>
-  digits.length >= 3 ? `${digits.slice(0, 2)}/${digits.slice(2)}` : digits;
-const detectBrand = (digits: string): string => {
-  if (/^4/.test(digits)) return 'Visa';
-  if (/^3[47]/.test(digits)) return 'Amex';
-  if (/^5[1-5]/.test(digits) || /^2(2[2-9]|[3-6]|7[01]|720)/.test(digits)) return 'Mastercard';
-  if (/^6(011|5|4[4-9])/.test(digits)) return 'Discover';
-  return digits.length > 0 ? 'Card' : '';
-};
-const luhnValid = (digits: string): boolean => {
-  if (digits.length < 13) return false;
-  let sum = 0;
-  let alt = false;
-  for (let i = digits.length - 1; i >= 0; i--) {
-    let n = parseInt(digits.charAt(i), 10);
-    if (alt) {
-      n *= 2;
-      if (n > 9) n -= 9;
-    }
-    sum += n;
-    alt = !alt;
-  }
-  return sum % 10 === 0;
 };
 
 // ── Component ───────────────────────────────────────────────────────
@@ -293,23 +251,23 @@ export default function StartRestaurantWizard() {
     setAddrSuggestions([]);
   };
 
-  // Food safety step
+  // Food safety step. Verification documents are entirely optional — cooks
+  // who submit either Tier 1 document get a "Verified" badge once an admin
+  // approves it, but neither is required to start selling.
   const [hostingType, setHostingType] = useState<'private' | 'business' | null>(null);
-  const [licenseAnswer, setLicenseAnswer] = useState<'yes' | 'no' | null>(null);
-  const [licenseAsset, setLicenseAsset] = useState<{
-    uri: string;
-    mime: string;
-    name: string;
-    isPdf: boolean;
-  } | null>(null);
+  const [verificationDocs, setVerificationDocs] = useState<
+    Partial<
+      Record<VerificationDocType, { uri: string; mime: string; name: string; isPdf: boolean }>
+    >
+  >({});
 
-  // Payment step
-  const [cardDigits, setCardDigits] = useState('');
-  const [expDigits, setExpDigits] = useState('');
-  const [cvcDigits, setCvcDigits] = useState('');
-  const cardRef = useRef<TextInput>(null);
-  const expRef = useRef<TextInput>(null);
-  const cvcRef = useRef<TextInput>(null);
+  // Payment step — payout bank account, not a card. Earnings from completed
+  // orders are transferred here.
+  const [bankName, setBankName] = useState('');
+  const [bankAccountName, setBankAccountName] = useState('');
+  const [bankAccountNumber, setBankAccountNumber] = useState('');
+  const bankAccountNameRef = useRef<TextInput>(null);
+  const bankAccountNumberRef = useRef<TextInput>(null);
 
   // ── Step validation ──────────────────────────────────────────────
   const canAdvance = (): boolean => {
@@ -336,9 +294,14 @@ export default function StartRestaurantWizard() {
           addr.postcode.trim() !== ''
         );
       case 'food-safety':
-        return hostingType != null && licenseAnswer != null;
+        // Verification documents are optional; only the hosting type is asked.
+        return hostingType != null;
       case 'payment':
-        return cardDigits.length === 16 && expDigits.length === 4 && cvcDigits.length === 3;
+        return (
+          bankName.trim().length > 0 &&
+          bankAccountName.trim().length > 0 &&
+          bankAccountNumber.length >= 8
+        );
     }
   };
 
@@ -360,38 +323,12 @@ export default function StartRestaurantWizard() {
 
   const handleNext = async () => {
     if (!canAdvance() || submitting) return;
-    // Special: food-safety with "yes, I have a license" but no upload
-    if (step === 'food-safety' && licenseAnswer === 'yes' && !licenseAsset) {
-      Alert.alert(
-        'Upload your license',
-        'Please upload a copy of your food safety license to continue, or pick "No, I don\'t have one".'
-      );
-      return;
-    }
     // Special: payment step → final commit
     if (step === 'payment') {
-      const err = validateCard();
-      if (err) {
-        Alert.alert('Check your card details', err);
-        return;
-      }
       await submit();
       return;
     }
     setStepIdx(stepIdx + 1);
-  };
-
-  const validateCard = (): string | null => {
-    if (!luhnValid(cardDigits)) return 'That card number doesn’t look right.';
-    const mm = parseInt(expDigits.slice(0, 2), 10);
-    const yy = parseInt(expDigits.slice(2), 10);
-    if (mm < 1 || mm > 12) return 'Expiry month must be 01–12.';
-    const now = new Date();
-    const expEndOfMonth = new Date(2000 + yy, mm, 0);
-    if (expEndOfMonth < new Date(now.getFullYear(), now.getMonth(), 1)) {
-      return 'This card has expired.';
-    }
-    return null;
   };
 
   // ── Photo picker ─────────────────────────────────────────────────
@@ -410,8 +347,8 @@ export default function StartRestaurantWizard() {
     if (!result.canceled && result.assets[0]) setPhotoUri(result.assets[0].uri);
   };
 
-  // ── License document picker ──────────────────────────────────────
-  const pickLicense = async () => {
+  // ── Verification document picker (one slot per Tier 1 doc type) ──
+  const pickVerificationDoc = async (docType: VerificationDocType) => {
     const result = await DocumentPicker.getDocumentAsync({
       type: ['application/pdf', 'image/jpeg', 'image/png', 'image/webp', 'image/heic'],
       copyToCacheDirectory: true,
@@ -423,29 +360,28 @@ export default function StartRestaurantWizard() {
     const mime =
       asset.mimeType ??
       (ext === 'pdf' ? 'application/pdf' : `image/${ext === 'jpg' ? 'jpeg' : ext}`);
-    setLicenseAsset({
-      uri: asset.uri,
-      mime,
-      name: asset.name ?? `license.${ext}`,
-      isPdf: ext === 'pdf',
+    setVerificationDocs(prev => ({
+      ...prev,
+      [docType]: {
+        uri: asset.uri,
+        mime,
+        name: asset.name ?? `${docType}.${ext}`,
+        isPdf: ext === 'pdf',
+      },
+    }));
+  };
+
+  const removeVerificationDoc = (docType: VerificationDocType) => {
+    setVerificationDocs(prev => {
+      const next = { ...prev };
+      delete next[docType];
+      return next;
     });
   };
 
-  // ── Card input handlers ──────────────────────────────────────────
-  const onCardChange = (text: string) => {
-    const digits = text.replace(/\D/g, '').slice(0, 16);
-    setCardDigits(digits);
-    if (digits.length === 16) expRef.current?.focus();
-  };
-  const onExpChange = (text: string) => {
-    const digits = text.replace(/\D/g, '').slice(0, 4);
-    setExpDigits(digits);
-    if (digits.length === 4) cvcRef.current?.focus();
-  };
-  const onCvcChange = (text: string) => {
-    const digits = text.replace(/\D/g, '').slice(0, 3);
-    setCvcDigits(digits);
-    if (digits.length === 3) cvcRef.current?.blur();
+  // ── Bank input handlers ──────────────────────────────────────────
+  const onBankAccountNumberChange = (text: string) => {
+    setBankAccountNumber(text.replace(/\D/g, '').slice(0, 20));
   };
 
   // ── Toggle helpers ───────────────────────────────────────────────
@@ -528,21 +464,35 @@ export default function StartRestaurantWizard() {
       });
       if (insertErr) throw insertErr;
 
-      // 3. Upload license (if any)
-      let licensePath: string | null = null;
-      if (licenseAnswer === 'yes' && licenseAsset) {
-        const ext = licenseAsset.name.split('.').pop()?.toLowerCase() ?? 'pdf';
-        const path = `${user.id}/license-${Date.now()}.${ext}`;
-        const response = await fetch(licenseAsset.uri);
+      // 3. Upload any optional verification documents and queue them for
+      // admin review. Approval of either doc grants the Tier 1 badge.
+      const docEntries = Object.entries(verificationDocs) as [
+        VerificationDocType,
+        { uri: string; mime: string; name: string; isPdf: boolean },
+      ][];
+      let certificatePath: string | null = null;
+      for (const [docType, asset] of docEntries) {
+        const ext = asset.name.split('.').pop()?.toLowerCase() ?? 'pdf';
+        const path = `${user.id}/${docType}-${Date.now()}.${ext}`;
+        const response = await fetch(asset.uri);
         const arrayBuffer = await response.arrayBuffer();
         const { error: uploadErr } = await supabase.storage
           .from(FOOD_SAFETY_BUCKET)
-          .upload(path, arrayBuffer, { contentType: licenseAsset.mime, upsert: false });
+          .upload(path, arrayBuffer, { contentType: asset.mime, upsert: false });
         if (uploadErr) throw uploadErr;
-        licensePath = path;
+
+        const { error: docErr } = await supabase.from('verification_documents').insert({
+          user_id: user.id,
+          doc_type: docType,
+          storage_path: path,
+          status: 'pending',
+        });
+        if (docErr) throw docErr;
+        if (docType === 'food_handler_certificate') certificatePath = path;
       }
 
-      // 4. Update profile (address + food safety)
+      // 4. Update profile (address + food safety). The legacy license columns
+      // stay populated so older read paths keep working.
       const { error: profileUpdateErr } = await supabase
         .from('profiles')
         .update({
@@ -554,8 +504,11 @@ export default function StartRestaurantWizard() {
           address_town: addr.town.trim(),
           address_postcode: addr.postcode.trim(),
           hosting_type: hostingType,
-          has_food_safety_license: licenseAnswer === 'yes',
-          food_safety_license_url: licensePath,
+          has_food_safety_license: certificatePath != null,
+          food_safety_license_url: certificatePath,
+          bank_name: bankName.trim(),
+          bank_account_name: bankAccountName.trim(),
+          bank_account_number: bankAccountNumber,
         })
         .eq('user_id', user.id);
       if (profileUpdateErr) throw profileUpdateErr;
@@ -575,15 +528,6 @@ export default function StartRestaurantWizard() {
           .insert({ user_id: user.id, role: 'cook' });
         if (roleErr) throw roleErr;
       }
-
-      // 6. Save card locally
-      const card = {
-        brand: detectBrand(cardDigits),
-        last4: cardDigits.slice(-4),
-        expMonth: expDigits.slice(0, 2),
-        expYear: expDigits.slice(2),
-      };
-      await AsyncStorage.setItem(getPaymentStorageKey(user?.id), JSON.stringify(card));
 
       Alert.alert(
         'Application submitted!',
@@ -884,117 +828,113 @@ export default function StartRestaurantWizard() {
               onPress={() => setHostingType('business')}
             />
             <View style={styles.divider} />
-            <Text style={styles.fsQuestion}>Do you have a valid Food Safety License?</Text>
-            <Text style={styles.fsHint}>
-              Sharing your license helps build trust and unlocks the &ldquo;Verified Cook&rdquo;
-              status.
-            </Text>
-            <RadioRow
-              title="Yes, I have a license"
-              selected={licenseAnswer === 'yes'}
-              onPress={() => setLicenseAnswer('yes')}
-            />
-            {licenseAnswer === 'yes' && (
-              <View style={styles.uploadWrap}>
-                <Text style={styles.uploadHint}>Upload a photo or scan:</Text>
-                <TouchableOpacity
-                  style={styles.uploadBox}
-                  onPress={pickLicense}
-                  activeOpacity={0.7}
-                >
-                  {licenseAsset ? (
-                    licenseAsset.isPdf ? (
-                      <View style={styles.pdfBadge}>
-                        <Ionicons name="document-text-outline" size={32} color="#1A1A1A" />
-                        <Text style={styles.pdfBadgeText} numberOfLines={1}>
-                          {licenseAsset.name}
-                        </Text>
-                        <Text style={styles.pdfBadgeHint}>Tap to replace</Text>
-                      </View>
-                    ) : (
-                      <Image source={{ uri: licenseAsset.uri }} style={styles.uploadPreview} />
-                    )
-                  ) : (
-                    <Ionicons name="add" size={32} color="#888" />
-                  )}
-                </TouchableOpacity>
+            <View style={styles.tierCallout}>
+              <Ionicons name="shield-checkmark" size={20} color="#4CAF50" />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.tierCalloutTitle}>Get your Verified badge (optional)</Text>
+                <Text style={styles.tierCalloutBody}>
+                  Upload either document below and we&apos;ll review it. Verified cooks stand out
+                  and earn more trust from customers. You can skip this and add it later.
+                </Text>
               </View>
-            )}
-            <RadioRow
-              title="No, I don't have one"
-              subtitle="Don't worry, you can still cook. We'll share simple safety guidelines for home cooks"
-              selected={licenseAnswer === 'no'}
-              onPress={() => {
-                setLicenseAnswer('no');
-                setLicenseAsset(null);
-              }}
-            />
+            </View>
+            {TIER1_DOCUMENTS.map(doc => {
+              const asset = verificationDocs[doc.type];
+              return (
+                <View key={doc.type} style={styles.uploadWrap}>
+                  <Text style={styles.fsQuestion}>{doc.title}</Text>
+                  <Text style={styles.fsHint}>{doc.subtitle}</Text>
+                  <TouchableOpacity
+                    style={styles.uploadBox}
+                    onPress={() => pickVerificationDoc(doc.type)}
+                    activeOpacity={0.7}
+                  >
+                    {asset ? (
+                      asset.isPdf ? (
+                        <View style={styles.pdfBadge}>
+                          <Ionicons name="document-text-outline" size={32} color="#1A1A1A" />
+                          <Text style={styles.pdfBadgeText} numberOfLines={1}>
+                            {asset.name}
+                          </Text>
+                          <Text style={styles.pdfBadgeHint}>Tap to replace</Text>
+                        </View>
+                      ) : (
+                        <Image source={{ uri: asset.uri }} style={styles.uploadPreview} />
+                      )
+                    ) : (
+                      <View style={styles.pdfBadge}>
+                        <Ionicons name="add" size={32} color="#888" />
+                        <Text style={styles.pdfBadgeHint}>Upload a photo, scan or PDF</Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                  {asset && (
+                    <TouchableOpacity onPress={() => removeVerificationDoc(doc.type)}>
+                      <Text style={styles.removeDocText}>Remove</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              );
+            })}
           </>
         );
 
-      case 'payment': {
-        const brand = detectBrand(cardDigits);
+      case 'payment':
         return (
           <View style={{ gap: 14 }}>
             <View>
-              <Text style={styles.fieldLabel}>CARD NUMBER</Text>
+              <Text style={styles.fieldLabel}>BANK NAME</Text>
+              <BankSelect value={bankName} onChange={setBankName} />
+            </View>
+            <View>
+              <Text style={styles.fieldLabel}>BANK ACCOUNT NAME</Text>
               <View style={styles.cardInputWrapper}>
-                <Ionicons name="card" size={22} color="#666" style={{ marginRight: 10 }} />
+                <Ionicons
+                  name="person-outline"
+                  size={20}
+                  color="#666"
+                  style={{ marginRight: 10 }}
+                />
                 <TextInput
-                  ref={cardRef}
-                  placeholder="1234 5678 9012 3456"
+                  ref={bankAccountNameRef}
+                  placeholder="Full name as registered with your bank"
+                  style={{ flex: 1, fontSize: 16 }}
+                  value={bankAccountName}
+                  onChangeText={setBankAccountName}
+                  autoCapitalize="words"
+                  returnKeyType="next"
+                  onSubmitEditing={() => bankAccountNumberRef.current?.focus()}
+                />
+              </View>
+            </View>
+            <View>
+              <Text style={styles.fieldLabel}>BANK ACCOUNT NUMBER</Text>
+              <View style={styles.cardInputWrapper}>
+                <Ionicons
+                  name="keypad-outline"
+                  size={20}
+                  color="#666"
+                  style={{ marginRight: 10 }}
+                />
+                <TextInput
+                  ref={bankAccountNumberRef}
+                  placeholder="e.g. 1122334455"
                   style={{ flex: 1, fontSize: 16 }}
                   keyboardType="number-pad"
                   inputMode="numeric"
-                  value={formatCardNumber(cardDigits)}
-                  onChangeText={onCardChange}
-                  maxLength={19}
-                  autoComplete="cc-number"
-                  textContentType="creditCardNumber"
-                  returnKeyType="next"
-                />
-                {brand && <Text style={styles.brandTag}>{brand}</Text>}
-              </View>
-            </View>
-            <View style={{ flexDirection: 'row', gap: 10 }}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.fieldLabel}>EXPIRY</Text>
-                <TextInput
-                  ref={expRef}
-                  placeholder="MM/YY"
-                  style={styles.halfInput}
-                  keyboardType="number-pad"
-                  inputMode="numeric"
-                  value={formatExpiry(expDigits)}
-                  onChangeText={onExpChange}
-                  maxLength={5}
-                  returnKeyType="next"
-                />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.fieldLabel}>CVC</Text>
-                <TextInput
-                  ref={cvcRef}
-                  placeholder="123"
-                  style={styles.halfInput}
-                  keyboardType="number-pad"
-                  inputMode="numeric"
-                  value={cvcDigits}
-                  onChangeText={onCvcChange}
-                  maxLength={3}
-                  secureTextEntry
+                  value={bankAccountNumber}
+                  onChangeText={onBankAccountNumberChange}
+                  maxLength={20}
                   returnKeyType="done"
                   onSubmitEditing={handleNext}
                 />
               </View>
             </View>
             <Text style={styles.disclaimer}>
-              Test mode — card data is stored locally on this device. Production payments should be
-              tokenised via Stripe or similar.
+              Double-check your account number — payouts to a wrong account can&apos;t be recalled.
             </Text>
           </View>
         );
-      }
     }
   };
 
@@ -1276,6 +1216,25 @@ const styles = StyleSheet.create({
   pdfBadge: { alignItems: 'center', gap: 4 },
   pdfBadgeText: { fontSize: 13, fontWeight: '700', color: '#1A1A1A' },
   pdfBadgeHint: { fontSize: 11, color: '#888' },
+  tierCallout: {
+    flexDirection: 'row',
+    gap: 10,
+    backgroundColor: '#E8F5E9',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 12,
+    alignItems: 'flex-start',
+  },
+  tierCalloutTitle: { fontSize: 14, fontWeight: '700', color: '#1A1A1A', marginBottom: 2 },
+  tierCalloutBody: { fontSize: 12, color: '#555', lineHeight: 17 },
+  removeDocText: {
+    fontSize: 13,
+    color: '#FF5252',
+    fontWeight: '600',
+    textDecorationLine: 'underline',
+    marginTop: -2,
+    marginBottom: 6,
+  },
 
   cardInputWrapper: {
     flexDirection: 'row',
@@ -1286,7 +1245,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
   },
-  brandTag: { fontSize: 12, fontWeight: '600', color: '#4CAF50', marginLeft: 8 },
   halfInput: {
     borderWidth: 1,
     borderColor: '#E0E0E0',

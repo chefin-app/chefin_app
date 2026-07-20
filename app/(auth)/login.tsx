@@ -26,7 +26,8 @@ export default function LoginScreen() {
   };
 
   const handleSignUp = () => {
-    router.push({ pathname: '/(auth)/email-login', params: { isSignUp: 'true' } });
+    // Same unified email flow — it detects whether the account exists.
+    router.push('/(auth)/email-login');
   };
 
   return (
@@ -106,12 +107,12 @@ export default function LoginScreen() {
           </View>
 
           {/* Sign Up */}
-          <View style={styles.signupContainer}>
+          {/* <View style={styles.signupContainer}>
             <Text style={styles.signupPrompt}>Don&apos;t have an account?</Text>
             <TouchableOpacity onPress={handleSignUp}>
               <Text style={styles.signupLink}> Sign Up</Text>
             </TouchableOpacity>
-          </View>
+          </View> */}
 
           {/* Terms and Privacy */}
           <View style={styles.termsContainer}>

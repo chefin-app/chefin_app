@@ -12,6 +12,8 @@ import availabilityRoutes from './routes/availability';
 import ordersRoutes from './routes/orders';
 import homeRoutes from './routes/home';
 import idRoutes from './routes/id';
+import verificationRoutes from './routes/verification';
+import reviewsRoutes from './routes/reviews';
 
 const app = express();
 const PORT = process.env.PORT || 8000;
@@ -40,6 +42,8 @@ app.use('/api/listings', listingsRoutes);
 app.use('/api/availability', availabilityRoutes);
 app.use('/api/orders', ordersRoutes);
 app.use('/api/id', idRoutes);
+app.use('/api/verification', verificationRoutes);
+app.use('/api/reviews', reviewsRoutes);
 
 // 404 handler
 app.use('/{*any}', (req, res) => {

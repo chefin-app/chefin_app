@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { createShadowStyle } from '../../utils/platform-utils';
 import { useAuth } from '@/src/services/auth-context';
 import { useCart } from '@/src/context/CartContext';
+import { useNotifications } from '@/src/context/NotificationsContext';
 
 interface NavBarProps {
   options?: {
@@ -20,12 +21,13 @@ export default function TopNavBarHomeUser({ options }: NavBarProps) {
   const router = useRouter();
   const { session } = useAuth();
   const { cartCount } = useCart();
+  const { unreadCounts } = useNotifications();
   const user = session?.user;
   const segments = useSegments();
   const currentTab = options?.headerProps?.currentTab || segments[segments.length - 1];
 
   const handleNotifPress = () => {
-    router.push('/'); // Navigate to cart screen
+    router.push({ pathname: '/notifications', params: { role: 'customer' } });
   };
 
   const handleCartPress = () => {
@@ -41,7 +43,7 @@ export default function TopNavBarHomeUser({ options }: NavBarProps) {
       return (
         <TouchableOpacity style={styles.iconButton} onPress={handleNotifPress}>
           <Ionicons name="notifications" size={24} color="#333" />
-          {user && cartCount > 0 && <View style={styles.notificationDot} />}
+          {user && unreadCounts.customer > 0 && <View style={styles.notificationDot} />}
         </TouchableOpacity>
       );
     } else {

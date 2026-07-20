@@ -191,6 +191,18 @@ export default function CookCalendarScreen() {
       a => a.listing_id === listingId && a.available_date === date && a.is_available
     );
 
+  // Tell followers new slots opened. Fire-and-forget: the backend fans out a
+  // notification to everyone who favourited this cook, throttled server-side
+  // so several toggles in a row produce one announcement.
+  const announceNewSlots = () => {
+    if (!user) return;
+    fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/availability/announce-slots`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: user.id }),
+    }).catch(e => console.warn('announce-slots failed', e?.message ?? e));
+  };
+
   const handleToggle = async (listing: Listing, value: boolean) => {
     const date = selectedDate;
     const key = `${listing.id}_${date}`;
@@ -228,6 +240,7 @@ export default function CookCalendarScreen() {
           if (error) throw error;
           setAvailability(prev => [...prev, data as AvailabilityRow]);
         }
+        announceNewSlots();
       } else {
         // Turning OFF — flip is_available to false (keep the row in case of past orders).
         if (existing) {
@@ -362,6 +375,7 @@ export default function CookCalendarScreen() {
       // rows will show up when the cook navigates there.
       await loadAvailability(currentMonth);
       setSlotEditing(null);
+      announceNewSlots();
     } catch (e: any) {
       Alert.alert('Could not apply to week', e.message ?? 'Unknown error');
     } finally {

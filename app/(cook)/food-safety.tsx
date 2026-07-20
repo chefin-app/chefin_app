@@ -17,11 +17,36 @@ import * as DocumentPicker from 'expo-document-picker';
 import { supabase } from '@/src/utils/supabaseClient';
 import { useAuth } from '@/src/services/auth-context';
 import { useOnboarding } from '@/src/context/OnboardingContext';
-
-const BUCKET = 'food-safety-licenses';
+import {
+  TIER1_DOCUMENTS,
+  VERIFICATION_BUCKET,
+  VerificationDocStatus,
+  VerificationDocType,
+} from '@/src/constants/verification';
 
 type HostingType = 'private' | 'business' | null;
-type LicenseAnswer = 'yes' | 'no' | null;
+
+/** A doc row already submitted to the DB. */
+interface SubmittedDoc {
+  id: string;
+  status: VerificationDocStatus;
+  reviewer_note: string | null;
+  storage_path: string;
+}
+
+/** A freshly picked local file, not yet uploaded. */
+interface PendingAsset {
+  uri: string;
+  mime: string;
+  name: string;
+  isPdf: boolean;
+}
+
+const STATUS_META: Record<VerificationDocStatus, { label: string; color: string; bg: string }> = {
+  pending: { label: 'Pending review', color: '#B26A00', bg: '#FFF3E0' },
+  approved: { label: 'Verified', color: '#2E7D32', bg: '#E8F5E9' },
+  rejected: { label: 'Rejected', color: '#C62828', bg: '#FFEBEE' },
+};
 
 export default function FoodSafetyScreen() {
   const router = useRouter();
@@ -30,22 +55,18 @@ export default function FoodSafetyScreen() {
   const isOnboarding = params.onboarding === '1' || params.onboarding === 'true';
   const { setFoodSafety: stashFoodSafety } = useOnboarding();
 
-  // Local-only file metadata kept while onboarding (uploaded at final commit).
-  const [pendingLicenseUri, setPendingLicenseUri] = useState<string | null>(null);
-  const [pendingLicenseMime, setPendingLicenseMime] = useState<string | null>(null);
-  const [pendingLicenseName, setPendingLicenseName] = useState<string | null>(null);
-
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState(false);
 
   const [hostingType, setHostingType] = useState<HostingType>(null);
-  const [licenseAnswer, setLicenseAnswer] = useState<LicenseAnswer>(null);
-  // The stored path (private bucket key), not a public URL — we render a
-  // signed URL for preview.
-  const [licensePath, setLicensePath] = useState<string | null>(null);
-  const [licensePreviewUrl, setLicensePreviewUrl] = useState<string | null>(null);
-  const [licenseIsPdf, setLicenseIsPdf] = useState(false);
+  // Latest submitted row per doc type (if any).
+  const [submittedDocs, setSubmittedDocs] = useState<
+    Partial<Record<VerificationDocType, SubmittedDoc>>
+  >({});
+  // Locally picked files awaiting upload (uploaded on Save / final commit).
+  const [pendingAssets, setPendingAssets] = useState<
+    Partial<Record<VerificationDocType, PendingAsset>>
+  >({});
 
   // Load existing values
   useEffect(() => {
@@ -57,26 +78,32 @@ export default function FoodSafetyScreen() {
       try {
         const { data, error } = await supabase
           .from('profiles')
-          .select('hosting_type, has_food_safety_license, food_safety_license_url')
+          .select('hosting_type')
           .eq('user_id', user.id)
           .single();
         if (error && error.code !== 'PGRST116') throw error;
-        if (data) {
-          setHostingType((data.hosting_type as HostingType) ?? null);
-          if (data.has_food_safety_license === true) setLicenseAnswer('yes');
-          else if (data.has_food_safety_license === false) setLicenseAnswer('no');
-          const path = data.food_safety_license_url ?? null;
-          setLicensePath(path);
-          setLicenseIsPdf(path?.toLowerCase().endsWith('.pdf') ?? false);
-          if (path) {
-            // Generate a signed URL for the private bucket so we can show the
-            // existing upload.
-            const { data: signed } = await supabase.storage
-              .from(BUCKET)
-              .createSignedUrl(path, 60 * 60);
-            setLicensePreviewUrl(signed?.signedUrl ?? null);
+        if (data) setHostingType((data.hosting_type as HostingType) ?? null);
+
+        const { data: docs, error: docsErr } = await supabase
+          .from('verification_documents')
+          .select('id, doc_type, status, reviewer_note, storage_path')
+          .eq('user_id', user.id)
+          .order('submitted_at', { ascending: false });
+        if (docsErr) throw docsErr;
+
+        const latest: Partial<Record<VerificationDocType, SubmittedDoc>> = {};
+        for (const d of docs ?? []) {
+          const t = d.doc_type as VerificationDocType;
+          if (!latest[t]) {
+            latest[t] = {
+              id: d.id,
+              status: d.status as VerificationDocStatus,
+              reviewer_note: d.reviewer_note,
+              storage_path: d.storage_path,
+            };
           }
         }
+        setSubmittedDocs(latest);
       } catch (e: any) {
         console.warn('Could not load food safety details', e.message);
       } finally {
@@ -85,10 +112,7 @@ export default function FoodSafetyScreen() {
     })();
   }, [user]);
 
-  const pickAndUploadLicense = async () => {
-    if (!user) return;
-    // Document picker — restricts to PDF and image files (scan/photo of license).
-    // Excludes the photo/video library and camera roll.
+  const pickDoc = async (docType: VerificationDocType) => {
     const result = await DocumentPicker.getDocumentAsync({
       type: ['application/pdf', 'image/jpeg', 'image/png', 'image/webp', 'image/heic'],
       copyToCacheDirectory: true,
@@ -102,84 +126,97 @@ export default function FoodSafetyScreen() {
       asset.mimeType ??
       (ext === 'pdf' ? 'application/pdf' : `image/${ext === 'jpg' ? 'jpeg' : ext}`);
 
-    // Onboarding: hold the local file in memory; the final commit uploads it
-    // along with everything else. Nothing hits Supabase yet.
-    if (isOnboarding) {
-      setPendingLicenseUri(asset.uri);
-      setPendingLicenseMime(contentType);
-      setPendingLicenseName(asset.name ?? `license.${ext}`);
-      setLicenseIsPdf(ext === 'pdf');
-      setLicensePreviewUrl(asset.uri); // local URI works as preview
-      setLicensePath('pending'); // sentinel so canAdvance / handleNext see "uploaded"
-      return;
-    }
-
-    setUploading(true);
-    try {
-      const path = `${user.id}/license-${Date.now()}.${ext}`;
-
-      const response = await fetch(asset.uri);
-      const arrayBuffer = await response.arrayBuffer();
-      const { error: uploadErr } = await supabase.storage
-        .from(BUCKET)
-        .upload(path, arrayBuffer, { contentType, upsert: false });
-      if (uploadErr) throw uploadErr;
-
-      const { data: signed } = await supabase.storage.from(BUCKET).createSignedUrl(path, 60 * 60);
-      setLicensePath(path);
-      setLicenseIsPdf(ext === 'pdf');
-      setLicensePreviewUrl(signed?.signedUrl ?? null);
-    } catch (e: any) {
-      Alert.alert('Upload failed', e.message ?? 'Unknown error');
-    } finally {
-      setUploading(false);
-    }
+    setPendingAssets(prev => ({
+      ...prev,
+      [docType]: {
+        uri: asset.uri,
+        mime: contentType,
+        name: asset.name ?? `${docType}.${ext}`,
+        isPdf: ext === 'pdf',
+      },
+    }));
   };
 
-  // Next is enabled as soon as both questions are answered. Whether the
-  // license upload is required is checked in `handleNext` so we can show an
-  // explanatory alert instead of silently disabling the button.
-  const canAdvance = hostingType != null && licenseAnswer != null;
+  const removePendingDoc = (docType: VerificationDocType) => {
+    setPendingAssets(prev => {
+      const next = { ...prev };
+      delete next[docType];
+      return next;
+    });
+  };
+
+  // Only the hosting type question gates Next — documents are optional.
+  const canAdvance = hostingType != null;
 
   const handleNext = async () => {
     if (!user || !canAdvance) return;
-    if (licenseAnswer === 'yes' && !licensePath) {
-      Alert.alert(
-        'Upload your license',
-        'Please upload a copy of your food safety license to continue, or pick "No, I don\'t have one".'
-      );
-      return;
-    }
 
     // ── Onboarding path: stash to context, defer upload + DB write to the
     // final payment-methods step.
     if (isOnboarding) {
       stashFoodSafety({
         hostingType,
-        hasLicense: licenseAnswer === 'yes',
-        licenseUri: licenseAnswer === 'yes' ? pendingLicenseUri : null,
-        licenseMimeType: licenseAnswer === 'yes' ? pendingLicenseMime : null,
-        licenseFileName: licenseAnswer === 'yes' ? pendingLicenseName : null,
+        documents: (Object.entries(pendingAssets) as [VerificationDocType, PendingAsset][]).map(
+          ([docType, a]) => ({
+            docType,
+            uri: a.uri,
+            mimeType: a.mime,
+            fileName: a.name,
+          })
+        ),
       });
       router.push({
-        pathname: '/(user)/payment-methods',
+        pathname: '/(cook)/payout-details',
         params: { onboarding: 'cook' },
       });
       return;
     }
 
-    // ── Normal "edit from profile" path: write straight to DB.
+    // ── Normal "edit from profile" path: upload new docs + write to DB.
     setSaving(true);
     try {
+      let certificatePath: string | null = null;
+      for (const [docType, asset] of Object.entries(pendingAssets) as [
+        VerificationDocType,
+        PendingAsset,
+      ][]) {
+        const ext = asset.name.split('.').pop()?.toLowerCase() ?? 'pdf';
+        const path = `${user.id}/${docType}-${Date.now()}.${ext}`;
+        const response = await fetch(asset.uri);
+        const arrayBuffer = await response.arrayBuffer();
+        const { error: uploadErr } = await supabase.storage
+          .from(VERIFICATION_BUCKET)
+          .upload(path, arrayBuffer, { contentType: asset.mime, upsert: false });
+        if (uploadErr) throw uploadErr;
+
+        const { error: docErr } = await supabase.from('verification_documents').insert({
+          user_id: user.id,
+          doc_type: docType,
+          storage_path: path,
+          status: 'pending',
+        });
+        if (docErr) throw docErr;
+        if (docType === 'food_handler_certificate') certificatePath = path;
+      }
+
       const { error } = await supabase
         .from('profiles')
         .update({
           hosting_type: hostingType,
-          has_food_safety_license: licenseAnswer === 'yes',
-          food_safety_license_url: licenseAnswer === 'yes' ? licensePath : null,
+          // Legacy columns kept coherent for older read paths.
+          ...(certificatePath
+            ? { has_food_safety_license: true, food_safety_license_url: certificatePath }
+            : {}),
         })
         .eq('user_id', user.id);
       if (error) throw error;
+
+      if (Object.keys(pendingAssets).length > 0) {
+        Alert.alert(
+          'Documents submitted',
+          "Thanks! We'll review your documents and grant your Verified badge once approved."
+        );
+      }
       router.back();
     } catch (e: any) {
       Alert.alert('Could not save', e.message ?? 'Unknown error');
@@ -237,68 +274,101 @@ export default function FoodSafetyScreen() {
 
         <View style={styles.divider} />
 
-        {/* License */}
-        <Text style={styles.question}>Do you have a valid Food Safety License?</Text>
-        <Text style={styles.questionSubtitle}>
-          Sharing your license helps build trust and unlocks the &ldquo;Verified Cook&rdquo; status.
-        </Text>
-
-        <RadioRow
-          title="Yes, I have a license"
-          selected={licenseAnswer === 'yes'}
-          onPress={() => setLicenseAnswer('yes')}
-        />
-
-        {licenseAnswer === 'yes' && (
-          <View style={styles.uploadWrap}>
-            <Text style={styles.uploadHint}>Upload a photo or scan:</Text>
-            <TouchableOpacity
-              style={styles.uploadBox}
-              onPress={pickAndUploadLicense}
-              disabled={uploading}
-              activeOpacity={0.7}
-            >
-              {uploading ? (
-                <ActivityIndicator color="#666" />
-              ) : licensePreviewUrl ? (
-                licenseIsPdf ? (
-                  <View style={styles.pdfBadge}>
-                    <Ionicons name="document-text-outline" size={32} color="#1A1A1A" />
-                    <Text style={styles.pdfBadgeText} numberOfLines={1}>
-                      License.pdf
-                    </Text>
-                    <Text style={styles.pdfBadgeHint}>Tap to replace</Text>
-                  </View>
-                ) : (
-                  <Image source={{ uri: licensePreviewUrl }} style={styles.uploadPreview} />
-                )
-              ) : (
-                <Ionicons name="add" size={32} color="#888" />
-              )}
-            </TouchableOpacity>
-            <Text style={styles.uploadFootnote}>
-              Your documents are kept secure and confidential. Need help? Read our{' '}
-              <Text
-                style={styles.link}
-                onPress={() => Linking.openURL('https://chefin.app/food-safety-guide')}
-              >
-                food safety guide
-              </Text>
-              .
+        {/* Optional Tier 1 verification documents */}
+        <View style={styles.tierCallout}>
+          <Ionicons name="shield-checkmark" size={20} color="#4CAF50" />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.tierCalloutTitle}>Get your Verified badge (optional)</Text>
+            <Text style={styles.tierCalloutBody}>
+              Upload either document below and we&apos;ll review it. Verified cooks stand out and
+              earn more trust from customers. You can skip this and add it later.
             </Text>
           </View>
-        )}
+        </View>
 
-        <RadioRow
-          title="No, I don't have one"
-          subtitle="Don't worry, you can still cook. We'll share simple safety guidelines for home cooks"
-          selected={licenseAnswer === 'no'}
-          onPress={() => {
-            setLicenseAnswer('no');
-            setLicensePath(null);
-            setLicensePreviewUrl(null);
-          }}
-        />
+        {TIER1_DOCUMENTS.map(doc => {
+          const submitted = submittedDocs[doc.type];
+          const pending = pendingAssets[doc.type];
+          // A rejected doc can be re-submitted; pending/approved ones are locked.
+          const locked = submitted != null && submitted.status !== 'rejected' && !pending;
+
+          return (
+            <View key={doc.type} style={styles.docBlock}>
+              <View style={styles.docHeaderRow}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.question}>{doc.title}</Text>
+                  <Text style={styles.questionSubtitle}>{doc.subtitle}</Text>
+                </View>
+                {submitted && !pending && (
+                  <View
+                    style={[
+                      styles.statusChip,
+                      { backgroundColor: STATUS_META[submitted.status].bg },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.statusChipText,
+                        { color: STATUS_META[submitted.status].color },
+                      ]}
+                    >
+                      {STATUS_META[submitted.status].label}
+                    </Text>
+                  </View>
+                )}
+              </View>
+
+              {submitted?.status === 'rejected' && submitted.reviewer_note && !pending && (
+                <Text style={styles.rejectionNote}>Reviewer note: {submitted.reviewer_note}</Text>
+              )}
+
+              {!locked && (
+                <>
+                  <TouchableOpacity
+                    style={styles.uploadBox}
+                    onPress={() => pickDoc(doc.type)}
+                    activeOpacity={0.7}
+                  >
+                    {pending ? (
+                      pending.isPdf ? (
+                        <View style={styles.pdfBadge}>
+                          <Ionicons name="document-text-outline" size={32} color="#1A1A1A" />
+                          <Text style={styles.pdfBadgeText} numberOfLines={1}>
+                            {pending.name}
+                          </Text>
+                          <Text style={styles.pdfBadgeHint}>Tap to replace</Text>
+                        </View>
+                      ) : (
+                        <Image source={{ uri: pending.uri }} style={styles.uploadPreview} />
+                      )
+                    ) : (
+                      <View style={styles.pdfBadge}>
+                        <Ionicons name="add" size={32} color="#888" />
+                        <Text style={styles.pdfBadgeHint}>Upload a photo, scan or PDF</Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                  {pending && (
+                    <TouchableOpacity onPress={() => removePendingDoc(doc.type)}>
+                      <Text style={styles.removeDocText}>Remove</Text>
+                    </TouchableOpacity>
+                  )}
+                </>
+              )}
+            </View>
+          );
+        })}
+
+        <Text style={styles.uploadFootnote}>
+          Your documents are kept secure and confidential. Need help? Read our{' '}
+          <Text
+            style={styles.link}
+            onPress={() => Linking.openURL('https://chefin.app/food-safety-guide')}
+          >
+            food safety guide
+          </Text>
+          .
+        </Text>
       </ScrollView>
 
       <View style={styles.footer}>
@@ -402,8 +472,37 @@ const styles = StyleSheet.create({
 
   divider: { height: 1, backgroundColor: '#E0E0E0', marginVertical: 16 },
 
-  uploadWrap: { marginLeft: 4, marginTop: 4, marginBottom: 8 },
-  uploadHint: { fontSize: 13, color: '#666', marginBottom: 8 },
+  tierCallout: {
+    flexDirection: 'row',
+    gap: 10,
+    backgroundColor: '#E8F5E9',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 12,
+    alignItems: 'flex-start',
+  },
+  tierCalloutTitle: { fontSize: 14, fontWeight: '700', color: '#1A1A1A', marginBottom: 2 },
+  tierCalloutBody: { fontSize: 12, color: '#555', lineHeight: 17 },
+
+  docBlock: { marginBottom: 8 },
+  docHeaderRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+  statusChip: {
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    marginTop: 8,
+  },
+  statusChipText: { fontSize: 12, fontWeight: '700' },
+  rejectionNote: { fontSize: 12, color: '#C62828', marginBottom: 8, lineHeight: 17 },
+  removeDocText: {
+    fontSize: 13,
+    color: '#FF5252',
+    fontWeight: '600',
+    textDecorationLine: 'underline',
+    marginTop: -2,
+    marginBottom: 6,
+  },
+
   uploadBox: {
     height: 140,
     borderRadius: 16,
@@ -419,7 +518,7 @@ const styles = StyleSheet.create({
   pdfBadge: { alignItems: 'center', gap: 4 },
   pdfBadgeText: { fontSize: 13, fontWeight: '700', color: '#1A1A1A' },
   pdfBadgeHint: { fontSize: 11, color: '#888' },
-  uploadFootnote: { fontSize: 12, color: '#888', lineHeight: 17 },
+  uploadFootnote: { fontSize: 12, color: '#888', lineHeight: 17, marginTop: 8 },
   link: { color: '#1A1A1A', textDecorationLine: 'underline', fontWeight: '600' },
 
   footer: { paddingHorizontal: 24, paddingTop: 8, paddingBottom: 16 },

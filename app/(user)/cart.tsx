@@ -18,15 +18,21 @@ import { useAuth } from '@/src/services/auth-context';
 import { supabase } from '@/src/utils/supabaseClient';
 
 const DELIVERY_FEE = 3.0;
-const PAYMENT_STORAGE_KEY = '@chefin:payment-method';
+// Must match the per-user key scheme in payment-methods.tsx — cards are saved
+// per user, not globally, so this has to include the signed-in user's id.
+const getPaymentStorageKey = (userId?: string) => `@chefin:payment-method-${userId || 'guest'}`;
 
 type SavedCard = { brand: string; last4: string; expMonth: string; expYear: string };
+type FulfillmentType = 'pickup' | 'delivery';
 
 export default function CartScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const { cartItems, removeFromCart, updateQuantity, clearCart, cartTotal, cartCount } = useCart();
   const [placingOrder, setPlacingOrder] = useState(false);
+  // Pickup is the default — it's always available with no fee, unlike
+  // delivery which costs extra and depends on the cook's delivery radius.
+  const [fulfillmentType, setFulfillmentType] = useState<FulfillmentType>('pickup');
   // cookId -> free_delivery_threshold (null = no offer)
   const [cookThresholds, setCookThresholds] = useState<Record<string, number | null>>({});
 
@@ -66,8 +72,16 @@ export default function CartScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cookIdsKey]);
 
-  // Group cart by cook, compute per-cook subtotal + delivery fee.
-  const { deliveryFee, freeDeliveryNote } = useMemo(() => {
+  // Group cart by cook, compute per-cook subtotal + delivery fee. Pickup never
+  // charges a delivery fee, regardless of threshold.
+  const { deliveryFee, freeDeliveryNote, thresholdNotes } = useMemo(() => {
+    if (fulfillmentType === 'pickup') {
+      return {
+        deliveryFee: 0,
+        freeDeliveryNote: null as string | null,
+        thresholdNotes: [] as string[],
+      };
+    }
     const byCook = new Map<string, { subtotal: number; cookName?: string }>();
     for (const item of cartItems) {
       const bucket = byCook.get(item.cookId) ?? { subtotal: 0, cookName: item.cookName };
@@ -76,6 +90,9 @@ export default function CartScreen() {
     }
     let fee = 0;
     const freedCooks: string[] = [];
+    // Per cook with an unmet threshold: show the offer and how much more to
+    // spend to earn it — more actionable than the raw number alone.
+    const notes: string[] = [];
     for (const [cookId, { subtotal, cookName }] of byCook) {
       const threshold = cookThresholds[cookId];
       if (threshold != null && subtotal >= threshold) {
@@ -83,6 +100,12 @@ export default function CartScreen() {
         if (cookName) freedCooks.push(cookName);
       } else {
         fee += DELIVERY_FEE;
+        if (threshold != null) {
+          const remaining = threshold - subtotal;
+          notes.push(
+            `Add RM ${remaining.toFixed(2)} more from ${cookName ?? 'this cook'} for free delivery (over RM ${threshold.toFixed(2)})`
+          );
+        }
       }
     }
     const note =
@@ -91,8 +114,8 @@ export default function CartScreen() {
         : freedCooks.length === byCook.size
           ? 'Free delivery applied 🎉'
           : `Free delivery from ${freedCooks.join(', ')} 🎉`;
-    return { deliveryFee: fee, freeDeliveryNote: note };
-  }, [cartItems, cookThresholds]);
+    return { deliveryFee: fee, freeDeliveryNote: note, thresholdNotes: notes };
+  }, [cartItems, cookThresholds, fulfillmentType]);
 
   const handlePlaceOrder = async () => {
     if (cartItems.length === 0) return;
@@ -106,12 +129,19 @@ export default function CartScreen() {
     }
 
     // Require a saved payment method before allowing checkout.
-    const raw = await AsyncStorage.getItem(PAYMENT_STORAGE_KEY);
+    const raw = await AsyncStorage.getItem(getPaymentStorageKey(user.id));
     const savedCard: SavedCard | null = raw ? JSON.parse(raw) : null;
     if (!savedCard) {
       Alert.alert('Payment method needed', 'Add a card to place your order.', [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Add card', onPress: () => router.push('/(user)/payment-methods') },
+        {
+          text: 'Add card',
+          onPress: () =>
+            router.push({
+              pathname: '/(user)/payment-methods',
+              params: { returnTo: '/(user)/cart' },
+            }),
+        },
       ]);
       return;
     }
@@ -123,6 +153,7 @@ export default function CartScreen() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userId: user.id,
+          fulfillmentType,
           items: cartItems.map(item => ({
             listingId: item.listingId,
             quantity: item.quantity,
@@ -137,11 +168,9 @@ export default function CartScreen() {
 
       if (res.ok) {
         clearCart();
-        Alert.alert(
-          '🎉 Order Placed!',
-          `Charged ${savedCard.brand} ending in ${savedCard.last4}.`,
-          [{ text: 'OK', onPress: () => router.replace('/(user)/(tabs)/home') }]
-        );
+        Alert.alert('Order Placed!', `Charged ${savedCard.brand} ending in ${savedCard.last4}.`, [
+          { text: 'OK', onPress: () => router.replace('/(user)/(tabs)/home') },
+        ]);
       } else {
         Alert.alert('Could not place order', body?.error ?? 'Please try again.');
       }
@@ -223,7 +252,7 @@ export default function CartScreen() {
               </View>
               {item.cookName && <Text style={styles.cartItemChef}>by {item.cookName}</Text>}
               <Text style={styles.cartItemDate}>
-                📅{' '}
+                Pickup/Delivery Date:{' '}
                 {item.selectedDate.toLocaleDateString(undefined, {
                   month: 'short',
                   day: 'numeric',
@@ -243,7 +272,13 @@ export default function CartScreen() {
                   </TouchableOpacity>
                   <Text style={styles.qtyValue}>{item.quantity}</Text>
                   <TouchableOpacity
-                    style={styles.qtyBtn}
+                    style={[
+                      styles.qtyBtn,
+                      item.maxQuantity != null &&
+                        item.quantity >= item.maxQuantity &&
+                        styles.qtyBtnDisabled,
+                    ]}
+                    disabled={item.maxQuantity != null && item.quantity >= item.maxQuantity}
                     onPress={() => updateQuantity(item.listingId, item.quantity + 1)}
                   >
                     <Text style={styles.qtyBtnText}>+</Text>
@@ -257,17 +292,72 @@ export default function CartScreen() {
 
       {/* Order Summary Footer */}
       <View style={styles.footer}>
+        <View style={styles.fulfillmentToggle}>
+          <TouchableOpacity
+            style={[
+              styles.fulfillmentOption,
+              fulfillmentType === 'pickup' && styles.fulfillmentOptionActive,
+            ]}
+            onPress={() => setFulfillmentType('pickup')}
+          >
+            <Ionicons
+              name="bag-handle-outline"
+              size={18}
+              color={fulfillmentType === 'pickup' ? '#fff' : '#666'}
+            />
+            <Text
+              style={[
+                styles.fulfillmentOptionText,
+                fulfillmentType === 'pickup' && styles.fulfillmentOptionTextActive,
+              ]}
+            >
+              Pickup
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.fulfillmentOption,
+              fulfillmentType === 'delivery' && styles.fulfillmentOptionActive,
+            ]}
+            onPress={() => setFulfillmentType('delivery')}
+          >
+            <Ionicons
+              name="bicycle-outline"
+              size={18}
+              color={fulfillmentType === 'delivery' ? '#fff' : '#666'}
+            />
+            <Text
+              style={[
+                styles.fulfillmentOptionText,
+                fulfillmentType === 'delivery' && styles.fulfillmentOptionTextActive,
+              ]}
+            >
+              Delivery
+            </Text>
+          </TouchableOpacity>
+        </View>
+
         <View style={styles.summaryRow}>
           <Text style={styles.summaryLabel}>Subtotal</Text>
           <Text style={styles.summaryValue}>RM {cartTotal.toFixed(2)}</Text>
         </View>
-        <View style={styles.summaryRow}>
-          <Text style={styles.summaryLabel}>Delivery fee</Text>
-          <Text style={styles.summaryValue}>
-            {deliveryFee === 0 ? 'FREE' : `RM ${deliveryFee.toFixed(2)}`}
-          </Text>
-        </View>
-        {freeDeliveryNote && <Text style={styles.freeDeliveryNote}>{freeDeliveryNote}</Text>}
+        {fulfillmentType === 'delivery' && (
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Delivery fee</Text>
+            <Text style={styles.summaryValue}>
+              {deliveryFee === 0 ? 'FREE' : `RM ${deliveryFee.toFixed(2)}`}
+            </Text>
+          </View>
+        )}
+        {fulfillmentType === 'delivery' && freeDeliveryNote && (
+          <Text style={styles.freeDeliveryNote}>{freeDeliveryNote}</Text>
+        )}
+        {fulfillmentType === 'delivery' &&
+          thresholdNotes.map(note => (
+            <Text key={note} style={styles.thresholdNote}>
+              {note}
+            </Text>
+          ))}
         <View style={[styles.summaryRow, styles.totalRow]}>
           <Text style={styles.totalLabel}>Total</Text>
           <Text style={styles.totalValue}>RM {grandTotal.toFixed(2)}</Text>
@@ -431,11 +521,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  qtyBtnDisabled: {
+    opacity: 0.4,
+  },
   qtyBtnText: {
     fontSize: 18,
     fontWeight: '600',
     color: '#1A1A1A',
     lineHeight: 22,
+  },
+  maxQtyNote: {
+    fontSize: 11,
+    color: '#999',
+    marginTop: 4,
   },
   qtyValue: {
     fontSize: 16,
@@ -459,6 +557,34 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 10,
   },
+  fulfillmentToggle: {
+    flexDirection: 'row',
+    backgroundColor: '#F0F0F0',
+    borderRadius: 14,
+    padding: 4,
+    marginBottom: 16,
+    gap: 4,
+  },
+  fulfillmentOption: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  fulfillmentOptionActive: {
+    backgroundColor: '#4CAF50',
+  },
+  fulfillmentOptionText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#666',
+  },
+  fulfillmentOptionTextActive: {
+    color: '#fff',
+  },
   summaryRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -473,6 +599,13 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#1A1A1A',
     fontWeight: '600',
+  },
+  thresholdNote: {
+    fontSize: 12,
+    color: '#B26A00',
+    fontWeight: '500',
+    marginTop: 2,
+    marginBottom: 4,
   },
   freeDeliveryNote: {
     fontSize: 12,

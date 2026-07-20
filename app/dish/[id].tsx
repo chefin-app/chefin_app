@@ -40,6 +40,14 @@ const DishDetailsScreen = () => {
   } | null>(null);
   const isSlotSelected = !!selectedDate && !!selectedSlot && !selectedSlot.isFull;
 
+  // Cap quantity at whatever capacity the cook set for the selected slot.
+  const maxQuantity = selectedSlot?.remainingSlots ?? 99;
+
+  // Clamp down if a fuller slot gets picked after quantity was already raised.
+  useEffect(() => {
+    setQuantity(q => Math.min(q, Math.max(1, maxQuantity)));
+  }, [maxQuantity]);
+
   const pickerRef = useRef<AvailabilityPickerHandle>(null);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -113,18 +121,21 @@ const DishDetailsScreen = () => {
         quantity,
         selectedDate: new Date(selectedDate),
         pickupSlotStart: selectedSlot?.startTime,
+        maxQuantity: selectedSlot?.remainingSlots,
       });
     }
   };
 
+  // The heart favourites the cook (restaurant), same as MealCard and the
+  // restaurant page — that's what powers "new dish from a favourite"
+  // notifications.
   const handleToggleFavourite = () => {
     toggleFavourite({
-      listingId: dish.id,
-      title: dish.title,
-      price: dish.price,
+      profileId: dish.cook_id,
+      restaurantName: profiles?.restaurant_name || profiles?.full_name || 'Restaurant',
       imageUrl: dish.image_url,
-      cookName: profiles?.full_name,
-      rating: parseFloat(averageRating),
+      fullChefName: profiles?.full_name,
+      rating: averageRating,
       reviewCount: reviews.length,
     });
   };
@@ -158,9 +169,9 @@ const DishDetailsScreen = () => {
         </TouchableOpacity>
         <TouchableOpacity style={styles.favouriteButton} onPress={handleToggleFavourite}>
           <Ionicons
-            name={isFavourite(dish.id) ? 'heart' : 'heart-outline'}
+            name={isFavourite(dish.cook_id) ? 'heart' : 'heart-outline'}
             size={24}
-            color={isFavourite(dish.id) ? '#FF5252' : '#333'}
+            color={isFavourite(dish.cook_id) ? '#FF5252' : '#333'}
           />
         </TouchableOpacity>
 
@@ -216,10 +227,19 @@ const DishDetailsScreen = () => {
                 <Text style={styles.qtyButtonText}>-</Text>
               </TouchableOpacity>
               <Text style={styles.qtyValue}>{quantity}</Text>
-              <TouchableOpacity onPress={() => setQuantity(q => q + 1)} style={styles.qtyBtn}>
+              <TouchableOpacity
+                onPress={() => setQuantity(q => Math.min(maxQuantity, q + 1))}
+                style={[styles.qtyBtn, quantity >= maxQuantity && styles.qtyBtnDisabled]}
+                disabled={quantity >= maxQuantity}
+              >
                 <Text style={styles.qtyButtonText}>+</Text>
               </TouchableOpacity>
             </View>
+            {isSlotSelected && (
+              <Text style={styles.maxQtyNote}>
+                {maxQuantity} order{maxQuantity === 1 ? '' : 's'} left for this slot
+              </Text>
+            )}
 
             <TouchableOpacity
               style={[styles.addToCartButton, !isSlotSelected && styles.disabledButton]}
@@ -348,6 +368,18 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0.15)',
   },
+  favouriteButton: {
+    position: 'absolute',
+    top: 55,
+    right: 20,
+    width: 42,
+    height: 42,
+    backgroundColor: '#fff',
+    borderRadius: 21,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
+  },
   backButton: {
     position: 'absolute',
     top: 55,
@@ -472,6 +504,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  qtyBtnDisabled: {
+    opacity: 0.4,
+  },
   qtyButtonText: {
     fontSize: 24,
     fontWeight: '500',
@@ -482,6 +517,13 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     width: 60,
     textAlign: 'center',
+  },
+  maxQtyNote: {
+    fontSize: 12,
+    color: '#888',
+    textAlign: 'center',
+    marginTop: -12,
+    marginBottom: 16,
   },
   addToCartButton: {
     backgroundColor: '#4CAF50',

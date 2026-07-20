@@ -11,6 +11,10 @@ export interface CartItem {
   selectedDate: Date;
   /** ISO string of the customer's 1-hour pickup slot start. */
   pickupSlotStart?: string;
+  /** Orders left in that slot at the time it was added — caps the cart's
+   *  quantity stepper so a customer can't raise it past what the cook
+   *  actually has capacity for. Undefined when no slot was chosen. */
+  maxQuantity?: number;
 }
 
 interface CartContextType {
@@ -31,12 +35,17 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
   const addToCart = useCallback((item: Omit<CartItem, 'quantity'> & { quantity?: number }) => {
     setCartItems(prev => {
       const existing = prev.find(c => c.listingId === item.listingId);
+      const cap = item.maxQuantity ?? existing?.maxQuantity;
       if (existing) {
+        const nextQuantity = existing.quantity + (item.quantity ?? 1);
         return prev.map(c =>
-          c.listingId === item.listingId ? { ...c, quantity: c.quantity + (item.quantity ?? 1) } : c
+          c.listingId === item.listingId
+            ? { ...c, ...item, quantity: cap != null ? Math.min(nextQuantity, cap) : nextQuantity }
+            : c
         );
       }
-      return [...prev, { ...item, quantity: item.quantity ?? 1 }];
+      const quantity = item.quantity ?? 1;
+      return [...prev, { ...item, quantity: cap != null ? Math.min(quantity, cap) : quantity }];
     });
   }, []);
 
@@ -49,7 +58,13 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
       setCartItems(prev => prev.filter(c => c.listingId !== listingId));
       return;
     }
-    setCartItems(prev => prev.map(c => (c.listingId === listingId ? { ...c, quantity } : c)));
+    setCartItems(prev =>
+      prev.map(c =>
+        c.listingId === listingId
+          ? { ...c, quantity: c.maxQuantity != null ? Math.min(quantity, c.maxQuantity) : quantity }
+          : c
+      )
+    );
   }, []);
 
   const clearCart = useCallback(() => setCartItems([]), []);

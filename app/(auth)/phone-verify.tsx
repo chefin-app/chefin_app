@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
+import { supabase } from '@/src/utils/supabaseClient';
 import React, { useEffect, useRef, useState } from 'react';
 import { NativeSyntheticEvent, TextInputKeyPressEventData } from 'react-native';
 
@@ -104,9 +105,21 @@ export default function PhoneVerifyStep2() {
         throw new Error(data.error || 'OTP verification failed');
       }
 
-      // Successful verification
-      // Navigate to home screen
-      router.replace('/(user)/(tabs)/home');
+      // Successful verification. New users (no completed onboarding) go to the
+      // name + phone step; returning users go home. Query Supabase directly and
+      // default to onboarding when unknown (a returning user completing it
+      // again is harmless; a new user wrongly sent home is stuck).
+      const userId = data.user?.id ?? data.session?.user?.id;
+      let completed = false;
+      if (userId) {
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('onboarding_completed')
+          .eq('user_id', userId)
+          .maybeSingle();
+        completed = !error && profile?.onboarding_completed === true;
+      }
+      router.replace(completed ? '/(user)/(tabs)/home' : '/(auth)/onboarding');
     } catch (error: unknown) {
       if (error instanceof Error) {
         console.error('OTP verification error:', error);

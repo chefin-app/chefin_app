@@ -1,12 +1,27 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import * as Linking from 'expo-linking';
 import { supabase } from '@/src/utils/supabaseClient';
 import type { Session, User } from '@supabase/supabase-js';
+
+// Where Supabase sends the user after they click the confirmation link.
+// expo-linking resolves this to the app's deep link for the current runtime:
+//   - dev build / production → chefinapp://callback
+//   - Expo Go                → exp://<LAN-IP>:<port>/--/callback
+// The matching value(s) must be listed in Supabase → Auth → URL Configuration.
+const emailRedirectTo = Linking.createURL('/callback');
 
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
   initializing: boolean;
+  /**
+   * Whether the signed-in user has finished the name + phone onboarding step.
+   * `null` while unknown (no session, or the status hasn't loaded yet).
+   */
+  onboardingCompleted: boolean | null;
+  /** Re-read onboarding status from the DB (call after completing onboarding). */
+  refreshOnboardingStatus: () => Promise<void>;
   signUp: (
     email: string,
     password: string
@@ -34,6 +49,31 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(false);
   const [initializing, setInitializing] = useState(true);
+  const [onboardingCompleted, setOnboardingCompleted] = useState<boolean | null>(null);
+
+  // Read the onboarding flag for a given user. Missing profile row or missing
+  // column → treat as not-yet-onboarded so we route them through it.
+  const loadOnboardingStatus = async (userId: string | undefined) => {
+    if (!userId) {
+      setOnboardingCompleted(null);
+      return;
+    }
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('onboarding_completed')
+      .eq('user_id', userId)
+      .maybeSingle();
+    if (error) {
+      console.warn('Could not load onboarding status', error.message);
+      setOnboardingCompleted(null);
+      return;
+    }
+    setOnboardingCompleted(data?.onboarding_completed ?? false);
+  };
+
+  const refreshOnboardingStatus = async () => {
+    await loadOnboardingStatus(user?.id);
+  };
 
   useEffect(() => {
     console.log('🔄 Initializing Supabase Auth...');
@@ -42,6 +82,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       console.log('📦 Initial session:', session);
       setSession(session);
       setUser(session?.user ?? null);
+      loadOnboardingStatus(session?.user?.id);
       setInitializing(false);
     });
 
@@ -51,6 +92,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       console.log('⚡ Auth state changed:', _event, session);
       setSession(session);
       setUser(session?.user ?? null);
+      loadOnboardingStatus(session?.user?.id);
       setInitializing(false);
     });
 
@@ -63,6 +105,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       const { data, error } = await supabase.auth.signUp({
         email: email.toLowerCase().trim(),
         password,
+        options: { emailRedirectTo },
       });
       if (error) {
         // Supabase returns an explicit error for this when email confirmation
@@ -109,6 +152,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       if (error) return { error: error.message };
       setUser(null);
       setSession(null);
+      setOnboardingCompleted(null);
       console.log('👋 Signed out successfully');
       return { error: null };
     } catch (err: any) {
@@ -151,6 +195,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     session,
     loading,
     initializing,
+    onboardingCompleted,
+    refreshOnboardingStatus,
     signUp,
     signIn,
     signOut,

@@ -1,4 +1,5 @@
 import React, { createContext, useCallback, useContext, useState } from 'react';
+import type { VerificationDocType } from '@/src/constants/verification';
 
 /** Snapshot of the first-dish draft collected during cook onboarding. Nothing
  *  is written to the DB until the cook submits the application on the final
@@ -14,14 +15,20 @@ export interface OnboardingDish {
   photoUri: string | null;
 }
 
-/** Food-safety details collected during onboarding. */
+/** An optional Tier 1 verification document picked during onboarding. */
+export interface OnboardingVerificationDoc {
+  docType: VerificationDocType;
+  /** Local file URI from expo-document-picker. Uploaded on final commit. */
+  uri: string;
+  mimeType: string;
+  fileName: string;
+}
+
+/** Food-safety details collected during onboarding. Documents are optional —
+ *  submitting either earns the Tier 1 "Verified" badge once admin-approved. */
 export interface OnboardingFoodSafety {
   hostingType: 'private' | 'business' | null;
-  hasLicense: boolean | null;
-  /** Local file URI from expo-document-picker. Uploaded on final commit. */
-  licenseUri: string | null;
-  licenseMimeType: string | null;
-  licenseFileName: string | null;
+  documents: OnboardingVerificationDoc[];
 }
 
 /** Kitchen address fields collected during onboarding. */

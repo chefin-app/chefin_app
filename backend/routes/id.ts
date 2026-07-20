@@ -10,7 +10,9 @@ router.get('/:id', async (req, res) => {
     // get cook (home restaurant) profile
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('id, full_name, restaurant_name, profile_image, bio, is_verified')
+      .select(
+        'id, full_name, restaurant_name, profile_image, bio, is_verified, free_delivery_threshold'
+      )
       .eq('id', id)
       .single();
 

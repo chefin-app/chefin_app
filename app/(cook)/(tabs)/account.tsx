@@ -1,7 +1,16 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, ScrollView } from 'react-native';
+import {
+  Alert,
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  SafeAreaView,
+  ScrollView,
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { supabase } from '@/src/utils/supabaseClient';
 
 interface MenuItem {
   id: string;
@@ -14,6 +23,7 @@ interface MenuItem {
 
 const Account: React.FC = () => {
   const router = useRouter();
+  const [isSigningOut, setIsSigningOut] = React.useState(false);
 
   const menuItems: MenuItem[] = [
     {
@@ -27,7 +37,7 @@ const Account: React.FC = () => {
       id: '2',
       title: 'Payment Settings',
       icon: 'wallet-outline',
-      route: 'PaymentMethods',
+      route: '/(cook)/payout-details',
       section: 'main',
     },
     {
@@ -37,50 +47,50 @@ const Account: React.FC = () => {
       route: '/(cook)/address',
       section: 'main',
     },
-    {
-      id: '4',
-      title: 'Invite Friends',
-      icon: 'share-outline',
-      route: 'InviteFriends',
-      section: 'main',
-    },
-    {
-      id: '5',
-      title: 'Rate Us',
-      subtitle: 'Rate us playstore, appstore',
-      icon: 'star-outline',
-      route: 'RateUs',
-      section: 'more',
-    },
-    {
-      id: '6',
-      title: 'FAQ',
-      subtitle: 'Frequently asked questions',
-      icon: 'help-circle-outline',
-      route: 'FAQ',
-      section: 'more',
-    },
+    // {
+    //   id: '4',
+    //   title: 'Invite Friends',
+    //   icon: 'share-outline',
+    //   route: 'InviteFriends',
+    //   section: 'main',
+    // },
+    // {
+    //   id: '5',
+    //   title: 'Rate Us',
+    //   subtitle: 'Rate us playstore, appstore',
+    //   icon: 'star-outline',
+    //   route: 'RateUs',
+    //   section: 'more',
+    // },
+    // {
+    //   id: '6',
+    //   title: 'FAQ',
+    //   subtitle: 'Frequently asked questions',
+    //   icon: 'help-circle-outline',
+    //   route: 'FAQ',
+    //   section: 'more',
+    // },
     {
       id: '7',
       title: 'Switch to customer mode',
       subtitle: 'Explore Chefins near you',
       icon: 'swap-horizontal-outline',
       route: '/(user)/(tabs)/home',
-      section: 'more',
+      section: 'main',
     },
     {
       id: '8',
-      title: 'Logout',
+      title: 'Sign Out',
       icon: 'log-out-outline',
-      route: 'Logout',
-      section: 'more',
+      route: 'SignOut',
+      section: 'main',
     },
   ];
 
   const handleNavigation = (route: string, title: string) => {
-    if (route === 'Logout') {
-      // Handle logout logic
-      handleLogout();
+    if (route === 'SignOut') {
+      // Handle signout logic
+      handleSignOut();
       return;
     }
 
@@ -94,21 +104,22 @@ const Account: React.FC = () => {
     }
   };
 
-  const handleLogout = async () => {
-    try {
-      // Add your logout logic here
-      // For example, if using Supabase:
-      // await supabase.auth.signOut();
-      console.log('Logging out...');
+  const handleSignOut = async () => {
+    Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Sign Out', style: 'destructive', onPress: confirmSignOut },
+    ]);
+  };
 
-      // Navigate to login screen or reset navigation stack
-      // navigation.reset({
-      //   index: 0,
-      //   routes: [{ name: 'Login' }],
-      // });
-    } catch (error) {
-      console.error('Logout error:', error);
+  const confirmSignOut = async () => {
+    setIsSigningOut(true);
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      Alert.alert('Error', error.message);
+    } else {
+      router.replace('/(user)/(tabs)/home');
     }
+    setIsSigningOut(false);
   };
 
   const renderMenuItem = (item: MenuItem) => {
@@ -136,18 +147,18 @@ const Account: React.FC = () => {
   };
 
   const mainItems = menuItems.filter(item => item.section === 'main');
-  const moreItems = menuItems.filter(item => item.section === 'more');
+  // const moreItems = menuItems.filter(item => item.section === 'more');
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.section}>{mainItems.map(renderMenuItem)}</View>
 
-        <View style={styles.sectionHeader}>
+        {/* <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>MORE</Text>
-        </View>
+        </View> */}
 
-        <View style={styles.section}>{moreItems.map(renderMenuItem)}</View>
+        {/* <View style={styles.section}>{moreItems.map(renderMenuItem)}</View> */}
       </ScrollView>
     </SafeAreaView>
   );

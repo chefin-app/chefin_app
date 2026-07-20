@@ -1,5 +1,6 @@
 import express from 'express';
 import { supabase } from '../supabaseClient';
+import { notifyFavouritersNewSlots } from '../notifications';
 
 const router = express.Router();
 
@@ -62,6 +63,46 @@ router.get('/menu-availability', async (req, res) => {
   } catch (err: any) {
     console.error('Server error:', err);
     return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// POST /api/availability/announce-slots - Cook's app calls this after adding
+// new pickup slots; fans out a "new pickup times" notification to everyone
+// who favourited the cook. Throttled server-side (one announcement per cook
+// per few hours) so editing several dates doesn't spam followers.
+router.post('/announce-slots', async (req, res) => {
+  const { userId } = req.body as { userId?: string };
+  if (!userId) {
+    return res.status(401).json({ error: 'userId is required.' });
+  }
+
+  try {
+    const { data: profile, error: profileErr } = await supabase
+      .from('profiles')
+      .select('id, restaurant_name, full_name')
+      .eq('user_id', userId)
+      .single();
+    if (profileErr || !profile) {
+      return res.status(404).json({ error: 'Profile not found for this user.' });
+    }
+
+    // Only actual cooks (someone with at least one listing) can announce.
+    const { count } = await supabase
+      .from('listings')
+      .select('id', { count: 'exact', head: true })
+      .eq('cook_id', profile.id);
+    if (!count) {
+      return res.status(403).json({ error: 'No listings found for this cook.' });
+    }
+
+    await notifyFavouritersNewSlots(
+      profile.id,
+      profile.restaurant_name || profile.full_name || 'A cook you favourited'
+    );
+    res.json({ success: true });
+  } catch (err: any) {
+    console.error('Error announcing slots:', err);
+    res.status(500).json({ error: err.message });
   }
 });
 

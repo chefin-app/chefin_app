@@ -1,5 +1,6 @@
 import express from 'express';
 import { supabase } from '../supabaseClient';
+import { notifyCookDishReviewed, notifyFavouritersNewDish } from '../notifications';
 
 const router = express.Router();
 
@@ -69,6 +70,61 @@ router.get('/:id', async (req, res) => {
   } catch (err: any) {
     console.error(`Error fetching listing ${id}:`, err);
     res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+// PATCH /api/listings/:id/status - Admin approves or rejects a dish.
+// Body: { status: 'approved' | 'rejected', note? }
+// Approval makes the dish publicly visible (feeds filter on status='approved'),
+// notifies the cook, and announces the new dish to everyone who favourited
+// that cook.
+router.patch('/:id/status', async (req, res) => {
+  const { id } = req.params;
+  const { status, note } = req.body as { status?: string; note?: string };
+
+  if (status !== 'approved' && status !== 'rejected') {
+    return res.status(400).json({ error: "status must be 'approved' or 'rejected'" });
+  }
+
+  try {
+    const { data: listing, error: fetchErr } = await supabase
+      .from('listings')
+      .select('id, title, status, cook_id, profiles(user_id, restaurant_name, full_name)')
+      .eq('id', id)
+      .single();
+    if (fetchErr || !listing) {
+      return res.status(404).json({ error: 'Listing not found.' });
+    }
+    const alreadyApproved = listing.status === 'approved';
+
+    const { data, error } = await supabase
+      .from('listings')
+      .update({ status })
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw error;
+
+    // Notifications are best-effort — the review already landed.
+    try {
+      const cook = (listing as any).profiles;
+      if (cook?.user_id) {
+        await notifyCookDishReviewed(cook.user_id, listing.title, status === 'approved', note);
+      }
+      // Only announce to favouriters the first time the dish goes live, not
+      // on re-approvals after edits.
+      if (status === 'approved' && !alreadyApproved) {
+        const restaurantName = cook?.restaurant_name || cook?.full_name || 'A cook you favourited';
+        await notifyFavouritersNewDish(listing.cook_id, restaurantName, listing.title, listing.id);
+      }
+    } catch (notifyErr: any) {
+      console.error('Dish review notifications failed:', notifyErr.message ?? notifyErr);
+    }
+
+    res.json({ success: true, listing: data });
+  } catch (err: any) {
+    console.error('Error reviewing listing:', err);
+    res.status(500).json({ error: err.message });
   }
 });
 

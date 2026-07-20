@@ -26,6 +26,7 @@ interface OrderRow {
   total_price: number;
   scheduled_date: string; // YYYY-MM-DD
   pickup_time: string | null;
+  fulfillment_type: 'pickup' | 'delivery';
   status: OrderStatus;
   created_at: string;
   listings: { title: string; image_url: string | null } | null;
@@ -75,7 +76,7 @@ export default function Today() {
   const [historyLoading, setHistoryLoading] = useState(false);
 
   const ORDER_SELECT =
-    'id, quantity, total_price, scheduled_date, pickup_time, status, created_at, listings(title, image_url), profiles(full_name)';
+    'id, quantity, total_price, scheduled_date, pickup_time, fulfillment_type, status, created_at, listings(title, image_url), profiles(full_name)';
 
   const getCookListingIds = useCallback(async (): Promise<string[] | null> => {
     if (!user) return null;
@@ -281,12 +282,36 @@ export default function Today() {
           <Text style={styles.orderCustomer} numberOfLines={1}>
             {order.profiles?.full_name ?? 'Customer'}
           </Text>
-          {order.pickup_time && (
-            <View style={styles.pickupPill}>
-              <Ionicons name="time-outline" size={12} color="#2E7D32" />
-              <Text style={styles.pickupPillText}>{formatTime(order.pickup_time)}</Text>
+          <View style={styles.pillGroup}>
+            <View
+              style={[
+                styles.fulfillmentPill,
+                order.fulfillment_type === 'delivery' && styles.fulfillmentPillDelivery,
+              ]}
+            >
+              <Ionicons
+                name={
+                  order.fulfillment_type === 'delivery' ? 'bicycle-outline' : 'bag-handle-outline'
+                }
+                size={12}
+                color={order.fulfillment_type === 'delivery' ? '#1565C0' : '#2E7D32'}
+              />
+              <Text
+                style={[
+                  styles.fulfillmentPillText,
+                  order.fulfillment_type === 'delivery' && styles.fulfillmentPillTextDelivery,
+                ]}
+              >
+                {order.fulfillment_type === 'delivery' ? 'Delivery' : 'Pickup'}
+              </Text>
             </View>
-          )}
+            {order.pickup_time && (
+              <View style={styles.pickupPill}>
+                <Ionicons name="time-outline" size={12} color="#2E7D32" />
+                <Text style={styles.pickupPillText}>{formatTime(order.pickup_time)}</Text>
+              </View>
+            )}
+          </View>
         </View>
         <Text style={styles.orderItem} numberOfLines={1}>
           {order.quantity}× {order.listings?.title ?? 'Dish'}
@@ -558,6 +583,12 @@ const styles = StyleSheet.create({
     color: '#000000',
     flexShrink: 1,
   },
+  pillGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginLeft: 8,
+  },
   pickupPill: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -566,12 +597,31 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 10,
-    marginLeft: 8,
   },
   pickupPillText: {
     fontSize: 11,
     fontWeight: '700',
     color: '#2E7D32',
+  },
+  fulfillmentPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#F0F7F1',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+  },
+  fulfillmentPillDelivery: {
+    backgroundColor: '#E3F2FD',
+  },
+  fulfillmentPillText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#2E7D32',
+  },
+  fulfillmentPillTextDelivery: {
+    color: '#1565C0',
   },
   orderItem: {
     fontSize: 14,

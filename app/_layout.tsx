@@ -2,6 +2,7 @@ import { Stack } from 'expo-router';
 import { AuthProvider } from '@/src/services/auth-context';
 import { CartProvider } from '@/src/context/CartContext';
 import { FavouritesProvider } from '@/src/context/FavouritesContext';
+import { NotificationsProvider } from '@/src/context/NotificationsContext';
 import { OnboardingProvider } from '@/src/context/OnboardingContext';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
@@ -33,15 +34,17 @@ export default function RootLayout() {
     <AuthProvider>
       <CartProvider>
         <FavouritesProvider>
-          <OnboardingProvider>
-            <StatusBar style="dark" />
-            <Stack screenOptions={{ headerShown: false }}>
-              <Stack.Screen name="(user)/(tabs)" />
-              <Stack.Screen name="(auth)" />
-              <Stack.Screen name="(cook)" />
-              <Stack.Screen name="+not-found" />
-            </Stack>
-          </OnboardingProvider>
+          <NotificationsProvider>
+            <OnboardingProvider>
+              <StatusBar style="dark" />
+              <Stack screenOptions={{ headerShown: false }}>
+                <Stack.Screen name="(user)/(tabs)" />
+                <Stack.Screen name="(auth)" />
+                <Stack.Screen name="(cook)" />
+                <Stack.Screen name="+not-found" />
+              </Stack>
+            </OnboardingProvider>
+          </NotificationsProvider>
         </FavouritesProvider>
       </CartProvider>
     </AuthProvider>

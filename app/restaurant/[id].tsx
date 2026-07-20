@@ -148,8 +148,15 @@ const MenuScreen = () => {
               </View>
               <View style={styles.divider} />
               <View style={styles.statItem}>
-                <Ionicons name="time-outline" size={18} color="#666" />
-                <Text style={[styles.statText, { marginLeft: 6 }]}>12:00 PM - 8:00 PM</Text>
+                {profile?.free_delivery_threshold != null && (
+                  <Text style={styles.freeDeliveryBannerText}>
+                    Spend{' '}
+                    <Text style={styles.freeDeliveryOrderValue}>
+                      RM {Number(profile.free_delivery_threshold).toFixed(2)}
+                    </Text>
+                    {''} for free delivery
+                  </Text>
+                )}
               </View>
             </View>
 
@@ -362,6 +369,26 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     flex: 1,
     fontWeight: '500',
+  },
+  freeDeliveryBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E8F5E9',
+    borderRadius: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginTop: 12,
+    gap: 6,
+  },
+  freeDeliveryBannerText: {
+    fontSize: 12,
+    color: '#1A1A1A',
+    fontWeight: '600',
+    flexShrink: 1,
+  },
+  freeDeliveryOrderValue: {
+    color: '#4CAF50',
+    fontWeight: '700',
   },
   sectionContainer: {
     marginBottom: 30,

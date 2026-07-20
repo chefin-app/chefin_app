@@ -1,5 +1,14 @@
 import express from 'express';
 import { supabase } from '../supabaseClient';
+import {
+  notifyBuyerOrderPlaced,
+  notifyBuyerOrderConfirmed,
+  notifyBuyerOrderReady,
+  notifyBuyerOrderCancelled,
+  notifyBuyerReviewRequest,
+  notifyCookNewOrder,
+  notifyCookPayoutSent,
+} from '../notifications';
 
 const router = express.Router();
 
@@ -33,9 +42,11 @@ router.get('/', async (req, res) => {
   }
 });
 
+const FULFILLMENT_TYPES = ['pickup', 'delivery'];
+
 // POST / - Place an order from the cart
 router.post('/', async (req, res) => {
-  const { userId, items } = req.body as {
+  const { userId, items, fulfillmentType } = req.body as {
     userId?: string;
     items: {
       listingId: string;
@@ -44,6 +55,7 @@ router.post('/', async (req, res) => {
       pickupTime?: string; // ISO of the 1-hour slot start the customer picked
       priceAtOrder: number; // unit price
     }[];
+    fulfillmentType?: string; // 'pickup' | 'delivery', applies to the whole order
   };
 
   if (!userId) {
@@ -51,6 +63,9 @@ router.post('/', async (req, res) => {
   }
   if (!items || items.length === 0) {
     return res.status(400).json({ error: 'No items in order.' });
+  }
+  if (fulfillmentType && !FULFILLMENT_TYPES.includes(fulfillmentType)) {
+    return res.status(400).json({ error: "fulfillmentType must be 'pickup' or 'delivery'." });
   }
 
   try {
@@ -80,6 +95,7 @@ router.post('/', async (req, res) => {
         total_price: +(item.priceAtOrder * item.quantity).toFixed(2),
         scheduled_date: scheduled,
         pickup_time: item.pickupTime ?? null,
+        fulfillment_type: fulfillmentType ?? 'pickup',
         status: 'pending',
         payment_status: 'paid', // mock-paid via locally-saved card
       };
@@ -145,6 +161,43 @@ router.post('/', async (req, res) => {
       }
     }
 
+    // Notify everyone involved (best-effort — the order is already placed).
+    // Buyer gets one payment-received summary; each cook gets one
+    // notification per order row so they can act on it from Today.
+    try {
+      const createdOrders = data ?? [];
+      const total = createdOrders.reduce((sum, o) => sum + Number(o.total_price), 0);
+      await notifyBuyerOrderPlaced(
+        userId,
+        total,
+        createdOrders.length,
+        createdOrders.map(o => o.id)
+      );
+
+      const listingIds = [...new Set(createdOrders.map(o => o.listing_id))];
+      const { data: listingRows } = await supabase
+        .from('listings')
+        .select('id, title, profiles(user_id)')
+        .in('id', listingIds);
+      const listingById = new Map((listingRows ?? []).map(l => [l.id, l]));
+
+      for (const order of createdOrders) {
+        const listing = listingById.get(order.listing_id) as any;
+        const cookUserId = listing?.profiles?.user_id;
+        if (!cookUserId) continue;
+        await notifyCookNewOrder(cookUserId, {
+          orderId: order.id,
+          listingTitle: listing.title ?? 'your dish',
+          quantity: order.quantity,
+          totalPrice: order.total_price,
+          scheduledDate: order.scheduled_date,
+          pickupTime: order.pickup_time,
+        });
+      }
+    } catch (notifyErr: any) {
+      console.error('Order notifications failed:', notifyErr.message ?? notifyErr);
+    }
+
     res.status(201).json({ success: true, orders: data });
   } catch (err: any) {
     console.error('Error placing order:', err);
@@ -183,7 +236,9 @@ router.patch('/:id/status', async (req, res) => {
     // before allowing the write.
     const { data: order, error: orderErr } = await supabase
       .from('orders')
-      .select('id, listings(cook_id)')
+      .select(
+        'id, quantity, total_price, scheduled_date, pickup_time, customer_id, listing_id, listings(cook_id, title)'
+      )
       .eq('id', id)
       .single();
     if (orderErr || !order) {
@@ -201,6 +256,45 @@ router.patch('/:id/status', async (req, res) => {
       .select()
       .single();
     if (error) throw error;
+
+    // Notify the affected party (best-effort — the status change already
+    // landed). Buyer hears about confirm/ready/cancel; the cook hears about
+    // their payout when the order completes.
+    try {
+      const orderCtx = {
+        orderId: order.id,
+        listingTitle: (order as any).listings?.title ?? 'your order',
+        quantity: order.quantity,
+        totalPrice: order.total_price,
+        scheduledDate: order.scheduled_date,
+        pickupTime: order.pickup_time,
+      };
+
+      if (status === 'completed') {
+        // The requester is the verified cook — userId is their auth id.
+        await notifyCookPayoutSent(userId, orderCtx);
+      }
+
+      const { data: buyer } = await supabase
+        .from('profiles')
+        .select('user_id')
+        .eq('id', order.customer_id)
+        .single();
+      if (buyer?.user_id) {
+        if (status === 'confirmed') await notifyBuyerOrderConfirmed(buyer.user_id, orderCtx);
+        else if (status === 'ready') await notifyBuyerOrderReady(buyer.user_id, orderCtx);
+        else if (status === 'cancelled') await notifyBuyerOrderCancelled(buyer.user_id, orderCtx);
+        else if (status === 'completed') {
+          // Ask for a review — the notification deep-links to the review screen.
+          await notifyBuyerReviewRequest(buyer.user_id, {
+            ...orderCtx,
+            listingId: order.listing_id,
+          });
+        }
+      }
+    } catch (notifyErr: any) {
+      console.error('Status notification failed:', notifyErr.message ?? notifyErr);
+    }
 
     res.json({ success: true, order: data });
   } catch (err: any) {

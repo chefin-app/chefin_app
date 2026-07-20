@@ -67,6 +67,14 @@ const MenuItemCard: React.FC<MenuItemCardProps> = ({
   const isSlotSelected = !!selectedDate && !!selectedSlot && !selectedSlot.isFull;
   const [nextAvailableDate, setNextAvailableDate] = useState<string | undefined>(undefined);
 
+  // Cap quantity at whatever capacity the cook set for the selected slot.
+  const maxQuantity = selectedSlot?.remainingSlots ?? 99;
+
+  // Clamp down if a fuller slot gets picked after quantity was already raised.
+  useEffect(() => {
+    setQuantity(q => Math.min(q, Math.max(1, maxQuantity)));
+  }, [maxQuantity]);
+
   // Fetch earliest available date for this listing on mount
   useEffect(() => {
     const today = new Date().toISOString().split('T')[0];
@@ -194,10 +202,19 @@ const MenuItemCard: React.FC<MenuItemCardProps> = ({
                 <Text style={styles.qtyButtonText}>-</Text>
               </TouchableOpacity>
               <Text style={styles.qtyValue}>{quantity}</Text>
-              <TouchableOpacity onPress={() => setQuantity(q => q + 1)} style={styles.qtyBtn}>
+              <TouchableOpacity
+                onPress={() => setQuantity(q => Math.min(maxQuantity, q + 1))}
+                style={[styles.qtyBtn, quantity >= maxQuantity && styles.qtyBtnDisabled]}
+                disabled={quantity >= maxQuantity}
+              >
                 <Text style={styles.qtyButtonText}>+</Text>
               </TouchableOpacity>
             </View>
+            {isSlotSelected && (
+              <Text style={styles.maxQtyNote}>
+                {maxQuantity} order{maxQuantity === 1 ? '' : 's'} left for this slot
+              </Text>
+            )}
 
             {/* Add to Cart Button */}
             <TouchableOpacity
@@ -215,6 +232,7 @@ const MenuItemCard: React.FC<MenuItemCardProps> = ({
                     quantity,
                     selectedDate: new Date(selectedDate),
                     pickupSlotStart: selectedSlot?.startTime,
+                    maxQuantity: selectedSlot?.remainingSlots,
                   });
                   setAddedFeedback(true);
                   setTimeout(() => {
@@ -378,8 +396,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  qtyBtnDisabled: { opacity: 0.4 },
   qtyButtonText: { fontSize: 24, fontWeight: '500', color: '#1A1A1A', marginTop: -2 },
   qtyValue: { fontSize: 20, fontWeight: '600', width: 40, textAlign: 'center' },
+  maxQtyNote: {
+    fontSize: 12,
+    color: '#888',
+    textAlign: 'center',
+    marginTop: -8,
+    marginBottom: 8,
+  },
   addButton: {
     backgroundColor: '#4CAF50',
     width: '100%',

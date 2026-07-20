@@ -1,4 +1,6 @@
-import React, { createContext, useCallback, useContext, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { supabase } from '@/src/utils/supabaseClient';
+import { useAuth } from '@/src/services/auth-context';
 
 export interface FavouriteRestaurant {
   profileId: string;
@@ -17,18 +19,96 @@ interface FavouritesContextType {
 
 const FavouritesContext = createContext<FavouritesContextType | undefined>(undefined);
 
+/** DB row → display shape. Rows carry a denormalised snapshot of the
+ *  restaurant card so this list renders without extra joins. */
+const rowToFavourite = (row: any): FavouriteRestaurant => ({
+  profileId: row.cook_profile_id,
+  restaurantName: row.restaurant_name ?? '',
+  imageUrl: row.image_url ?? undefined,
+  fullChefName: row.chef_name ?? undefined,
+  rating: row.rating ?? '-',
+  reviewCount: row.review_count ?? 0,
+});
+
+/**
+ * Favourites persist to the `favourites` table for signed-in users (so they
+ * survive restarts, and the backend can notify favouriters when a cook adds
+ * a dish or new pickup slots). Guests keep session-only favourites.
+ */
 export const FavouritesProvider = ({ children }: { children: React.ReactNode }) => {
+  const { user } = useAuth();
+  const userId = user?.id ?? null;
   const [favourites, setFavourites] = useState<FavouriteRestaurant[]>([]);
 
-  const toggleFavourite = useCallback((item: FavouriteRestaurant) => {
-    setFavourites(prev => {
-      const exists = prev.find(f => f.profileId === item.profileId);
-      if (exists) {
-        return prev.filter(f => f.profileId !== item.profileId);
+  useEffect(() => {
+    if (!userId) {
+      setFavourites([]);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await supabase
+        .from('favourites')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+      if (error) {
+        console.warn('Could not load favourites', error.message);
+        return;
       }
-      return [...prev, item];
-    });
-  }, []);
+      if (!cancelled) setFavourites((data ?? []).map(rowToFavourite));
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
+
+  const toggleFavourite = useCallback(
+    (item: FavouriteRestaurant) => {
+      let removed = false;
+      // Optimistic flip; persistence follows for signed-in users.
+      setFavourites(prev => {
+        const exists = prev.find(f => f.profileId === item.profileId);
+        if (exists) {
+          removed = true;
+          return prev.filter(f => f.profileId !== item.profileId);
+        }
+        return [...prev, item];
+      });
+
+      if (!userId) return;
+      (async () => {
+        try {
+          if (removed) {
+            const { error } = await supabase
+              .from('favourites')
+              .delete()
+              .eq('user_id', userId)
+              .eq('cook_profile_id', item.profileId);
+            if (error) throw error;
+          } else {
+            const { error } = await supabase.from('favourites').insert({
+              user_id: userId,
+              cook_profile_id: item.profileId,
+              restaurant_name: item.restaurantName || null,
+              image_url: item.imageUrl ?? null,
+              chef_name: item.fullChefName ?? null,
+              rating: item.rating ?? null,
+              review_count: item.reviewCount ?? 0,
+            });
+            if (error) throw error;
+          }
+        } catch (e: any) {
+          console.warn('Could not save favourite', e.message ?? e);
+          // Roll the optimistic change back so the heart reflects reality.
+          setFavourites(prev =>
+            removed ? [...prev, item] : prev.filter(f => f.profileId !== item.profileId)
+          );
+        }
+      })();
+    },
+    [userId]
+  );
 
   const isFavourite = useCallback(
     (profileId: string) => {

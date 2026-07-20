@@ -37,6 +37,27 @@ router.post('/callback', async (req, res) => {
   }
 });
 
+// POST /check-email - Does an account exist for this email?
+// Uses admin.generateLink (which never sends an email) as an existence probe.
+// Must be type 'recovery': it errors with "user not found" for unregistered
+// addresses, whereas 'magiclink' silently auto-creates a stub user.
+router.post('/check-email', async (req, res) => {
+  const { email } = req.body as { email?: string };
+  if (!email) {
+    return res.status(400).json({ error: 'email is required' });
+  }
+
+  try {
+    const { error } = await supabase.auth.admin.generateLink({
+      type: 'recovery',
+      email: email.toLowerCase().trim(),
+    });
+    res.json({ exists: !error });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.post('/sign-up', async (req, res) => {
   const { email, password } = req.body;
 
@@ -176,6 +197,69 @@ router.post('/update-profile', async (req, res) => {
       return res.status(400).json({ error: error.message });
     }
     res.json({ message: 'Profile updated successfully' });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /onboarding-status - Has this user finished onboarding? Used right
+// after sign-in to decide whether to route to the onboarding step or home.
+// A missing profile row counts as not-completed.
+router.post('/onboarding-status', async (req, res) => {
+  const { userId } = req.body as { userId?: string };
+  if (!userId) {
+    return res.status(401).json({ error: 'userId is required.' });
+  }
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('onboarding_completed')
+      .eq('user_id', userId)
+      .maybeSingle();
+    if (error) {
+      return res.status(400).json({ error: error.message });
+    }
+    res.json({ completed: data?.onboarding_completed ?? false });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /complete-onboarding - New user provides their name + phone number.
+// Upserts the profile (the auth trigger normally created a stub row already,
+// but upsert keeps this safe if the trigger isn't installed) and flips
+// onboarding_completed so the app stops routing them here.
+router.post('/complete-onboarding', async (req, res) => {
+  const { userId, full_name, phone_number } = req.body as {
+    userId?: string;
+    full_name?: string;
+    phone_number?: string;
+  };
+
+  if (!userId) {
+    return res.status(401).json({ error: 'userId is required.' });
+  }
+  if (!full_name?.trim()) {
+    return res.status(400).json({ error: 'full_name is required.' });
+  }
+  if (!phone_number?.trim()) {
+    return res.status(400).json({ error: 'phone_number is required.' });
+  }
+
+  try {
+    const { error } = await supabase.from('profiles').upsert(
+      {
+        user_id: userId,
+        full_name: full_name.trim(),
+        phone_number: phone_number.trim(),
+        onboarding_completed: true,
+      },
+      { onConflict: 'user_id' }
+    );
+    if (error) {
+      return res.status(400).json({ error: error.message });
+    }
+    res.json({ message: 'Onboarding completed' });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }

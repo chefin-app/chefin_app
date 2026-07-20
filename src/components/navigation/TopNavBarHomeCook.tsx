@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import Entypo from '@expo/vector-icons/Entypo';
 import { createShadowStyle } from '../../utils/platform-utils';
 import { useAuth } from '@/src/services/auth-context';
+import { useNotifications } from '@/src/context/NotificationsContext';
 
 interface NavBarProps {
   options?: {
@@ -19,6 +20,7 @@ export default function TopNavBarHomeCook({ options }: NavBarProps) {
   const router = useRouter();
   const segments = useSegments();
   const { user, initializing } = useAuth();
+  const { unreadCounts } = useNotifications();
 
   // Get current tab from segments or props
   const currentTab = options?.headerProps?.currentTab || segments[segments.length - 1];
@@ -131,9 +133,12 @@ export default function TopNavBarHomeCook({ options }: NavBarProps) {
       );
     } else {
       return (
-        <TouchableOpacity style={styles.notificationButton}>
+        <TouchableOpacity
+          style={styles.notificationButton}
+          onPress={() => router.push({ pathname: '/notifications', params: { role: 'cook' } })}
+        >
           <Ionicons name="notifications" size={24} color="#333" />
-          {user && <View style={styles.notificationDot} />}
+          {user && unreadCounts.cook > 0 && <View style={styles.notificationDot} />}
         </TouchableOpacity>
       );
     }

@@ -9,6 +9,7 @@ export default function AuthLayout() {
       {/* <Stack.Screen name="phone-signup" /> */}
       <Stack.Screen name="phone-verify" />
       <Stack.Screen name="setup-password" />
+      <Stack.Screen name="onboarding" />
       <Stack.Screen name="callback" />
     </Stack>
   );
