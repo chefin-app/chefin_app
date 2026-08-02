@@ -19,6 +19,8 @@ import { useAuth } from '@/src/services/auth-context';
 import { useOnboarding } from '@/src/context/OnboardingContext';
 import { VERIFICATION_BUCKET, VerificationDocType } from '@/src/constants/verification';
 import { BankSelect } from '@/src/components/inputs/BankSelect';
+import { FOOD_SAFETY_WAIVER_VERSION } from '@/src/constants/foodSafetyWaiver';
+import { recordFoodComplianceAcceptance } from '@/src/utils/foodCompliance';
 
 const DISH_IMAGES_BUCKET = 'dish-images';
 
@@ -118,10 +120,16 @@ export default function PayoutDetailsScreen() {
       // the whole submission is aborted so we don't leave half-application
       // rows behind.
       if (isCookOnboarding) {
-        if (!onboardingDish || !onboardingAddress || !onboardingFoodSafety) {
+        if (
+          !onboardingDish ||
+          !onboardingAddress ||
+          !onboardingFoodSafety ||
+          !onboardingFoodSafety.complianceAccepted ||
+          onboardingFoodSafety.complianceVersion !== FOOD_SAFETY_WAIVER_VERSION
+        ) {
           Alert.alert(
             'Missing details',
-            'Some onboarding details are missing. Please go back and complete each step.'
+            'Some onboarding details or the current compliance acknowledgement are missing. Please go back and complete each step.'
           );
           return;
         }
@@ -132,6 +140,10 @@ export default function PayoutDetailsScreen() {
           .eq('user_id', user.id)
           .single();
         if (profileErr || !profile) throw new Error('Profile not found for your account.');
+
+        // Acceptance is recorded before uploads or listing creation, so a
+        // persistence failure cannot leave a newly activated cook/listing.
+        await recordFoodComplianceAcceptance(user.id, 'cook_onboarding');
 
         // 1. Upload dish photo (if any) → public URL.
         let dishImageUrl: string | null = null;
@@ -283,6 +295,7 @@ export default function PayoutDetailsScreen() {
               ref={accountNameRef}
               placeholder="Full name as registered with your bank"
               style={styles.input}
+              placeholderTextColor="#c1c0c0ff"
               value={accountName}
               onChangeText={setAccountName}
               autoCapitalize="words"

@@ -1,13 +1,13 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-import { useRouter, useSegments } from 'expo-router';
+import { useLocalSearchParams, useRouter, useSegments } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { createShadowStyle } from '../../utils/platform-utils';
 import { useAuth } from '@/src/services/auth-context';
 import { useCart } from '@/src/context/CartContext';
 import { useNotifications } from '@/src/context/NotificationsContext';
+import SearchBar from '@/src/components/filters/SearchBar';
 
 interface NavBarProps {
   options?: {
@@ -25,6 +25,31 @@ export default function TopNavBarHomeUser({ options }: NavBarProps) {
   const user = session?.user;
   const segments = useSegments();
   const currentTab = options?.headerProps?.currentTab || segments[segments.length - 1];
+  const params = useLocalSearchParams<{ q?: string }>();
+  const [searchValue, setSearchValue] = useState('');
+
+  useEffect(() => {
+    if (currentTab === 'search') {
+      setSearchValue(typeof params.q === 'string' ? params.q : '');
+    }
+  }, [currentTab, params.q]);
+
+  const handleSearchChange = (text: string) => {
+    setSearchValue(text);
+    if (currentTab === 'search') {
+      router.setParams({ q: text, discover: '', title: '' });
+    }
+  };
+
+  const handleSearchSubmit = () => {
+    const q = searchValue.trim();
+    if (!q) return;
+    if (currentTab === 'search') {
+      router.setParams({ q, discover: '', title: '' });
+    } else {
+      router.push({ pathname: '/(user)/(tabs)/search', params: { q } });
+    }
+  };
 
   const handleNotifPress = () => {
     router.push({ pathname: '/notifications', params: { role: 'customer' } });
@@ -63,7 +88,17 @@ export default function TopNavBarHomeUser({ options }: NavBarProps) {
 
   return (
     <SafeAreaView edges={['top']} style={styles.safeArea}>
-      <View style={styles.header}>{renderRightButtons()}</View>
+      <View style={styles.header}>
+        {(currentTab === 'home' || currentTab === 'search') && (
+          <SearchBar
+            value={searchValue}
+            onChangeText={handleSearchChange}
+            onSubmitEditing={handleSearchSubmit}
+            containerStyle={styles.searchBar}
+          />
+        )}
+        {renderRightButtons()}
+      </View>
     </SafeAreaView>
   );
 }
@@ -74,10 +109,17 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
     alignItems: 'center',
     paddingVertical: 8,
     paddingHorizontal: 16,
+    gap: 8,
+  },
+  searchBar: {
+    flex: 1,
+    width: 'auto',
+    alignSelf: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
   },
   buttonRow: {
     flexDirection: 'row',

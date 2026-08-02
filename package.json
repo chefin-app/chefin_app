@@ -14,7 +14,8 @@
     "lint:fix": "npm run lint -- --fix",
     "format": "prettier --write .",
     "prepare": "husky",
-    "seed": "ts-node prisma/seed.ts"
+    "seed": "ts-node prisma/seed.ts",
+    "db:migrate:deploy": "prisma migrate deploy"
   },
   "jest": {
     "preset": "jest-expo"

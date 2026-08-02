@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import React, { useState } from 'react';
 import { PhoneNumberInput } from '@/src/components/inputs/PhoneNumberInput';
 import { CountryCodeSelector } from '@/src/components/inputs/CountryCodeSelector';
@@ -18,6 +18,11 @@ import {
 import { useAuth } from '../../src/services/auth-context';
 
 export default function PhoneLoginScreen() {
+  const { returnTo } = useLocalSearchParams<{ returnTo?: string }>();
+  const safeReturnTo =
+    typeof returnTo === 'string' && returnTo.startsWith('/') && !returnTo.startsWith('//')
+      ? returnTo
+      : undefined;
   const [phoneNumber, setPhoneNumber] = useState('');
   const [selectedCountry, setSelectedCountry] = useState(DEFAULT_COUNTRY);
 
@@ -73,6 +78,7 @@ export default function PhoneLoginScreen() {
         params: {
           phoneNumber: fullPhoneNumber,
           displayNumber: `${selectedCountry.flag} ${selectedCountry.code} ${phoneNumber}`,
+          ...(safeReturnTo && { returnTo: safeReturnTo }),
         },
       });
     } catch (error: any) {

@@ -1,7 +1,14 @@
 /* Search bar component, styling and size etc. are here*/
 
 import React from 'react';
-import { View, TextInput, StyleSheet, TouchableOpacity } from 'react-native';
+import {
+  View,
+  TextInput,
+  StyleSheet,
+  TouchableOpacity,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 type Props = {
@@ -9,6 +16,7 @@ type Props = {
   value: string;
   onChangeText: (text: string) => void;
   onSubmitEditing?: () => void;
+  containerStyle?: StyleProp<ViewStyle>;
 };
 
 const SearchBar = ({
@@ -16,9 +24,10 @@ const SearchBar = ({
   onChangeText,
   placeholder = 'Home restaurants, dishes, locations...',
   onSubmitEditing,
+  containerStyle,
 }: Props) => {
   return (
-    <View style={styles.wrapper}>
+    <View style={[styles.wrapper, containerStyle]}>
       <Ionicons name="search" size={20} color="#888" style={styles.icon} />
       <TextInput
         style={styles.input}

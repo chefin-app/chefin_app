@@ -23,6 +23,12 @@ import {
   VerificationDocStatus,
   VerificationDocType,
 } from '@/src/constants/verification';
+import { FoodComplianceAcknowledgement } from '@/src/components/food-safety/FoodComplianceAcknowledgement';
+import { FOOD_SAFETY_WAIVER_VERSION } from '@/src/constants/foodSafetyWaiver';
+import {
+  getCurrentFoodComplianceAcceptance,
+  recordFoodComplianceAcceptance,
+} from '@/src/utils/foodCompliance';
 
 type HostingType = 'private' | 'business' | null;
 
@@ -57,6 +63,8 @@ export default function FoodSafetyScreen() {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [complianceAccepted, setComplianceAccepted] = useState(false);
+  const [complianceAcceptedAt, setComplianceAcceptedAt] = useState<string | null>(null);
 
   const [hostingType, setHostingType] = useState<HostingType>(null);
   // Latest submitted row per doc type (if any).
@@ -104,6 +112,12 @@ export default function FoodSafetyScreen() {
           }
         }
         setSubmittedDocs(latest);
+
+        const acceptance = await getCurrentFoodComplianceAcceptance(user.id);
+        if (acceptance) {
+          setComplianceAccepted(true);
+          setComplianceAcceptedAt(acceptance.acceptedAt);
+        }
       } catch (e: any) {
         console.warn('Could not load food safety details', e.message);
       } finally {
@@ -145,8 +159,9 @@ export default function FoodSafetyScreen() {
     });
   };
 
-  // Only the hosting type question gates Next — documents are optional.
-  const canAdvance = hostingType != null;
+  // Documents remain optional, but every cook must acknowledge their legal
+  // responsibilities before continuing past this step.
+  const canAdvance = hostingType != null && complianceAccepted;
 
   const handleNext = async () => {
     if (!user || !canAdvance) return;
@@ -156,6 +171,8 @@ export default function FoodSafetyScreen() {
     if (isOnboarding) {
       stashFoodSafety({
         hostingType,
+        complianceAccepted,
+        complianceVersion: FOOD_SAFETY_WAIVER_VERSION,
         documents: (Object.entries(pendingAssets) as [VerificationDocType, PendingAsset][]).map(
           ([docType, a]) => ({
             docType,
@@ -175,6 +192,10 @@ export default function FoodSafetyScreen() {
     // ── Normal "edit from profile" path: upload new docs + write to DB.
     setSaving(true);
     try {
+      // Record the exact, versioned terms before any profile or document
+      // mutation. The database supplies the acceptance timestamp.
+      await recordFoodComplianceAcceptance(user.id, 'food_safety_screen');
+
       let certificatePath: string | null = null;
       for (const [docType, asset] of Object.entries(pendingAssets) as [
         VerificationDocType,
@@ -278,13 +299,19 @@ export default function FoodSafetyScreen() {
         <View style={styles.tierCallout}>
           <Ionicons name="shield-checkmark" size={20} color="#4CAF50" />
           <View style={{ flex: 1 }}>
-            <Text style={styles.tierCalloutTitle}>Get your Verified badge (optional)</Text>
+            <Text style={styles.tierCalloutTitle}>Get a platform Verified badge (optional)</Text>
             <Text style={styles.tierCalloutBody}>
-              Upload either document below and we&apos;ll review it. Verified cooks stand out and
-              earn more trust from customers. You can skip this and add it later.
+              Upload one or both documents below for review. This badge is not a licence or proof of
+              full regulatory compliance. You can skip the uploads and add them later.
             </Text>
           </View>
         </View>
+
+        <FoodComplianceAcknowledgement
+          accepted={complianceAccepted}
+          onAcceptedChange={setComplianceAccepted}
+          acceptedAt={complianceAcceptedAt}
+        />
 
         {TIER1_DOCUMENTS.map(doc => {
           const submitted = submittedDocs[doc.type];
@@ -391,7 +418,15 @@ export default function FoodSafetyScreen() {
             {saving ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.nextBtnText}>{isOnboarding ? 'Next' : 'Save'}</Text>
+              <Text style={styles.nextBtnText}>
+                {complianceAcceptedAt
+                  ? isOnboarding
+                    ? 'Continue'
+                    : 'Save'
+                  : isOnboarding
+                    ? 'Agree & continue'
+                    : 'Agree & save'}
+              </Text>
             )}
           </TouchableOpacity>
         </View>

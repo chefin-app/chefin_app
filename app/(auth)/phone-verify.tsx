@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams, type Href } from 'expo-router';
 import { supabase } from '@/src/utils/supabaseClient';
 import React, { useEffect, useRef, useState } from 'react';
 import { NativeSyntheticEvent, TextInputKeyPressEventData } from 'react-native';
@@ -16,10 +16,15 @@ import {
 } from 'react-native';
 
 export default function PhoneVerifyStep2() {
-  const { phoneNumber, displayNumber } = useLocalSearchParams<{
+  const { phoneNumber, displayNumber, returnTo } = useLocalSearchParams<{
     phoneNumber: string;
     displayNumber: string;
+    returnTo?: string;
   }>();
+  const safeReturnTo =
+    typeof returnTo === 'string' && returnTo.startsWith('/') && !returnTo.startsWith('//')
+      ? returnTo
+      : null;
 
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [isLoading, setIsLoading] = useState(false);
@@ -105,6 +110,14 @@ export default function PhoneVerifyStep2() {
         throw new Error(data.error || 'OTP verification failed');
       }
 
+      if (data.session?.access_token && data.session?.refresh_token) {
+        const { error: sessionError } = await supabase.auth.setSession({
+          access_token: data.session.access_token,
+          refresh_token: data.session.refresh_token,
+        });
+        if (sessionError) throw sessionError;
+      }
+
       // Successful verification. New users (no completed onboarding) go to the
       // name + phone step; returning users go home. Query Supabase directly and
       // default to onboarding when unknown (a returning user completing it
@@ -119,7 +132,18 @@ export default function PhoneVerifyStep2() {
           .maybeSingle();
         completed = !error && profile?.onboarding_completed === true;
       }
-      router.replace(completed ? '/(user)/(tabs)/home' : '/(auth)/onboarding');
+      if (!completed) {
+        router.replace({
+          pathname: '/(auth)/onboarding',
+          params: safeReturnTo ? { returnTo: safeReturnTo } : undefined,
+        });
+      } else {
+        if (safeReturnTo) {
+          router.dismissTo(safeReturnTo as Href);
+        } else {
+          router.replace('/(user)/(tabs)/home');
+        }
+      }
     } catch (error: unknown) {
       if (error instanceof Error) {
         console.error('OTP verification error:', error);

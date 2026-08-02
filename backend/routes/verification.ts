@@ -1,6 +1,7 @@
 import express from 'express';
 import { supabase } from '../supabaseClient';
 import { notifyCookVerificationReviewed } from '../notifications';
+import { requireAdmin } from '../middleware/requireAdmin';
 
 const router = express.Router();
 
@@ -47,7 +48,7 @@ router.get('/status/:userId', async (req, res) => {
 
 // GET /pending - Admin review queue. Each document comes with a short-lived
 // signed URL so the reviewer can view the file from the private bucket.
-router.get('/pending', async (req, res) => {
+router.get('/pending', requireAdmin, async (req, res) => {
   try {
     const { data: documents, error } = await supabase
       .from('verification_documents')
@@ -78,7 +79,7 @@ router.get('/pending', async (req, res) => {
 // POST /review - Approve or reject a submitted document.
 // Body: { document_id, decision: 'approved' | 'rejected', reviewer_note? }
 // Approving any Tier 1 document grants the Tier 1 "Verified" badge.
-router.post('/review', async (req, res) => {
+router.post('/review', requireAdmin, async (req, res) => {
   const { document_id, decision, reviewer_note } = req.body as {
     document_id?: string;
     decision?: string;

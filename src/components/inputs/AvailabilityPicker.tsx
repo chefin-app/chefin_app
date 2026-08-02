@@ -19,6 +19,7 @@ import {
 } from 'react-native';
 import { Calendar, DateData } from 'react-native-calendars';
 import { Ionicons } from '@expo/vector-icons';
+import { getLocalDateKey, isAvailabilityRecordBookable } from '@/src/utils/listingAvailability';
 
 interface AvailabilityRecord {
   id: string;
@@ -28,7 +29,7 @@ interface AvailabilityRecord {
   end_time: string;
   max_orders: number;
   orders_taken: number | null;
-  is_available: boolean;
+  is_available: boolean | null;
 }
 
 interface TimeSlot {
@@ -64,7 +65,7 @@ const expandToHourSlots = (record: AvailabilityRecord, now: Date): TimeSlot[] =>
   const start = new Date(record.start_time);
   const end = new Date(record.end_time);
   const remaining = Math.max(0, record.max_orders - (record.orders_taken ?? 0));
-  const isFull = !record.is_available || remaining <= 0;
+  const isFull = record.is_available === false || remaining <= 0;
 
   const slots: TimeSlot[] = [];
   const cursor = new Date(start);
@@ -138,14 +139,14 @@ const AvailabilityPicker = forwardRef<AvailabilityPickerHandle, AvailabilityPick
     // Build marked dates for the calendar
     const markedDates = useMemo(() => {
       const marks: Record<string, any> = {};
-      const today = new Date().toISOString().split('T')[0];
+      const now = new Date();
+      const today = getLocalDateKey(now);
 
       records.forEach(record => {
         const dateStr = record.available_date.split('T')[0];
         if (dateStr < today) return; // skip past dates
 
-        const remaining = record.max_orders - (record.orders_taken ?? 0);
-        const isOpen = record.is_available && remaining > 0;
+        const isOpen = isAvailabilityRecordBookable(record, today, now);
 
         // Only mark if not already marked, or if this slot is open
         if (!marks[dateStr]) {
@@ -197,7 +198,7 @@ const AvailabilityPicker = forwardRef<AvailabilityPickerHandle, AvailabilityPick
         (sum, r) => sum + Math.max(0, r.max_orders - (r.orders_taken ?? 0)),
         0
       );
-      const anyOpen = rowsToday.some(r => r.is_available);
+      const anyOpen = rowsToday.some(r => r.is_available !== false);
       return { remaining, isFull: !anyOpen || remaining <= 0 };
     }, [records, selectedDate]);
 
@@ -242,7 +243,7 @@ const AvailabilityPicker = forwardRef<AvailabilityPickerHandle, AvailabilityPick
         <Calendar
           markedDates={markedDates}
           onDayPress={handleDateSelect}
-          minDate={new Date().toISOString().split('T')[0]}
+          minDate={getLocalDateKey()}
           theme={{
             selectedDayBackgroundColor: '#4CAF50',
             todayTextColor: '#4CAF50',

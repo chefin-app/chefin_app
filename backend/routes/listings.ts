@@ -1,6 +1,7 @@
 import express from 'express';
 import { supabase } from '../supabaseClient';
 import { notifyCookDishReviewed, notifyFavouritersNewDish } from '../notifications';
+import { requireAdmin } from '../middleware/requireAdmin';
 
 const router = express.Router();
 
@@ -66,7 +67,16 @@ router.get('/:id', async (req, res) => {
       throw new Error(listingError.message);
     }
 
-    return res.json(listing);
+    const { data: ratingRows, error: ratingError } = await supabase
+      .from('listings')
+      .select('reviews(rating)')
+      .eq('cook_id', listing.cook_id)
+      .eq('status', 'approved')
+      .eq('is_active', true);
+    if (ratingError) throw ratingError;
+
+    const restaurantReviews = (ratingRows ?? []).flatMap(row => row.reviews ?? []);
+    return res.json({ ...listing, restaurant_reviews: restaurantReviews });
   } catch (err: any) {
     console.error(`Error fetching listing ${id}:`, err);
     res.status(500).json({ error: 'Internal Server Error' });
@@ -78,7 +88,7 @@ router.get('/:id', async (req, res) => {
 // Approval makes the dish publicly visible (feeds filter on status='approved'),
 // notifies the cook, and announces the new dish to everyone who favourited
 // that cook.
-router.patch('/:id/status', async (req, res) => {
+router.patch('/:id/status', requireAdmin, async (req, res) => {
   const { id } = req.params;
   const { status, note } = req.body as { status?: string; note?: string };
 

@@ -10,24 +10,35 @@ import {
 } from 'react-native';
 
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import SocialMediaButtons from '@/src/components/buttons/SocialMediaButtons';
 import { useAuth } from '@/src/services/auth-context';
 
 export default function LoginScreen() {
   const { signInWithFacebook, signInWithGoogle, signInWithApple } = useAuth();
+  const { returnTo } = useLocalSearchParams<{ returnTo?: string }>();
+  const safeReturnTo =
+    typeof returnTo === 'string' && returnTo.startsWith('/') && !returnTo.startsWith('//')
+      ? returnTo
+      : undefined;
 
   const handleEmailLogin = () => {
-    router.push('/(auth)/email-login');
+    router.push({
+      pathname: '/(auth)/email-login',
+      params: safeReturnTo ? { returnTo: safeReturnTo } : undefined,
+    });
   };
 
   const handlePhoneLogin = () => {
-    router.push('/(auth)/phone-login');
+    router.push({
+      pathname: '/(auth)/phone-login',
+      params: safeReturnTo ? { returnTo: safeReturnTo } : undefined,
+    });
   };
 
   const handleSignUp = () => {
     // Same unified email flow — it detects whether the account exists.
-    router.push('/(auth)/email-login');
+    handleEmailLogin();
   };
 
   return (

@@ -4,6 +4,38 @@ import { notifyFavouritersNewSlots } from '../notifications';
 
 const router = express.Router();
 
+const AVAILABILITY_TIME_ZONE = 'Asia/Kuala_Lumpur';
+
+const getDateKeyInTimeZone = (date = new Date()): string => {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: AVAILABILITY_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts.map(part => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
+};
+
+const isWindowStillOpen = (endTime: unknown, now: Date): boolean => {
+  if (typeof endTime !== 'string' || !endTime.trim()) return true;
+
+  const timeOnly = endTime.match(/^(\d{2}):(\d{2})(?::(\d{2}))?/);
+  if (timeOnly) {
+    const currentTime = new Intl.DateTimeFormat('en-GB', {
+      timeZone: AVAILABILITY_TIME_ZONE,
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+    }).format(now);
+    return `${timeOnly[1]}:${timeOnly[2]}:${timeOnly[3] ?? '00'}` > currentTime;
+  }
+
+  const parsedEndTime = new Date(endTime);
+  return !Number.isNaN(parsedEndTime.getTime()) && parsedEndTime.getTime() > now.getTime();
+};
+
 // GET listing_id
 router.get('/:listing_id', async (req, res) => {
   const { listing_id } = req.params;
@@ -13,7 +45,9 @@ router.get('/:listing_id', async (req, res) => {
       .from('availability')
       .select('*')
       .eq('listing_id', listing_id)
-      .eq('is_available', true)
+      // Null is treated as enabled for rows created before the flag existed.
+      // Explicitly disabled rows must never be returned as bookable.
+      .or('is_available.eq.true,is_available.is.null')
       .order('available_date', { ascending: true });
 
     if (error) throw error;
@@ -22,16 +56,20 @@ router.get('/:listing_id', async (req, res) => {
       return res.status(404).json({ available: false, message: 'No availability found.' });
     }
 
-    const today = new Date();
+    const today = getDateKeyInTimeZone();
+    const now = new Date();
     const availableToday = data.find(
       record =>
-        new Date(record.available_date).toDateString() === today.toDateString() &&
-        record.orders_taken < record.max_orders
+        String(record.available_date).split('T')[0] === today &&
+        (record.orders_taken ?? 0) < record.max_orders &&
+        isWindowStillOpen(record.end_time, now)
     );
 
     res.json({
       available: !!availableToday,
-      remainingSlots: availableToday ? availableToday.max_orders - availableToday.orders_taken : 0,
+      remainingSlots: availableToday
+        ? availableToday.max_orders - (availableToday.orders_taken ?? 0)
+        : 0,
       availability: data,
     });
   } catch (err: unknown) {

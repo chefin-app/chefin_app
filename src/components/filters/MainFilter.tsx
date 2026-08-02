@@ -28,6 +28,7 @@ interface DietaryOption {
 }
 
 const initialFilters: FilterItem[] = [
+  { id: 'availableNow', name: 'Available Now', active: false },
   { id: 'certified', name: 'Certified', active: false },
   { id: 'dietary', name: 'Dietary', active: false },
 ];
@@ -131,7 +132,18 @@ export default function MainFilter({ onFilterToggle, onDietarySelect }: MainFilt
             key={filter.id}
             style={[styles.filterTag, filter.active && styles.activeFilterTag]}
             onPress={() => handleFilterToggle(filter.id)}
+            accessibilityRole="button"
+            accessibilityState={{ selected: filter.active }}
+            accessibilityLabel={`${filter.name} filter`}
           >
+            {filter.id === 'availableNow' && (
+              <Ionicons
+                name="flash"
+                size={15}
+                color={filter.active ? '#fff' : '#2E7D32'}
+                style={styles.leadingIcon}
+              />
+            )}
             <Text style={[styles.filterText, filter.active && styles.activeFilterText]}>
               {filter.id === 'dietary' ? getdietaryDisplayText() : filter.name}
             </Text>
@@ -227,6 +239,9 @@ const styles = StyleSheet.create({
   },
   dropdownIcon: {
     marginLeft: 4,
+  },
+  leadingIcon: {
+    marginRight: 5,
   },
   modalOverlay: {
     flex: 1,

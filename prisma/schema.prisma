@@ -17,6 +17,7 @@ model availability {
   end_time       DateTime  @db.Timestamptz(6)
   max_orders     Int
   orders_taken   Int?      @default(0)
+  is_available   Boolean   @default(true)
   created_at     DateTime? @default(now()) @db.Timestamptz(6)
   listings       listings  @relation(fields: [listing_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
@@ -24,58 +25,58 @@ model availability {
 }
 
 model listings {
-  id              String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  cook_id         String         @db.Uuid
-  title           String
-  description     String?
-  price           Decimal        @db.Decimal(10, 2)
-  image_url       String?
-  cuisine         String?
-  dietary_tags    String[]       @default([])
-  location String?
-  ingredients     String[]       @default([])
-  is_active       Boolean?       @default(true)
-  status          String         @default("pending")
-  created_at      DateTime?      @default(now()) @db.Timestamptz(6)
-  availability    availability[]
-  profiles        profiles       @relation(fields: [cook_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  orders          orders[]
-  reviews         reviews[]
+  id           String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cook_id      String         @db.Uuid
+  title        String
+  description  String?
+  price        Decimal        @db.Decimal(10, 2)
+  image_url    String?
+  cuisine      String?
+  dietary_tags String[]       @default([])
+  location     String?
+  ingredients  String[]       @default([])
+  is_active    Boolean?       @default(true)
+  status       String         @default("pending")
+  created_at   DateTime?      @default(now()) @db.Timestamptz(6)
+  availability availability[]
+  profiles     profiles       @relation(fields: [cook_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  orders       orders[]
+  reviews      reviews[]
 
   @@schema("public")
 }
 
 model orders {
-  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  customer_id    String    @db.Uuid
-  listing_id     String    @db.Uuid
-  quantity       Int
-  total_price    Decimal   @db.Decimal(10, 2)
-  scheduled_date DateTime  @db.Date
-  pickup_time    DateTime? @db.Timestamptz(6)
-  fulfillment_type String  @default("pickup")
-  status         String?
-  payment_status String?
-  created_at     DateTime? @default(now()) @db.Timestamptz(6)
-  profiles       profiles  @relation(fields: [customer_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  listings       listings  @relation(fields: [listing_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  reviews        reviews?
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  customer_id      String    @db.Uuid
+  listing_id       String    @db.Uuid
+  quantity         Int
+  total_price      Decimal   @db.Decimal(10, 2)
+  scheduled_date   DateTime  @db.Date
+  pickup_time      DateTime? @db.Timestamptz(6)
+  fulfillment_type String    @default("pickup")
+  status           String?
+  payment_status   String?
+  created_at       DateTime? @default(now()) @db.Timestamptz(6)
+  profiles         profiles  @relation(fields: [customer_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  listings         listings  @relation(fields: [listing_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  reviews          reviews?
 
   @@schema("public")
 }
 
 model profiles {
-  id                      String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  user_id                 String       @unique @db.Uuid
+  id                      String                        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id                 String                        @unique @db.Uuid
   full_name               String
   profile_image           String?
-  phone_number            String?      @db.VarChar(20)
-  onboarding_completed    Boolean      @default(false)
+  phone_number            String?                       @db.VarChar(20)
+  onboarding_completed    Boolean                       @default(false)
   bio                     String?
-  is_verified             Boolean?     @default(false)
-  created_at              DateTime?    @default(now()) @db.Timestamptz(6)
+  is_verified             Boolean?                      @default(false)
+  created_at              DateTime?                     @default(now()) @db.Timestamptz(6)
   restaurant_name         String?
-  free_delivery_threshold Decimal?     @db.Decimal(10, 2)
+  free_delivery_threshold Decimal?                      @db.Decimal(10, 2)
   address_country         String?
   address_flat            String?
   address_property_name   String?
@@ -86,7 +87,7 @@ model profiles {
   hosting_type            String?
   has_food_safety_license Boolean?
   food_safety_license_url String?
-  verification_tier       Int                      @default(0)
+  verification_tier       Int                           @default(0)
   bank_name               String?
   bank_account_name       String?
   bank_account_number     String?
@@ -96,8 +97,10 @@ model profiles {
   reviews                 reviews[]
   user_roles              user_roles[]
   verification_documents  verification_documents[]
-  favourites_as_user      favourites[]             @relation("favourites_user")
-  favourites_as_cook      favourites[]             @relation("favourites_cook")
+  compliance_acceptances  cook_compliance_acceptances[]
+  favourites_as_user      favourites[]                  @relation("favourites_user")
+  favourites_as_cook      favourites[]                  @relation("favourites_cook")
+  content_reports         content_reports[]
 
   @@schema("public")
 }
@@ -129,10 +132,10 @@ model notifications {
   type           String
   title          String
   body           String
-  data       Json     @default("{}")
-  read       Boolean  @default(false)
-  created_at DateTime @default(now()) @db.Timestamptz(6)
-  profiles   profiles @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
+  data           Json     @default("{}")
+  read           Boolean  @default(false)
+  created_at     DateTime @default(now()) @db.Timestamptz(6)
+  profiles       profiles @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([user_id, created_at(sort: Desc)])
   @@schema("public")
@@ -152,6 +155,63 @@ model verification_documents {
 
   @@index([user_id])
   @@index([status])
+  @@schema("public")
+}
+
+/// Immutable, canonical legal copy. Publishing materially different terms
+/// creates a new version rather than changing an accepted version in place.
+/// This model uses RLS policies defined by its SQL migration.
+model cook_compliance_clause_versions {
+  version          String                        @id @db.VarChar(40)
+  locale           String                        @default("en-MY") @db.VarChar(10)
+  title            String                        @db.VarChar(120)
+  body             String
+  acceptance_label String
+  effective_at     DateTime                      @default(now()) @db.Timestamptz(6)
+  is_active        Boolean                       @default(false)
+  acceptances      cook_compliance_acceptances[]
+
+  @@schema("public")
+}
+
+/// Append-only evidence that a cook affirmatively accepted a specific,
+/// canonical compliance clause. The timestamp is always database-generated.
+/// This model uses RLS policies and restricted grants from its migration.
+model cook_compliance_acceptances {
+  id             String                          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id        String                          @db.Uuid
+  clause_version String                          @db.VarChar(40)
+  source         String                          @db.VarChar(40)
+  accepted_at    DateTime                        @default(now()) @db.Timestamptz(6)
+  profiles       profiles                        @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
+  clause         cook_compliance_clause_versions @relation(fields: [clause_version], references: [version], onDelete: Restrict, onUpdate: NoAction)
+
+  @@unique([user_id, clause_version])
+  @@index([user_id, accepted_at(sort: Desc)])
+  @@schema("public")
+}
+
+/// User-submitted moderation reports. target_id intentionally has no foreign
+/// key because it can refer to either a listing or a restaurant profile and an
+/// audit record should remain even if the reported content is later removed.
+/// This table is service-role only; RLS is enabled by the accompanying SQL
+/// migration without granting direct client policies.
+model content_reports {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  reporter_id     String   @db.Uuid
+  target_type     String   @db.VarChar(20)
+  target_id       String   @db.Uuid
+  target_label    String   @db.VarChar(200)
+  target_snapshot Json     @default("{}")
+  reason          String   @db.VarChar(50)
+  details         String?  @db.VarChar(1000)
+  status          String   @default("pending") @db.VarChar(20)
+  created_at      DateTime @default(now()) @db.Timestamptz(6)
+  profiles        profiles @relation(fields: [reporter_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([status, created_at], map: "content_reports_moderation_queue_idx")
+  @@index([target_type, target_id], map: "content_reports_target_idx")
+  @@index([reporter_id, created_at(sort: Desc)], map: "content_reports_reporter_rate_idx")
   @@schema("public")
 }
 

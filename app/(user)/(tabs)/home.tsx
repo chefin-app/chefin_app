@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { useRouter } from 'expo-router';
+import React, { useCallback, useState, useEffect, useMemo } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
 import {
   StyleSheet,
   ScrollView,
@@ -11,29 +11,46 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { createShadowStyle } from '../../../src/utils/platform-utils';
-import SearchBar from '@/src/components/filters/SearchBar';
 import CuisineFilter from '@/src/components/filters/CuisineFilter';
 import MainFilter from '@/src/components/filters/MainFilter';
 import { HeadingText } from '@/src/components/typography';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import LoadingSpinner from '@/src/components/feedback/LoadingSpinner';
-import { useAuth } from '@/src/services/auth-context';
 
 import PromoImage from '@/src/assets/images/promo-food.webp';
 import MealCard from '@/src/components/cards/MealCard';
 import StickyCartBar from '@/src/components/navigation/StickyCartBar';
 
 import { Listing, Profile, Review } from '@/src/types/models';
+import {
+  fetchAvailabilitySummaries,
+  getLocalDateKey,
+  isSummaryAvailableNow,
+  type AvailabilitySummaryMap,
+} from '@/src/utils/listingAvailability';
+import { getListingsRatingSummary, getRatingSummary } from '@/src/utils/ratings';
+import { fetchCooks } from '@/src/utils/fetchCooks';
 
 interface ListingWithProfile extends Listing {
   profiles: Profile;
   reviews?: Review[];
 }
 
+type DiscoveryMode = 'all' | 'availableNow' | 'topRated';
+
+function uniqueByCook(listings: ListingWithProfile[]): ListingWithProfile[] {
+  const seenCookIds = new Set<string>();
+  return listings.filter(listing => {
+    if (seenCookIds.has(listing.cook_id)) return false;
+    seenCookIds.add(listing.cook_id);
+    return true;
+  });
+}
+
+const RailSeparator = () => <View style={styles.railSeparator} />;
+
 export default function HomeScreen() {
   const router = useRouter();
-  const { user } = useAuth();
-  const [searchValue, setSearchValue] = useState('');
   const [popularChefins, setPopularChefins] = useState<ListingWithProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -42,33 +59,43 @@ export default function HomeScreen() {
   const [activeFilters, setActiveFilters] = useState<Record<string, boolean>>({});
   const [selectedDietary, setSelectedDietary] = useState<string[]>([]);
   const [filteredChefins, setFilteredChefins] = useState<ListingWithProfile[]>([]);
-  const [nextAvailableDates, setNextAvailableDates] = useState<Record<string, string>>({});
+  const [availabilitySummaries, setAvailabilitySummaries] = useState<AvailabilitySummaryMap>({});
 
-  const today = useMemo(() => new Date().toISOString().split('T')[0], []);
-
-  const displayName =
-    (user?.user_metadata?.full_name as string | undefined)?.split(' ')[0] ||
-    user?.email?.split('@')[0] ||
-    'there';
+  const [today, setToday] = useState(getLocalDateKey);
 
   const availableToday = useMemo(
-    () => filteredChefins.filter(c => nextAvailableDates[c.id] === today),
-    [filteredChefins, nextAvailableDates, today]
+    () =>
+      uniqueByCook(
+        filteredChefins.filter(c => isSummaryAvailableNow(c.cook_id, availabilitySummaries, today))
+      ),
+    [availabilitySummaries, filteredChefins, today]
+  );
+
+  const popularRestaurants = useMemo(
+    () => uniqueByCook(filteredChefins).slice(0, 10),
+    [filteredChefins]
+  );
+
+  const featuredAvailableToday = useMemo(
+    () =>
+      popularChefins.filter(c => isSummaryAvailableNow(c.cook_id, availabilitySummaries, today)),
+    [availabilitySummaries, popularChefins, today]
   );
 
   const topRated = useMemo(() => {
-    const scored = filteredChefins.map(c => {
-      const reviews = c.reviews ?? [];
-      const avg =
-        reviews.length > 0 ? reviews.reduce((s, r) => s + r.rating, 0) / reviews.length : 0;
-      return { listing: c, avg, count: reviews.length };
+    const scored = uniqueByCook(filteredChefins).map(c => {
+      const cookListings = popularChefins.filter(listing => listing.cook_id === c.cook_id);
+      const rating = Array.isArray(c.restaurant_reviews)
+        ? getRatingSummary(c.restaurant_reviews)
+        : getListingsRatingSummary(cookListings);
+      return { listing: c, average: rating.average, count: rating.count };
     });
     return scored
-      .filter(s => s.count > 0)
-      .sort((a, b) => b.avg - a.avg)
+      .filter(s => s.average !== null)
+      .sort((a, b) => b.average! - a.average! || b.count - a.count)
       .slice(0, 8)
       .map(s => s.listing);
-  }, [filteredChefins]);
+  }, [filteredChefins, popularChefins]);
 
   const handleCuisineSelect = (cuisine: string) => {
     setSelectedCuisine(cuisine);
@@ -109,83 +136,63 @@ export default function HomeScreen() {
       });
     }
 
-    // 4. Text search across title, cuisine, cook name, restaurant name
-    const q = searchValue.trim().toLowerCase();
-    if (q) {
-      result = result.filter(chefin => {
-        const haystacks = [
-          chefin.title,
-          chefin.cuisine,
-          chefin.profiles?.full_name,
-          chefin.profiles?.restaurant_name,
-        ];
-        return haystacks.some(s => s?.toLowerCase().includes(q));
-      });
+    // 4. Available Now — earliest valid slot is today and still has capacity.
+    if (activeFilters.availableNow) {
+      result = result.filter(chefin =>
+        isSummaryAvailableNow(chefin.cook_id, availabilitySummaries, today)
+      );
     }
 
     setFilteredChefins(result);
-  }, [popularChefins, selectedCuisine, activeFilters, selectedDietary, searchValue]);
+  }, [
+    popularChefins,
+    selectedCuisine,
+    activeFilters,
+    selectedDietary,
+    availabilitySummaries,
+    today,
+  ]);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
+    const currentDate = getLocalDateKey();
+    setToday(currentDate);
+
     try {
       setLoading(true);
       setError(null);
 
-      const response = await fetch(
-        `${process.env.EXPO_PUBLIC_API_URL}/api/home/popular-chefin-listings`
-      );
-      const data = await response.json();
-      const chefins: ListingWithProfile[] = data.popularChefins || [];
+      // Listings and availability must come from the same Supabase project;
+      // otherwise a valid sibling-dish slot cannot be matched to this card.
+      const chefins = (await fetchCooks({ query: '' })) as ListingWithProfile[];
       setPopularChefins(chefins);
-
-      const availabilityResults = await Promise.allSettled(
-        chefins.map(listing =>
-          fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/availability/${listing.id}`)
-            .then(r => r.json())
-            .then(d => ({ listingId: listing.id, availability: d.availability ?? [] }))
-            .catch(() => ({ listingId: listing.id, availability: [] }))
-        )
-      );
-
-      const dateMap: Record<string, string> = {};
-      availabilityResults.forEach(result => {
-        if (result.status !== 'fulfilled') return;
-        const { listingId, availability } = result.value as {
-          listingId: string;
-          availability: any[];
-        };
-        const futureDates = availability
-          .filter(
-            r =>
-              r.is_available &&
-              r.max_orders - (r.orders_taken ?? 0) > 0 &&
-              r.available_date >= today
-          )
-          .map(r => r.available_date.split('T')[0])
-          .sort();
-        if (futureDates.length > 0) dateMap[listingId] = futureDates[0];
-      });
-      setNextAvailableDates(dateMap);
+      setAvailabilitySummaries(await fetchAvailabilitySummaries(chefins, currentDate));
     } catch (err) {
       console.error('Error fetching listings:', err);
       setError('Failed to load listings. Please try again later.');
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    fetchData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleSearchSubmit = () => {
-    const q = searchValue.trim();
-    if (!q) return;
-    router.push({ pathname: '/(user)/(tabs)/search', params: { q } });
+  useFocusEffect(
+    useCallback(() => {
+      fetchData();
+    }, [fetchData])
+  );
+
+  const openDiscovery = (discover: DiscoveryMode, title: string) => {
+    router.push({
+      pathname: '/(user)/(tabs)/search',
+      params: { discover, title },
+    });
   };
 
-  const renderRail = (title: string, data: ListingWithProfile[]) => {
+  const renderRail = (
+    title: string,
+    data: ListingWithProfile[],
+    discover: DiscoveryMode,
+    destinationTitle = title
+  ) => {
     if (data.length === 0) return null;
     return (
       <View style={styles.section}>
@@ -193,7 +200,12 @@ export default function HomeScreen() {
           <HeadingText level={4} style={styles.sectionTitle}>
             {title}
           </HeadingText>
-          <TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => openDiscovery(discover, destinationTitle)}
+            accessibilityRole="link"
+            accessibilityLabel={`See all ${title}`}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
             <Text style={styles.seeAllText}>See all</Text>
           </TouchableOpacity>
         </View>
@@ -207,15 +219,15 @@ export default function HomeScreen() {
               isVerified={item.profiles.is_verified}
               cookImage={item.profiles.profile_image}
               reviews={item.reviews || []}
-              listings={data}
-              nextAvailableDate={nextAvailableDates[item.id]}
+              listings={popularChefins}
+              availability={availabilitySummaries[item.cook_id]}
             />
           )}
           keyExtractor={item => item.id}
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingVertical: 10 }}
-          ItemSeparatorComponent={() => <View style={{ width: 10 }} />}
+          contentContainerStyle={styles.railContent}
+          ItemSeparatorComponent={RailSeparator}
         />
       </View>
     );
@@ -246,46 +258,92 @@ export default function HomeScreen() {
   }
 
   const hasAnyResults = filteredChefins.length > 0;
+  const featuredKitchenCount = new Set(featuredAvailableToday.map(item => item.cook_id)).size;
+  const hasFeaturedAvailability = featuredKitchenCount > 0;
+  const promoTitle = hasFeaturedAvailability
+    ? 'Home-cooked meals, available now'
+    : 'Discover food made close to home';
+  const promoDescription = hasFeaturedAvailability
+    ? `${featuredKitchenCount} featured ${
+        featuredKitchenCount === 1 ? 'kitchen has' : 'kitchens have'
+      } order slots still open today.`
+    : 'Explore local Chefins, fresh menus and the next available pickup times.';
+  const promoCallToAction = hasFeaturedAvailability ? 'See available meals' : 'Explore kitchens';
+  const promoDiscoveryMode: DiscoveryMode = hasFeaturedAvailability ? 'availableNow' : 'all';
+  const promoDiscoveryTitle = hasFeaturedAvailability ? 'Available Now' : 'All Home Restaurants';
+  const featuredPromoListing = featuredAvailableToday[0] ?? popularChefins[0];
 
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right']}>
       <ScrollView
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 100 }}
+        contentContainerStyle={styles.scrollContent}
       >
-        {/* Search */}
-        <View style={styles.searchBarContainer}>
-          <SearchBar
-            value={searchValue}
-            onChangeText={setSearchValue}
-            onSubmitEditing={handleSearchSubmit}
-          />
-        </View>
-
-        {/* Promo banner */}
-        <View style={styles.promoBanner}>
+        {/* Interactive availability spotlight */}
+        <TouchableOpacity
+          style={styles.promoBanner}
+          activeOpacity={0.9}
+          onPress={() => openDiscovery(promoDiscoveryMode, promoDiscoveryTitle)}
+          accessibilityRole="link"
+          accessibilityLabel={`${promoTitle}. ${promoDescription} ${promoCallToAction}.`}
+          accessibilityHint="Opens matching home restaurants"
+        >
+          <View style={styles.promoOrb} />
           <View style={styles.promoContent}>
-            <Text style={styles.promoEyebrow}>FEATURED</Text>
-            <HeadingText level={5} style={styles.promoTitle}>
-              We think you'll love this dish
+            <View style={styles.promoBadge}>
+              <Ionicons
+                name={hasFeaturedAvailability ? 'flash' : 'sparkles'}
+                size={13}
+                color="#1B5E20"
+              />
+              <Text style={styles.promoEyebrow}>
+                {hasFeaturedAvailability ? 'AVAILABLE NOW' : 'LOCAL PICKS'}
+              </Text>
+            </View>
+            <HeadingText level={5} style={styles.promoTitle} numberOfLines={2}>
+              {promoTitle}
             </HeadingText>
-            <TouchableOpacity style={styles.promoButton}>
-              <Text style={styles.promoButtonText}>Explore</Text>
+            <Text style={styles.promoDescription} numberOfLines={3}>
+              {promoDescription}
+            </Text>
+            <View style={styles.promoButton}>
+              <Text style={styles.promoButtonText}>{promoCallToAction}</Text>
               <Ionicons name="arrow-forward" size={16} color="#2E7D32" />
-            </TouchableOpacity>
+            </View>
           </View>
-          <Image source={PromoImage} style={styles.promoImage} />
-        </View>
+          <View style={styles.promoVisual}>
+            <Image
+              source={
+                featuredPromoListing?.image_url
+                  ? { uri: featuredPromoListing.image_url }
+                  : PromoImage
+              }
+              style={styles.promoImage}
+              accessible={false}
+            />
+            <View style={styles.promoImagePill}>
+              <Ionicons name="time-outline" size={12} color="#1B5E20" />
+              <Text style={styles.promoImagePillText}>
+                {hasFeaturedAvailability ? 'Today' : 'Fresh'}
+              </Text>
+            </View>
+          </View>
+        </TouchableOpacity>
 
         <CuisineFilter onCuisineSelect={handleCuisineSelect} />
         <MainFilter onFilterToggle={handleMainFilterToggle} onDietarySelect={handleDietarySelect} />
 
         {hasAnyResults ? (
           <>
-            {renderRail('Popular Chefins Near You', filteredChefins)}
-            {renderRail('Available Today', availableToday)}
-            {renderRail('Top Rated', topRated)}
+            {renderRail(
+              'Popular Chefins Near You',
+              popularRestaurants,
+              'all',
+              'All Home Restaurants'
+            )}
+            {renderRail('Available Now', availableToday, 'availableNow')}
+            {renderRail('Top Rated', topRated, 'topRated')}
           </>
         ) : (
           <View style={styles.emptyState}>
@@ -329,8 +387,8 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 10,
   },
-  searchBarContainer: {
-    marginTop: 10,
+  scrollContent: {
+    paddingBottom: 100,
   },
   header: {
     flexDirection: 'row',
@@ -416,6 +474,12 @@ const styles = StyleSheet.create({
   section: {
     marginBottom: 24,
   },
+  railContent: {
+    paddingVertical: 10,
+  },
+  railSeparator: {
+    width: 10,
+  },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -437,33 +501,63 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   promoBanner: {
-    backgroundColor: '#90EE90',
-    borderRadius: 20,
-    padding: 20,
+    backgroundColor: '#E9F7EC',
+    borderRadius: 24,
+    padding: 18,
     flexDirection: 'row',
     alignItems: 'center',
     marginVertical: 16,
+    minHeight: 190,
     overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#D3ECD7',
     ...createShadowStyle({
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 8 },
-      shadowOpacity: 0.15,
-      shadowRadius: 16,
-      elevation: 10,
+      shadowColor: '#1B5E20',
+      shadowOffset: { width: 0, height: 5 },
+      shadowOpacity: 0.12,
+      shadowRadius: 12,
+      elevation: 5,
     }),
+  },
+  promoOrb: {
+    position: 'absolute',
+    width: 190,
+    height: 190,
+    borderRadius: 95,
+    backgroundColor: '#D4EFD9',
+    right: -82,
+    top: -74,
   },
   promoContent: {
     flex: 1,
-    paddingRight: 12,
+    paddingRight: 14,
+    zIndex: 1,
+  },
+  promoBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 5,
+    backgroundColor: 'rgba(255, 255, 255, 0.72)',
+    borderRadius: 20,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    marginBottom: 9,
   },
   promoEyebrow: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#2E7D32',
-    letterSpacing: 1.2,
-    marginBottom: 4,
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#1B5E20',
+    letterSpacing: 0.8,
   },
   promoTitle: {
+    color: '#153E1B',
+    marginBottom: 5,
+  },
+  promoDescription: {
+    color: '#426447',
+    fontSize: 12,
+    lineHeight: 17,
     marginBottom: 12,
   },
   promoButton: {
@@ -471,20 +565,52 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     alignSelf: 'flex-start',
     backgroundColor: '#fff',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
     borderRadius: 20,
     gap: 6,
   },
   promoButtonText: {
     color: '#2E7D32',
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  promoVisual: {
+    width: 104,
+    height: 142,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1,
   },
   promoImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 104,
+    height: 132,
+    borderRadius: 20,
+    borderWidth: 3,
+    borderColor: 'rgba(255, 255, 255, 0.85)',
+  },
+  promoImagePill: {
+    position: 'absolute',
+    bottom: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    ...createShadowStyle({
+      shadowColor: '#153E1B',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.14,
+      shadowRadius: 5,
+      elevation: 3,
+    }),
+  },
+  promoImagePillText: {
+    color: '#1B5E20',
+    fontSize: 10,
+    fontWeight: '700',
   },
   stateTitle: {
     fontSize: 18,

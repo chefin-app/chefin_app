@@ -1,12 +1,15 @@
 import { View, Text, TouchableOpacity, StyleSheet, ImageBackground, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 
 import { images } from '@/src/constants/images';
 import type { Listing, ListingReview, Profile } from '@/src/types/models';
 import { useFavourites } from '@/src/context/FavouritesContext';
 import { useAuth } from '@/src/services/auth-context';
+import VerifiedBadge from '@/src/components/feedback/VerifiedBadge';
+import { formatRating, getListingsRatingSummary, getRatingSummary } from '@/src/utils/ratings';
+import { formatAvailabilityLabel, type AvailabilitySummary } from '@/src/utils/listingAvailability';
 
 export interface MealCardProps extends Listing {
   cookName?: string;
@@ -15,27 +18,14 @@ export interface MealCardProps extends Listing {
   cookImage?: string;
   profiles?: Profile;
   reviews?: ListingReview[];
-  averageRating?: number;
   listings?: Listing[];
-  /** ISO date string (YYYY-MM-DD) of the earliest available slot for this chef's dishes */
-  nextAvailableDate?: string;
+  /** Time-aware availability across this restaurant's dishes. */
+  availability?: AvailabilitySummary;
 }
 
-/** Returns 'Today', 'Tomorrow', or a locale-formatted date string */
-function getAvailabilityLabel(dateStr?: string): string {
-  if (!dateStr) return 'Unknown';
-  const today = new Date();
-  const target = new Date(dateStr + 'T00:00:00'); // force local midnight to avoid UTC offset issues
-
-  const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-  const targetMidnight = new Date(target.getFullYear(), target.getMonth(), target.getDate());
-  const diffDays = Math.round(
-    (targetMidnight.getTime() - todayMidnight.getTime()) / (1000 * 60 * 60 * 24)
-  );
-
-  if (diffDays === 0) return 'today';
-  if (diffDays === 1) return 'tomorrow';
-  return target.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+/** Returns a complete, user-facing availability message. */
+export function getAvailabilityLabel(availability?: AvailabilitySummary, now = new Date()): string {
+  return formatAvailabilityLabel(availability, now);
 }
 
 const MealCard: React.FC<MealCardProps> = ({
@@ -49,9 +39,10 @@ const MealCard: React.FC<MealCardProps> = ({
   created_at,
   cook_id,
   reviews = [], // Default to empty array if undefined
+  restaurant_reviews,
   profiles, // Add profiles to destructured props
   listings = [],
-  nextAvailableDate,
+  availability,
 }) => {
   const router = useRouter();
   const { toggleFavourite, isFavourite } = useFavourites();
@@ -64,30 +55,16 @@ const MealCard: React.FC<MealCardProps> = ({
   const displayImage = cookImage || profiles?.profile_image;
   const displayVerified = isVerified ?? profiles?.is_verified ?? false;
 
-  // Gather all rated dishes belonging to this cook
-  const chefDishes = (listings || []).filter(
-    dish =>
-      dish.cook_id &&
-      dish.cook_id === profileId &&
-      Array.isArray(dish.reviews) &&
-      (dish.reviews?.length ?? 0) > 0
-  );
-
-  // Compute weighted average: sum of all ratings across all dishes / total number of ratings
-  const { totalRatingsSum, totalRatingsCount } = chefDishes.reduce(
-    (acc, dish) => {
-      const validReviews = (dish.reviews ?? []).filter(r => typeof r.rating === 'number');
-      const sum = validReviews.reduce((s, r) => s + r.rating, 0);
-      return {
-        totalRatingsSum: acc.totalRatingsSum + sum,
-        totalRatingsCount: acc.totalRatingsCount + validReviews.length,
-      };
-    },
-    { totalRatingsSum: 0, totalRatingsCount: 0 }
-  );
-
-  const displayRestaurantRating =
-    totalRatingsCount > 0 ? (totalRatingsSum / totalRatingsCount).toFixed(1) : '-';
+  // Prefer a cook-wide review set supplied by the API. The listings fallback
+  // supports callers that already hold every dish for this cook, while the
+  // final fallback keeps a standalone dish card useful.
+  const chefListings = listings.filter(dish => dish.cook_id === profileId);
+  const ratingSummary = Array.isArray(restaurant_reviews)
+    ? getRatingSummary(restaurant_reviews)
+    : chefListings.length > 0
+      ? getListingsRatingSummary(chefListings)
+      : getRatingSummary(reviews);
+  const displayRestaurantRating = formatRating(ratingSummary.average);
 
   const handleToggleFavourite = () => {
     if (!session?.user) {
@@ -100,7 +77,7 @@ const MealCard: React.FC<MealCardProps> = ({
       imageUrl: image_url,
       fullChefName: profiles?.full_name,
       rating: displayRestaurantRating,
-      reviewCount: totalRatingsCount,
+      reviewCount: ratingSummary.count,
     });
   };
 
@@ -144,22 +121,14 @@ const MealCard: React.FC<MealCardProps> = ({
 
           <View style={styles.subtitleRow}>
             <Text style={styles.subtitle}>{cuisine || 'No description'}</Text>
-            {displayVerified && (
-              <MaterialIcons
-                style={styles.verifiedIcon}
-                name="verified"
-                size={16}
-                color="#0084ff"
-              />
-            )}
+            {displayVerified && <VerifiedBadge style={styles.verifiedIcon} size={16} />}
           </View>
         </View>
       </View>
 
       <View style={styles.availabilityRow}>
-        <Text style={styles.available}>
-          Available{' '}
-          <Text style={styles.availableDate}>{getAvailabilityLabel(nextAvailableDate)}</Text>
+        <Text style={[styles.available, availability?.state !== 'available' && styles.unavailable]}>
+          {getAvailabilityLabel(availability)}
         </Text>
       </View>
     </TouchableOpacity>
@@ -244,8 +213,8 @@ const styles = StyleSheet.create({
     marginLeft: 14,
     fontWeight: 'bold',
   },
-  availableDate: {
-    fontWeight: 'bold',
+  unavailable: {
+    color: '#666666',
   },
   rating: {
     flexDirection: 'row',

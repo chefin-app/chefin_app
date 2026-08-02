@@ -12,7 +12,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams, type Href } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/src/services/auth-context';
 import { supabase } from '@/src/utils/supabaseClient';
@@ -29,6 +29,11 @@ import { DEFAULT_COUNTRY, Country } from '@/src/constants/countryCodes';
  */
 export default function OnboardingScreen() {
   const { user, refreshOnboardingStatus } = useAuth();
+  const { returnTo } = useLocalSearchParams<{ returnTo?: string }>();
+  const safeReturnTo =
+    typeof returnTo === 'string' && returnTo.startsWith('/') && !returnTo.startsWith('//')
+      ? returnTo
+      : null;
 
   const [fullName, setFullName] = useState('');
   const [country, setCountry] = useState<Country>(DEFAULT_COUNTRY);
@@ -68,7 +73,11 @@ export default function OnboardingScreen() {
 
       // Refresh the flag so the app stops routing back here, then land home.
       await refreshOnboardingStatus();
-      router.replace('/(user)/(tabs)/home');
+      if (safeReturnTo) {
+        router.dismissTo(safeReturnTo as Href);
+      } else {
+        router.replace('/(user)/(tabs)/home');
+      }
     } catch (e: any) {
       Alert.alert('Something went wrong', e.message ?? 'Please try again.');
     } finally {

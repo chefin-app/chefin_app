@@ -14,14 +14,30 @@ import homeRoutes from './routes/home';
 import idRoutes from './routes/id';
 import verificationRoutes from './routes/verification';
 import reviewsRoutes from './routes/reviews';
+import reportsRoutes from './routes/reports';
+import adminRoutes from './routes/admin';
 
 const app = express();
 const PORT = process.env.PORT || 8000;
+const allowedOrigins = (process.env.CORS_ALLOWED_ORIGINS ?? '')
+  .split(',')
+  .map(origin => origin.trim())
+  .filter(Boolean);
+const allowAnyDevelopmentOrigin =
+  process.env.NODE_ENV !== 'production' && allowedOrigins.length === 0;
 
 // Middleware setup
 app.use(
   cors({
-    origin: '*', // Configure this properly for production
+    origin: (origin, callback) => {
+      // Native requests do not send an Origin header. Browser origins must be
+      // explicitly configured in production; local development remains easy.
+      if (!origin || allowAnyDevelopmentOrigin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+        return;
+      }
+      callback(new Error('Origin is not allowed by CORS'));
+    },
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
     allowedHeaders: ['Content-Type', 'Authorization'],
   })
@@ -44,6 +60,8 @@ app.use('/api/orders', ordersRoutes);
 app.use('/api/id', idRoutes);
 app.use('/api/verification', verificationRoutes);
 app.use('/api/reviews', reviewsRoutes);
+app.use('/api/reports', reportsRoutes);
+app.use('/api/admin', adminRoutes);
 
 // 404 handler
 app.use('/{*any}', (req, res) => {

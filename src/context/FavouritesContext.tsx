@@ -1,6 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/src/utils/supabaseClient';
 import { useAuth } from '@/src/services/auth-context';
+import { formatPersistedRating, formatRating, getRatingSummary } from '@/src/utils/ratings';
 
 export interface FavouriteRestaurant {
   profileId: string;
@@ -26,7 +27,7 @@ const rowToFavourite = (row: any): FavouriteRestaurant => ({
   restaurantName: row.restaurant_name ?? '',
   imageUrl: row.image_url ?? undefined,
   fullChefName: row.chef_name ?? undefined,
-  rating: row.rating ?? '-',
+  rating: formatPersistedRating(row.rating),
   reviewCount: row.review_count ?? 0,
 });
 
@@ -56,7 +57,42 @@ export const FavouritesProvider = ({ children }: { children: React.ReactNode }) 
         console.warn('Could not load favourites', error.message);
         return;
       }
-      if (!cancelled) setFavourites((data ?? []).map(rowToFavourite));
+
+      let loadedFavourites = (data ?? []).map(rowToFavourite);
+      const cookIds = [...new Set(loadedFavourites.map(item => item.profileId).filter(Boolean))];
+
+      if (cookIds.length > 0) {
+        const { data: ratingRows, error: ratingError } = await supabase
+          .from('listings')
+          .select('cook_id, reviews(rating)')
+          .in('cook_id', cookIds)
+          .eq('status', 'approved')
+          .eq('is_active', true);
+
+        if (ratingError) {
+          // The denormalised snapshot is still a safe display fallback if the
+          // live aggregate cannot be refreshed.
+          console.warn('Could not refresh favourite ratings', ratingError.message);
+        } else {
+          const reviewsByCook = new Map<string, Array<{ rating?: unknown }>>();
+          for (const row of ratingRows ?? []) {
+            const current = reviewsByCook.get(row.cook_id) ?? [];
+            current.push(...(row.reviews ?? []));
+            reviewsByCook.set(row.cook_id, current);
+          }
+
+          loadedFavourites = loadedFavourites.map(item => {
+            const summary = getRatingSummary(reviewsByCook.get(item.profileId));
+            return {
+              ...item,
+              rating: formatRating(summary.average),
+              reviewCount: summary.count,
+            };
+          });
+        }
+      }
+
+      if (!cancelled) setFavourites(loadedFavourites);
     })();
     return () => {
       cancelled = true;

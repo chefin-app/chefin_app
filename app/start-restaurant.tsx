@@ -21,6 +21,11 @@ import { supabase } from '@/src/utils/supabaseClient';
 import { useAuth } from '@/src/services/auth-context';
 import { TIER1_DOCUMENTS, VerificationDocType } from '@/src/constants/verification';
 import { BankSelect } from '@/src/components/inputs/BankSelect';
+import { FoodComplianceAcknowledgement } from '@/src/components/food-safety/FoodComplianceAcknowledgement';
+import {
+  getCurrentFoodComplianceAcceptance,
+  recordFoodComplianceAcceptance,
+} from '@/src/utils/foodCompliance';
 
 // ── Constants ───────────────────────────────────────────────────────
 const RESTAURANT_NAME_LIMIT = 40;
@@ -251,15 +256,31 @@ export default function StartRestaurantWizard() {
     setAddrSuggestions([]);
   };
 
-  // Food safety step. Verification documents are entirely optional — cooks
-  // who submit either Tier 1 document get a "Verified" badge once an admin
-  // approves it, but neither is required to start selling.
+  // Food safety step. Documents are optional for Chefin's platform badge, but
+  // that badge is not a licence or confirmation of full legal compliance.
   const [hostingType, setHostingType] = useState<'private' | 'business' | null>(null);
+  const [complianceAccepted, setComplianceAccepted] = useState(false);
+  const [complianceAcceptedAt, setComplianceAcceptedAt] = useState<string | null>(null);
   const [verificationDocs, setVerificationDocs] = useState<
     Partial<
       Record<VerificationDocType, { uri: string; mime: string; name: string; isPdf: boolean }>
     >
   >({});
+
+  useEffect(() => {
+    if (!user) return;
+
+    getCurrentFoodComplianceAcceptance(user.id)
+      .then(acceptance => {
+        if (acceptance) {
+          setComplianceAccepted(true);
+          setComplianceAcceptedAt(acceptance.acceptedAt);
+        }
+      })
+      .catch(error => {
+        console.warn('Could not load food compliance acceptance', error.message);
+      });
+  }, [user]);
 
   // Payment step — payout bank account, not a card. Earnings from completed
   // orders are transferred here.
@@ -294,8 +315,8 @@ export default function StartRestaurantWizard() {
           addr.postcode.trim() !== ''
         );
       case 'food-safety':
-        // Verification documents are optional; only the hosting type is asked.
-        return hostingType != null;
+        // Documents are optional; the current compliance terms are not.
+        return hostingType != null && complianceAccepted;
       case 'payment':
         return (
           bankName.trim().length > 0 &&
@@ -424,6 +445,13 @@ export default function StartRestaurantWizard() {
       Alert.alert('Sign in required', 'Please sign in to submit your application.');
       return;
     }
+    if (!complianceAccepted) {
+      Alert.alert(
+        'Acknowledgement required',
+        'Return to the food-safety step and accept the current compliance terms.'
+      );
+      return;
+    }
     setSubmitting(true);
     try {
       const { data: profile, error: profileErr } = await supabase
@@ -432,6 +460,10 @@ export default function StartRestaurantWizard() {
         .eq('user_id', user.id)
         .single();
       if (profileErr || !profile) throw new Error('Profile not found for your account.');
+
+      // Fail before creating a listing or uploading documents if the
+      // immutable acceptance cannot be recorded.
+      await recordFoodComplianceAcceptance(user.id, 'start_restaurant');
 
       // 1. Upload dish photo
       let dishImageUrl: string | null = null;
@@ -831,13 +863,20 @@ export default function StartRestaurantWizard() {
             <View style={styles.tierCallout}>
               <Ionicons name="shield-checkmark" size={20} color="#4CAF50" />
               <View style={{ flex: 1 }}>
-                <Text style={styles.tierCalloutTitle}>Get your Verified badge (optional)</Text>
+                <Text style={styles.tierCalloutTitle}>
+                  Get a platform Verified badge (optional)
+                </Text>
                 <Text style={styles.tierCalloutBody}>
-                  Upload either document below and we&apos;ll review it. Verified cooks stand out
-                  and earn more trust from customers. You can skip this and add it later.
+                  Upload one or both documents below for review. This badge is not a licence or
+                  proof of full regulatory compliance. You can skip the uploads and add them later.
                 </Text>
               </View>
             </View>
+            <FoodComplianceAcknowledgement
+              accepted={complianceAccepted}
+              onAcceptedChange={setComplianceAccepted}
+              acceptedAt={complianceAcceptedAt}
+            />
             {TIER1_DOCUMENTS.map(doc => {
               const asset = verificationDocs[doc.type];
               return (
@@ -940,7 +979,13 @@ export default function StartRestaurantWizard() {
 
   // ── Render ───────────────────────────────────────────────────────
   const heading = STEP_HEADINGS[step];
-  const advanceLabel = isLast ? 'Submit application' : 'Next';
+  const advanceLabel = isLast
+    ? 'Submit application'
+    : step === 'food-safety'
+      ? complianceAcceptedAt
+        ? 'Continue'
+        : 'Agree & continue'
+      : 'Next';
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>

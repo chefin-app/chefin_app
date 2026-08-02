@@ -1,22 +1,16 @@
-import {
-  View,
-  Text,
-  ScrollView,
-  Image,
-  StyleSheet,
-  TouchableOpacity,
-  Dimensions,
-} from 'react-native';
+import { View, Text, ScrollView, Image, StyleSheet, TouchableOpacity } from 'react-native';
 import React, { useEffect, useState } from 'react';
 import { useLocalSearchParams } from 'expo-router';
 import MenuItemCard from '@/src/components/cards/MenuItemCard';
 import { useRouter } from 'expo-router';
-import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import LoadingSpinner from '@/src/components/feedback/LoadingSpinner';
 import StickyCartBar from '@/src/components/navigation/StickyCartBar';
 import { useFavourites } from '@/src/context/FavouritesContext';
 import { useAuth } from '@/src/services/auth-context';
+import VerifiedBadge from '@/src/components/feedback/VerifiedBadge';
+import { formatRating, getListingsRatingSummary } from '@/src/utils/ratings';
 
 const MenuScreen = () => {
   const router = useRouter();
@@ -56,25 +50,12 @@ const MenuScreen = () => {
   // Determine if the restaurant is verified (adjust property name as needed)
   const displayVerified = profile?.verified ?? profile?.is_verified ?? false;
 
-  // calculate average restaurant rating based only on dishes with reviews
-  const ratedDishes = listings.filter((dish: any) => dish.reviews && dish.reviews.length > 0);
-
-  const displayRestaurantRating =
-    ratedDishes.length > 0
-      ? (
-          ratedDishes.reduce((total: any, dish: any) => {
-            const reviews = dish.reviews || [];
-            const dishAvg =
-              reviews.reduce((sum: any, r: any) => sum + (r.rating ?? 0), 0) / reviews.length;
-            return total + dishAvg;
-          }, 0) / ratedDishes.length
-        ).toFixed(1)
-      : '-';
-
-  const displayReviewCount = ratedDishes.reduce(
-    (count: number, dish: any) => count + (dish.reviews.length || 0),
-    0
-  );
+  // A restaurant's score is review-weighted: every valid review across every
+  // dish contributes once. This avoids giving a one-review dish the same
+  // influence as a dish with many reviews.
+  const ratingSummary = getListingsRatingSummary(listings);
+  const displayRestaurantRating = formatRating(ratingSummary.average);
+  const displayReviewCount = ratingSummary.count;
 
   const handleToggleFavourite = () => {
     if (!session?.user) {
@@ -88,6 +69,17 @@ const MenuScreen = () => {
       fullChefName: profile.full_name,
       rating: displayRestaurantRating,
       reviewCount: displayReviewCount,
+    });
+  };
+
+  const handleReportRestaurant = () => {
+    router.push({
+      pathname: '/report-listing',
+      params: {
+        targetType: 'restaurant',
+        targetId: profile.id,
+        targetName: profile.restaurant_name || profile.full_name || 'Home restaurant',
+      },
     });
   };
 
@@ -127,14 +119,7 @@ const MenuScreen = () => {
                   <Text style={styles.restaurantName} numberOfLines={1}>
                     {profile?.restaurant_name}
                   </Text>
-                  {displayVerified && (
-                    <MaterialIcons
-                      name="verified"
-                      size={20}
-                      color="#0084ff"
-                      style={styles.verifiedIconBadge}
-                    />
-                  )}
+                  {displayVerified && <VerifiedBadge size={20} style={styles.verifiedIconBadge} />}
                 </View>
                 <Text style={styles.chefName}>By Chef {profile?.full_name}</Text>
               </View>
@@ -144,7 +129,9 @@ const MenuScreen = () => {
               <View style={styles.statItem}>
                 <Ionicons name="star" size={18} color="#FFB800" />
                 <Text style={styles.statTextBold}>{displayRestaurantRating}</Text>
-                <Text style={styles.statText}>({displayReviewCount}+)</Text>
+                <Text style={styles.statText}>
+                  ({displayReviewCount} {displayReviewCount === 1 ? 'review' : 'reviews'})
+                </Text>
               </View>
               <View style={styles.divider} />
               <View style={styles.statItem}>
@@ -207,18 +194,20 @@ const MenuScreen = () => {
           </View>
         )}
 
-        {/* Report This Listing Button */}
-        <TouchableOpacity style={styles.reportButton}>
-          <Ionicons name="flag-outline" size={18} color="#ff4d4d" style={{ marginRight: 8 }} />
-          <Text style={styles.reportButtonText}>Report this listing</Text>
+        <TouchableOpacity
+          style={styles.reportButton}
+          onPress={handleReportRestaurant}
+          accessibilityRole="button"
+          accessibilityLabel={`Report ${profile.restaurant_name || 'this home restaurant'}`}
+        >
+          <Ionicons name="flag-outline" size={18} color="#B42318" />
+          <Text style={styles.reportButtonText}>Report this restaurant</Text>
         </TouchableOpacity>
       </ScrollView>
       <StickyCartBar />
     </View>
   );
 };
-
-const { width } = Dimensions.get('window');
 
 const styles = StyleSheet.create({
   container: {
@@ -336,7 +325,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   statItem: {
-    flexDirection: 'row',
+    // flexDirection: 'row',
     alignItems: 'center',
   },
   statTextBold: {
@@ -413,12 +402,13 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 8,
     marginBottom: 20,
     borderWidth: 1,
     borderColor: '#FFE4E4',
   },
   reportButtonText: {
-    color: '#ff4d4d',
+    color: '#B42318',
     fontWeight: '700',
     fontSize: 16,
   },

@@ -76,10 +76,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   };
 
   useEffect(() => {
-    console.log('🔄 Initializing Supabase Auth...');
-
     supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('📦 Initial session:', session);
       setSession(session);
       setUser(session?.user ?? null);
       loadOnboardingStatus(session?.user?.id);
@@ -89,7 +86,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      console.log('⚡ Auth state changed:', _event, session);
+      console.log('Auth state changed:', _event);
       setSession(session);
       setUser(session?.user ?? null);
       loadOnboardingStatus(session?.user?.id);
@@ -136,7 +133,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       if (error) return { error: error.message };
       setSession(data.session ?? null);
       setUser(data.session?.user ?? null);
-      console.log('✅ Signed in successfully:', data.session);
+      console.log('Signed in successfully');
       return { error: null };
     } catch (err: any) {
       return { error: err.message ?? 'An error occurred' };
@@ -205,7 +202,13 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     signInWithFacebook: async () => Promise.resolve(),
     signInWithGoogle: async () => Promise.resolve(),
     signInWithApple: async () => Promise.resolve(),
-    signInWithPhone: async (_phone: string) => Promise.resolve({ error: 'Not implemented' }),
+    signInWithPhone: async (phone: string) => {
+      const { error } = await supabase.auth.signInWithOtp({
+        phone,
+        options: { shouldCreateUser: true },
+      });
+      return { error: error?.message ?? '' };
+    },
     verifyOTP: async () => Promise.resolve({ error: 'Not implemented' }),
     updateProfile: async () => Promise.resolve({ error: 'Not implemented' }),
   };

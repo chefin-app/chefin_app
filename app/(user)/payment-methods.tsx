@@ -12,19 +12,17 @@ import {
   ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams, type Href } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '@/src/services/auth-context';
-
-const getStorageKey = (userId?: string) => `@chefin:payment-method-${userId || 'guest'}`;
-
-type SavedCard = {
-  brand: string;
-  last4: string;
-  expMonth: string; // "01"-"12"
-  expYear: string; // "YY"
-};
+import {
+  createSavedPaymentCard,
+  emptyPaymentMethods,
+  loadPaymentMethods,
+  savePaymentMethods,
+  type SavedPaymentCard,
+  type StoredPaymentMethods,
+} from '@/src/utils/payment-method-storage';
 
 const detectBrand = (digits: string): string => {
   if (/^4/.test(digits)) return 'Visa';
@@ -56,13 +54,33 @@ const formatCardNumber = (digits: string): string => digits.replace(/(.{4})/g, '
 const formatExpiry = (digits: string): string =>
   digits.length >= 3 ? `${digits.slice(0, 2)}/${digits.slice(2)}` : digits;
 
+const errorMessage = (error: unknown, fallback: string) =>
+  error instanceof Error ? error.message : fallback;
+
+const ScreenHeader = ({ title, onBack }: { title: string; onBack: () => void }) => (
+  <View style={styles.header}>
+    <TouchableOpacity
+      onPress={onBack}
+      style={styles.backButton}
+      accessibilityRole="button"
+      accessibilityLabel="Go back"
+    >
+      <Ionicons name="chevron-back" size={24} color="#000" />
+    </TouchableOpacity>
+    <Text style={styles.headerTitle}>{title}</Text>
+    <View style={styles.headerSpacer} />
+  </View>
+);
+
 export default function PaymentMethodScreen() {
   const router = useRouter();
   // When opened from checkout (cart has no saved card yet), come back to the
   // cart afterwards instead of leaving the user stranded on this screen.
   const { returnTo } = useLocalSearchParams<{ returnTo?: string }>();
   const { user } = useAuth();
-  const [savedCard, setSavedCard] = useState<SavedCard | null>(null);
+  const [paymentMethods, setPaymentMethods] = useState<StoredPaymentMethods>(() =>
+    emptyPaymentMethods()
+  );
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
 
@@ -76,18 +94,21 @@ export default function PaymentMethodScreen() {
   const cvcRef = useRef<TextInput>(null);
 
   useEffect(() => {
+    let cancelled = false;
     (async () => {
       try {
-        const raw = await AsyncStorage.getItem(getStorageKey(user?.id));
-        if (raw) {
-          setSavedCard(JSON.parse(raw));
-        }
+        const storedMethods = await loadPaymentMethods(user?.id);
+        if (!cancelled) setPaymentMethods(storedMethods);
       } catch (e) {
-        console.warn('Failed to load saved card', e);
+        console.warn('Failed to load saved cards', e);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [user?.id]);
 
   const resetForm = () => {
@@ -97,9 +118,8 @@ export default function PaymentMethodScreen() {
   };
 
   const onCardChange = (text: string) => {
-    const digits = text.replace(/\D/g, '').slice(0, 16);
+    const digits = text.replace(/\D/g, '').slice(0, 19);
     setCardDigits(digits);
-    if (digits.length === 16) expRef.current?.focus();
   };
 
   const onExpChange = (text: string) => {
@@ -109,13 +129,16 @@ export default function PaymentMethodScreen() {
   };
 
   const onCvcChange = (text: string) => {
-    const digits = text.replace(/\D/g, '').slice(0, 3);
+    const expectedLength = detectBrand(cardDigits) === 'Amex' ? 4 : 3;
+    const digits = text.replace(/\D/g, '').slice(0, expectedLength);
     setCvcDigits(digits);
-    if (digits.length === 3) cvcRef.current?.blur();
+    if (digits.length === expectedLength) cvcRef.current?.blur();
   };
 
   const validate = (): string | null => {
-    if (cardDigits.length !== 16) return 'Card number must be 16 digits.';
+    if (cardDigits.length < 13 || cardDigits.length > 19) {
+      return 'Card number must be between 13 and 19 digits.';
+    }
     if (!luhnValid(cardDigits)) return 'That card number doesn’t look right.';
     if (expDigits.length !== 4) return 'Expiry must be MM/YY.';
     const mm = parseInt(expDigits.slice(0, 2), 10);
@@ -127,7 +150,10 @@ export default function PaymentMethodScreen() {
     if (expEndOfMonth < new Date(now.getFullYear(), now.getMonth(), 1)) {
       return 'This card has expired.';
     }
-    if (cvcDigits.length !== 3) return 'CVC must be 3 digits.';
+    const expectedCvcLength = detectBrand(cardDigits) === 'Amex' ? 4 : 3;
+    if (cvcDigits.length !== expectedCvcLength) {
+      return `CVC must be ${expectedCvcLength} digits.`;
+    }
     return null;
   };
 
@@ -139,46 +165,91 @@ export default function PaymentMethodScreen() {
     }
     setSaving(true);
     try {
-      const card: SavedCard = {
+      const metadata = {
         brand: detectBrand(cardDigits),
         last4: cardDigits.slice(-4),
         expMonth: expDigits.slice(0, 2),
         expYear: expDigits.slice(2),
       };
+      const duplicate = paymentMethods.cards.find(
+        card =>
+          card.brand === metadata.brand &&
+          card.last4 === metadata.last4 &&
+          card.expMonth === metadata.expMonth &&
+          card.expYear === metadata.expYear
+      );
+      const card = duplicate ?? createSavedPaymentCard(metadata);
+      const nextMethods: StoredPaymentMethods = {
+        version: 2,
+        cards: duplicate ? paymentMethods.cards : [...paymentMethods.cards, card],
+        defaultCardId: card.id,
+      };
 
-      await AsyncStorage.setItem(getStorageKey(user?.id), JSON.stringify(card));
-      setSavedCard(card);
+      await savePaymentMethods(user?.id, nextMethods);
+      setPaymentMethods(nextMethods);
       setShowForm(false);
       resetForm();
 
       if (returnTo) {
         // Came from checkout — go straight back instead of leaving the user
         // stranded on the payment method screen.
-        Alert.alert('Card added', `${card.brand} ending in ${card.last4} is now your default.`, [
-          { text: 'OK', onPress: () => router.replace(returnTo as any) },
-        ]);
+        Alert.alert(
+          duplicate ? 'Card selected' : 'Card added',
+          `${card.brand} ending in ${card.last4} is now your default.`,
+          [{ text: 'OK', onPress: () => router.replace(returnTo as Href) }]
+        );
       } else {
-        Alert.alert('Card added', `${card.brand} ending in ${card.last4} is now your default.`);
+        Alert.alert(
+          duplicate ? 'Card already saved' : 'Card added',
+          `${card.brand} ending in ${card.last4} is now your default.`
+        );
       }
-    } catch (e: any) {
-      Alert.alert('Could not save card', e.message ?? 'Unknown error');
+    } catch (error: unknown) {
+      Alert.alert('Could not save card', errorMessage(error, 'Please try again.'));
     } finally {
       setSaving(false);
     }
   };
 
-  const handleRemove = () => {
-    Alert.alert('Remove card?', 'You can add it again any time.', [
+  const handleRemove = (card: SavedPaymentCard) => {
+    Alert.alert('Remove card?', `${card.brand} ending in ${card.last4} will be removed.`, [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Remove',
         style: 'destructive',
         onPress: async () => {
-          await AsyncStorage.removeItem(getStorageKey(user?.id));
-          setSavedCard(null);
+          const remainingCards = paymentMethods.cards.filter(item => item.id !== card.id);
+          const nextMethods: StoredPaymentMethods = {
+            version: 2,
+            cards: remainingCards,
+            defaultCardId:
+              paymentMethods.defaultCardId === card.id
+                ? (remainingCards[0]?.id ?? null)
+                : paymentMethods.defaultCardId,
+          };
+          try {
+            await savePaymentMethods(user?.id, nextMethods);
+            setPaymentMethods(nextMethods);
+          } catch (error: unknown) {
+            Alert.alert('Could not remove card', errorMessage(error, 'Please try again.'));
+          }
         },
       },
     ]);
+  };
+
+  const handleSetDefault = async (card: SavedPaymentCard) => {
+    if (paymentMethods.defaultCardId === card.id) return;
+    const nextMethods: StoredPaymentMethods = {
+      ...paymentMethods,
+      defaultCardId: card.id,
+    };
+    try {
+      await savePaymentMethods(user?.id, nextMethods);
+      setPaymentMethods(nextMethods);
+    } catch (error: unknown) {
+      Alert.alert('Could not update card', errorMessage(error, 'Please try again.'));
+    }
   };
 
   const beginAddFlow = () => {
@@ -188,24 +259,14 @@ export default function PaymentMethodScreen() {
     setTimeout(() => cardRef.current?.focus(), 50);
   };
 
-  const Header = ({ title }: { title: string }) => (
-    <View style={styles.header}>
-      <TouchableOpacity
-        onPress={() => {
-          if (showForm) {
-            setShowForm(false);
-          } else {
-            router.back();
-          }
-        }}
-        style={styles.backButton}
-      >
-        <Ionicons name="chevron-back" size={24} color="#000" />
-      </TouchableOpacity>
-      <Text style={styles.headerTitle}>{title}</Text>
-      <View style={{ width: 40 }} />
-    </View>
-  );
+  const handleBack = () => {
+    if (showForm) {
+      resetForm();
+      setShowForm(false);
+    } else {
+      router.back();
+    }
+  };
 
   if (loading) {
     return (
@@ -220,22 +281,31 @@ export default function PaymentMethodScreen() {
   // ---- Add Card form ----
   if (showForm) {
     const brand = detectBrand(cardDigits);
-    const isComplete = cardDigits.length === 16 && expDigits.length === 4 && cvcDigits.length === 3;
+    const expectedCvcLength = brand === 'Amex' ? 4 : 3;
+    const isComplete =
+      cardDigits.length >= 13 && expDigits.length === 4 && cvcDigits.length === expectedCvcLength;
 
     return (
       <SafeAreaView style={styles.container}>
-        <Header title="Add payment method" />
+        <ScreenHeader
+          title={paymentMethods.cards.length > 0 ? 'Add another card' : 'Add a card'}
+          onBack={handleBack}
+        />
         <KeyboardAvoidingView
-          style={{ flex: 1 }}
+          style={styles.keyboardView}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
           <ScrollView
             contentContainerStyle={styles.formContainer}
             keyboardShouldPersistTaps="handled"
           >
-            <Text style={styles.instruction}>
-              This card will only be charged when you place an order.
-            </Text>
+            <View style={styles.demoNotice}>
+              <Ionicons name="information-circle-outline" size={22} color="#8A5A00" />
+              <Text style={styles.demoNoticeText}>
+                Demo payment flow. No real payment is processed. Only the card brand, last four
+                digits and expiry are saved on this device; the card number and CVC are discarded.
+              </Text>
+            </View>
 
             <Text style={styles.fieldLabel}>CARD NUMBER</Text>
             <View style={styles.cardInputWrapper}>
@@ -248,16 +318,18 @@ export default function PaymentMethodScreen() {
                 inputMode="numeric"
                 value={formatCardNumber(cardDigits)}
                 onChangeText={onCardChange}
-                maxLength={19}
+                maxLength={23}
                 autoComplete="cc-number"
                 textContentType="creditCardNumber"
                 returnKeyType="next"
+                placeholderTextColor="#a3a3a3ff"
+                onSubmitEditing={() => expRef.current?.focus()}
               />
               {brand && <Text style={styles.brandTag}>{brand}</Text>}
             </View>
 
             <View style={styles.row}>
-              <View style={{ flex: 1, marginRight: 10 }}>
+              <View style={styles.expiryColumn}>
                 <Text style={styles.fieldLabel}>EXPIRY</Text>
                 <TextInput
                   ref={expRef}
@@ -268,21 +340,23 @@ export default function PaymentMethodScreen() {
                   value={formatExpiry(expDigits)}
                   onChangeText={onExpChange}
                   maxLength={5}
+                  placeholderTextColor="#a3a3a3ff"
                   returnKeyType="next"
                 />
               </View>
-              <View style={{ flex: 1 }}>
+              <View style={styles.formColumn}>
                 <Text style={styles.fieldLabel}>CVC</Text>
                 <TextInput
                   ref={cvcRef}
-                  placeholder="123"
+                  placeholder={expectedCvcLength === 4 ? '1234' : '123'}
                   style={styles.halfInput}
                   keyboardType="number-pad"
                   inputMode="numeric"
                   value={cvcDigits}
                   onChangeText={onCvcChange}
-                  maxLength={3}
+                  maxLength={expectedCvcLength}
                   secureTextEntry
+                  placeholderTextColor="#a3a3a3ff"
                   returnKeyType="done"
                   onSubmitEditing={handleSubmit}
                 />
@@ -304,49 +378,84 @@ export default function PaymentMethodScreen() {
               )}
             </TouchableOpacity>
 
-            <Text style={styles.disclaimer}>
-              For testing only — card data is stored locally on this device. Production payments
-              should be tokenised via Stripe, Apple Pay, or similar.
-            </Text>
+            <View style={styles.providerNote}>
+              <Ionicons name="shield-checkmark-outline" size={18} color="#5F6368" />
+              <Text style={styles.providerNoteText}>
+                A PCI-compliant payment provider must replace this local demo before launch.
+              </Text>
+            </View>
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
     );
   }
 
-  // ---- Saved card view ----
-  if (savedCard) {
+  // ---- Saved cards view ----
+  if (paymentMethods.cards.length > 0) {
     return (
       <SafeAreaView style={styles.container}>
-        <Header title="Payment Method" />
-        <View style={styles.savedContainer}>
-          <View style={styles.cardChip}>
-            <View style={styles.cardChipTop}>
-              <Text style={styles.cardChipBrand}>{savedCard.brand}</Text>
-              <Ionicons name="card" size={28} color="#fff" />
-            </View>
-            <Text style={styles.cardChipNumber}>
-              {'•••• •••• •••• '}
-              {savedCard.last4}
-            </Text>
-            <View style={styles.cardChipBottom}>
-              <Text style={styles.cardChipLabel}>EXPIRES</Text>
-              <Text style={styles.cardChipValue}>
-                {savedCard.expMonth}/{savedCard.expYear}
-              </Text>
-            </View>
+        <ScreenHeader title="Payment Methods" onBack={handleBack} />
+        <ScrollView contentContainerStyle={styles.savedContainer}>
+          <Text style={styles.savedTitle}>Saved cards</Text>
+          <Text style={styles.savedSubtitle}>Select the card to use by default at checkout.</Text>
+
+          <View style={styles.cardsList}>
+            {paymentMethods.cards.map(card => {
+              const isDefault = card.id === paymentMethods.defaultCardId;
+              return (
+                <View key={card.id} style={[styles.savedCard, isDefault && styles.defaultCard]}>
+                  <TouchableOpacity
+                    style={styles.cardSelection}
+                    onPress={() => handleSetDefault(card)}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected: isDefault }}
+                    accessibilityLabel={`${card.brand} ending in ${card.last4}`}
+                  >
+                    <View style={styles.savedCardIcon}>
+                      <Ionicons name="card" size={25} color="#2E7D32" />
+                    </View>
+                    <View style={styles.savedCardDetails}>
+                      <View style={styles.savedCardTitleRow}>
+                        <Text style={styles.savedCardTitle}>{card.brand}</Text>
+                        {isDefault && <Text style={styles.defaultPill}>DEFAULT</Text>}
+                      </View>
+                      <Text style={styles.savedCardNumber}>•••• {card.last4}</Text>
+                      <Text style={styles.savedCardExpiry}>
+                        Expires {card.expMonth}/{card.expYear}
+                      </Text>
+                    </View>
+                    <Ionicons
+                      name={isDefault ? 'radio-button-on' : 'radio-button-off'}
+                      size={23}
+                      color={isDefault ? '#4CAF50' : '#BDBDBD'}
+                    />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.cardRemoveButton}
+                    onPress={() => handleRemove(card)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Remove ${card.brand} ending in ${card.last4}`}
+                  >
+                    <Ionicons name="trash-outline" size={19} color="#C62828" />
+                  </TouchableOpacity>
+                </View>
+              );
+            })}
           </View>
 
-          <TouchableOpacity style={styles.secondaryButton} onPress={beginAddFlow}>
-            <Ionicons name="add" size={20} color="#000" />
-            <Text style={styles.secondaryButtonText}> Replace card</Text>
+          <TouchableOpacity style={styles.addAnotherButton} onPress={beginAddFlow}>
+            <Ionicons name="add-circle-outline" size={22} color="#2E7D32" />
+            <Text style={styles.addAnotherButtonText}>Add another card</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.removeButton} onPress={handleRemove}>
-            <Ionicons name="trash-outline" size={18} color="#FF5252" />
-            <Text style={styles.removeButtonText}> Remove card</Text>
-          </TouchableOpacity>
-        </View>
+          <View style={styles.localStorageNotice}>
+            <Ionicons name="phone-portrait-outline" size={18} color="#616161" />
+            <Text style={styles.localStorageNoticeText}>
+              These demo payment methods are available only on this device and do not process real
+              charges.
+            </Text>
+          </View>
+        </ScrollView>
       </SafeAreaView>
     );
   }
@@ -354,14 +463,14 @@ export default function PaymentMethodScreen() {
   // ---- Empty state ----
   return (
     <SafeAreaView style={styles.container}>
-      <Header title="Payment Method" />
+      <ScreenHeader title="Payment Methods" onBack={handleBack} />
       <View style={styles.emptyContainer}>
         <View style={styles.iconContainer}>
           <Ionicons name="card" size={60} color="#4CAF50" />
         </View>
         <Text style={styles.emptyTitle}>No payment method added</Text>
         <Text style={styles.emptySubtitle}>
-          You have not added any payment methods yet. Tap below to add one.
+          Add a demo card to choose a default payment method for checkout.
         </Text>
         <TouchableOpacity style={styles.addButton} onPress={beginAddFlow}>
           <Ionicons name="add" size={20} color="#4CAF50" />
@@ -383,6 +492,8 @@ const styles = StyleSheet.create({
   },
   headerTitle: { fontSize: 20, fontWeight: '700' },
   backButton: { padding: 5 },
+  headerSpacer: { width: 40 },
+  keyboardView: { flex: 1 },
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 },
   iconContainer: {
     width: 120,
@@ -406,7 +517,21 @@ const styles = StyleSheet.create({
   },
   addButtonText: { color: '#4CAF50', fontWeight: '600', fontSize: 16 },
   formContainer: { padding: 20 },
-  instruction: { fontSize: 14, color: '#666', marginBottom: 20, textAlign: 'center' },
+  demoNotice: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    borderRadius: 12,
+    backgroundColor: '#FFF8E1',
+    padding: 14,
+    marginBottom: 24,
+  },
+  demoNoticeText: {
+    flex: 1,
+    color: '#6D4C00',
+    fontSize: 13,
+    lineHeight: 19,
+  },
   fieldLabel: {
     fontSize: 11,
     fontWeight: '600',
@@ -433,6 +558,8 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   row: { flexDirection: 'row', marginBottom: 30 },
+  expiryColumn: { flex: 1, marginRight: 10 },
+  formColumn: { flex: 1 },
   halfInput: {
     borderWidth: 1,
     borderColor: '#e0e0e0',
@@ -450,71 +577,140 @@ const styles = StyleSheet.create({
   },
   primaryButtonDisabled: { backgroundColor: '#a5d6a7' },
   primaryButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  secondaryButton: {
+  providerNote: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+    gap: 8,
+    paddingHorizontal: 8,
+    marginTop: 4,
+  },
+  providerNoteText: {
+    flex: 1,
+    color: '#757575',
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  savedContainer: {
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    paddingBottom: 40,
+  },
+  savedTitle: {
+    color: '#1F2937',
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: 5,
+  },
+  savedSubtitle: {
+    color: '#6B7280',
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 20,
+  },
+  cardsList: {
+    gap: 12,
+    marginBottom: 18,
+  },
+  savedCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 12,
-    paddingVertical: 14,
-    marginBottom: 12,
+    borderColor: '#E5E7EB',
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+    overflow: 'hidden',
   },
-  secondaryButtonText: { fontSize: 16, fontWeight: '600', marginLeft: 4 },
-  removeButton: {
+  defaultCard: {
+    borderColor: '#66BB6A',
+    backgroundColor: '#F4FBF4',
+  },
+  cardSelection: {
+    flex: 1,
     flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingLeft: 16,
+    paddingRight: 12,
+  },
+  savedCardIcon: {
+    width: 46,
+    height: 46,
+    borderRadius: 13,
+    backgroundColor: '#E8F5E9',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 14,
+    marginRight: 13,
   },
-  removeButtonText: { fontSize: 15, fontWeight: '600', color: '#FF5252', marginLeft: 4 },
-  disclaimer: {
-    fontSize: 11,
-    color: '#999',
-    textAlign: 'center',
-    marginTop: 8,
-    fontStyle: 'italic',
+  savedCardDetails: {
+    flex: 1,
   },
-  savedContainer: { padding: 20 },
-  cardChip: {
-    backgroundColor: '#1f2937',
-    borderRadius: 16,
-    padding: 22,
-    marginBottom: 24,
-    minHeight: 180,
-    justifyContent: 'space-between',
-  },
-  cardChipTop: {
+  savedCardTitleRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 8,
+    marginBottom: 2,
   },
-  cardChipBrand: {
-    color: '#fff',
-    fontSize: 18,
+  savedCardTitle: {
+    color: '#1F2937',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  defaultPill: {
+    color: '#2E7D32',
+    backgroundColor: '#DFF3E1',
+    borderRadius: 999,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    fontSize: 9,
     fontWeight: '700',
     letterSpacing: 0.5,
   },
-  cardChipNumber: {
-    color: '#fff',
-    fontSize: 22,
+  savedCardNumber: {
+    color: '#374151',
+    fontSize: 14,
     fontWeight: '500',
-    letterSpacing: 2,
-    marginVertical: 16,
+    marginBottom: 2,
   },
-  cardChipBottom: {
+  savedCardExpiry: {
+    color: '#7A7A7A',
+    fontSize: 12,
+  },
+  cardRemoveButton: {
+    alignSelf: 'stretch',
+    justifyContent: 'center',
+    paddingHorizontal: 15,
+    borderLeftWidth: 1,
+    borderLeftColor: '#ECECEC',
+  },
+  addAnotherButton: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    borderWidth: 1.5,
+    borderColor: '#4CAF50',
+    borderRadius: 14,
+    paddingVertical: 15,
+    marginBottom: 18,
   },
-  cardChipLabel: {
-    color: '#9ca3af',
-    fontSize: 11,
-    letterSpacing: 0.8,
-  },
-  cardChipValue: {
-    color: '#fff',
+  addAnotherButtonText: {
+    color: '#2E7D32',
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: '700',
+  },
+  localStorageNotice: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 9,
+    borderRadius: 12,
+    backgroundColor: '#F5F5F5',
+    padding: 13,
+  },
+  localStorageNoticeText: {
+    flex: 1,
+    color: '#616161',
+    fontSize: 12,
+    lineHeight: 17,
   },
 });

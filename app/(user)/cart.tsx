@@ -12,17 +12,16 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCart, CartItem } from '@/src/context/CartContext';
 import { useAuth } from '@/src/services/auth-context';
 import { supabase } from '@/src/utils/supabaseClient';
+import {
+  getDefaultPaymentCard,
+  loadPaymentMethods,
+  type SavedPaymentCard,
+} from '@/src/utils/payment-method-storage';
 
 const DELIVERY_FEE = 3.0;
-// Must match the per-user key scheme in payment-methods.tsx — cards are saved
-// per user, not globally, so this has to include the signed-in user's id.
-const getPaymentStorageKey = (userId?: string) => `@chefin:payment-method-${userId || 'guest'}`;
-
-type SavedCard = { brand: string; last4: string; expMonth: string; expYear: string };
 type FulfillmentType = 'pickup' | 'delivery';
 
 export default function CartScreen() {
@@ -128,9 +127,16 @@ export default function CartScreen() {
       return;
     }
 
-    // Require a saved payment method before allowing checkout.
-    const raw = await AsyncStorage.getItem(getPaymentStorageKey(user.id));
-    const savedCard: SavedCard | null = raw ? JSON.parse(raw) : null;
+    // Require a saved payment method before allowing checkout. The storage
+    // helper also understands the original single-card format.
+    let savedCard: SavedPaymentCard | null = null;
+    try {
+      savedCard = getDefaultPaymentCard(await loadPaymentMethods(user.id));
+    } catch (error) {
+      console.warn('Failed to load payment methods', error);
+      Alert.alert('Could not load payment methods', 'Please try again before placing your order.');
+      return;
+    }
     if (!savedCard) {
       Alert.alert('Payment method needed', 'Add a card to place your order.', [
         { text: 'Cancel', style: 'cancel' },
@@ -168,9 +174,11 @@ export default function CartScreen() {
 
       if (res.ok) {
         clearCart();
-        Alert.alert('Order Placed!', `Charged ${savedCard.brand} ending in ${savedCard.last4}.`, [
-          { text: 'OK', onPress: () => router.replace('/(user)/(tabs)/home') },
-        ]);
+        Alert.alert(
+          'Order Placed!',
+          `Payment method: ${savedCard.brand} ending in ${savedCard.last4}. No real payment was processed in this demo.`,
+          [{ text: 'OK', onPress: () => router.replace('/(user)/(tabs)/home') }]
+        );
       } else {
         Alert.alert('Could not place order', body?.error ?? 'Please try again.');
       }

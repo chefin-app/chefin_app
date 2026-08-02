@@ -213,13 +213,13 @@ export default function AccountScreen() {
       icon: 'notifications-outline',
       title: 'Notifications',
       subtitle: 'Manage your notification preferences',
-      onPress: () => {}, // TODO: Navigate to notifications
+      onPress: () => router.push('/notifications'), // TODO: Navigate to notifications
     },
     {
       icon: 'help-circle-outline',
       title: 'Help & Support',
       subtitle: 'Get help or contact us',
-      onPress: () => {}, // TODO: Navigate to help
+      onPress: () => router.push('/(user)/help-support'),
     },
   ];
 

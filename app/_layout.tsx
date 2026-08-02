@@ -41,6 +41,7 @@ export default function RootLayout() {
                 <Stack.Screen name="(user)/(tabs)" />
                 <Stack.Screen name="(auth)" />
                 <Stack.Screen name="(cook)" />
+                <Stack.Screen name="admin" />
                 <Stack.Screen name="+not-found" />
               </Stack>
             </OnboardingProvider>

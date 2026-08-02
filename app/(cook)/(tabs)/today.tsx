@@ -36,7 +36,7 @@ interface OrderRow {
 const TABS: { status: ActiveStatus; label: string }[] = [
   { status: 'pending', label: 'New orders' },
   { status: 'confirmed', label: 'Confirmed' },
-  { status: 'ready', label: 'Pickup' },
+  { status: 'ready', label: 'Pickup/Delivery' },
 ];
 
 // The action that advances an order to the next stage of the workflow.

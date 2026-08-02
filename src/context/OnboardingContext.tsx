@@ -29,6 +29,9 @@ export interface OnboardingVerificationDoc {
 export interface OnboardingFoodSafety {
   hostingType: 'private' | 'business' | null;
   documents: OnboardingVerificationDoc[];
+  /** Affirmative acceptance is required even when no optional documents are uploaded. */
+  complianceAccepted: boolean;
+  complianceVersion: string;
 }
 
 /** Kitchen address fields collected during onboarding. */

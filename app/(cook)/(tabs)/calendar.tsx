@@ -19,6 +19,7 @@ import { useFocusEffect } from 'expo-router';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import { supabase } from '@/src/utils/supabaseClient';
 import { useAuth } from '@/src/services/auth-context';
+import { getLocalDateKey } from '@/src/utils/listingAvailability';
 
 const DEFAULT_START_HOUR = 11;
 const DEFAULT_END_HOUR = 13;
@@ -55,10 +56,10 @@ type AvailabilityRow = {
   available_date: string;
   start_time: string;
   end_time: string;
-  is_available: boolean;
+  is_available: boolean | null;
 };
 
-const todayISO = () => new Date().toISOString().split('T')[0];
+const todayISO = () => getLocalDateKey();
 
 const monthBounds = (yearMonth: string): { start: string; end: string } => {
   // yearMonth is "YYYY-MM". Return inclusive start (1st) and exclusive end (1st of next month).
@@ -99,7 +100,8 @@ export default function CookCalendarScreen() {
 
   const openSlotEditor = (listing: Listing) => {
     const row = availability.find(
-      a => a.listing_id === listing.id && a.available_date === selectedDate && a.is_available
+      a =>
+        a.listing_id === listing.id && a.available_date === selectedDate && a.is_available !== false
     );
     setDraftStart(row ? new Date(row.start_time) : dateAt(selectedDate, DEFAULT_START_HOUR));
     setDraftEnd(row ? new Date(row.end_time) : dateAt(selectedDate, DEFAULT_END_HOUR));
@@ -188,7 +190,7 @@ export default function CookCalendarScreen() {
   // ── Toggle availability for a (listing, date) pair ─────────────────
   const isOnFor = (listingId: string, date: string): AvailabilityRow | undefined =>
     availability.find(
-      a => a.listing_id === listingId && a.available_date === date && a.is_available
+      a => a.listing_id === listingId && a.available_date === date && a.is_available !== false
     );
 
   // Tell followers new slots opened. Fire-and-forget: the backend fans out a
@@ -269,7 +271,7 @@ export default function CookCalendarScreen() {
     if (!slotEditing) return;
     const date = selectedDate;
     const existing = availability.find(
-      a => a.listing_id === slotEditing.id && a.available_date === date && a.is_available
+      a => a.listing_id === slotEditing.id && a.available_date === date && a.is_available !== false
     );
     if (!existing) return;
 
@@ -387,7 +389,7 @@ export default function CookCalendarScreen() {
   const markedDates = useMemo(() => {
     const map: Record<string, any> = {};
     for (const a of availability) {
-      if (!a.is_available) continue;
+      if (a.is_available === false) continue;
       const existing = map[a.available_date] ?? {};
       map[a.available_date] = { ...existing, marked: true, dotColor: '#4CAF50' };
     }

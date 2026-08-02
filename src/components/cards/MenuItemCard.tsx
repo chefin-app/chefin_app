@@ -12,19 +12,14 @@ import { useRouter } from 'expo-router';
 import AvailabilityPicker from '@/src/components/inputs/AvailabilityPicker';
 import { useCart } from '@/src/context/CartContext';
 import type { Listing, Profile, Review } from '@/src/types/models';
-
-/** Returns 'today', 'tomorrow', or a short formatted date */
-function getAvailabilityLabel(dateStr?: string): string {
-  if (!dateStr) return 'Unknown';
-  const today = new Date();
-  const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-  const target = new Date(dateStr + 'T00:00:00');
-  const targetMidnight = new Date(target.getFullYear(), target.getMonth(), target.getDate());
-  const diff = Math.round((targetMidnight.getTime() - todayMidnight.getTime()) / 86400000);
-  if (diff === 0) return 'today';
-  if (diff === 1) return 'tomorrow';
-  return target.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-}
+import { formatRating, getRatingSummary } from '@/src/utils/ratings';
+import {
+  formatAvailabilityLabel,
+  getAvailabilitySummary,
+  getLocalDateKey,
+  type AvailabilityRecord,
+  type AvailabilitySummary,
+} from '@/src/utils/listingAvailability';
 
 export interface MenuItemCardProps extends Listing {
   title: string;
@@ -65,7 +60,7 @@ const MenuItemCard: React.FC<MenuItemCardProps> = ({
     isFull: boolean;
   } | null>(null);
   const isSlotSelected = !!selectedDate && !!selectedSlot && !selectedSlot.isFull;
-  const [nextAvailableDate, setNextAvailableDate] = useState<string | undefined>(undefined);
+  const [availability, setAvailability] = useState<AvailabilitySummary>({ state: 'unavailable' });
 
   // Cap quantity at whatever capacity the cook set for the selected slot.
   const maxQuantity = selectedSlot?.remainingSlots ?? 99;
@@ -77,21 +72,12 @@ const MenuItemCard: React.FC<MenuItemCardProps> = ({
 
   // Fetch earliest available date for this listing on mount
   useEffect(() => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = getLocalDateKey();
     fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/availability/${id}`)
       .then(r => r.json())
       .then(d => {
-        const avail: any[] = d.availability ?? [];
-        const earliest = avail
-          .filter(
-            r =>
-              r.is_available &&
-              r.max_orders - (r.orders_taken ?? 0) > 0 &&
-              r.available_date >= today
-          )
-          .map(r => (r.available_date as string).split('T')[0])
-          .sort()[0];
-        setNextAvailableDate(earliest);
+        const avail = (d.availability ?? []) as AvailabilityRecord[];
+        setAvailability(getAvailabilitySummary(avail, today));
       })
       .catch(() => {
         /* silent */
@@ -109,10 +95,8 @@ const MenuItemCard: React.FC<MenuItemCardProps> = ({
   // Handle both flattened props and nested profiles object
   const displayName = title || 'Unknown Dish';
   const displayDishImage = image_url;
-  const displayDishRating =
-    reviews && reviews.length > 0
-      ? (reviews.reduce((sum, r) => sum + (r.rating ?? 0), 0) / reviews.length).toFixed(1)
-      : '-';
+  const ratingSummary = getRatingSummary(reviews);
+  const displayDishRating = formatRating(ratingSummary.average);
 
   useEffect(() => {
     if (!isActive) setModalVisible(false);
@@ -149,16 +133,13 @@ const MenuItemCard: React.FC<MenuItemCardProps> = ({
             ) : null}
             <View style={styles.footerRow}>
               <Text style={styles.price}>RM {price.toFixed(2)}</Text>
-              {displayDishRating !== '-' && (
+              {ratingSummary.count > 0 && (
                 <View style={styles.ratingBadge}>
                   <Text style={styles.ratingText}>★ {displayDishRating}</Text>
                 </View>
               )}
             </View>
-            <Text style={styles.availabilityText}>
-              Earliest availability:{' '}
-              <Text style={styles.availabilityText}>{getAvailabilityLabel(nextAvailableDate)}</Text>
-            </Text>
+            <Text style={styles.availabilityText}>{formatAvailabilityLabel(availability)}</Text>
           </View>
           <View style={styles.imageContainer}>
             {displayDishImage ? (

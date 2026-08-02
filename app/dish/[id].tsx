@@ -10,14 +10,15 @@ import {
 } from 'react-native';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Ionicons, MaterialIcons } from '@expo/vector-icons';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import AvailabilityPicker, {
   AvailabilityPickerHandle,
 } from '@/src/components/inputs/AvailabilityPicker';
 import { useCart } from '@/src/context/CartContext';
 import { useFavourites } from '@/src/context/FavouritesContext';
 import StickyCartBar from '@/src/components/navigation/StickyCartBar';
+import VerifiedBadge from '@/src/components/feedback/VerifiedBadge';
+import { formatRating, getRatingSummary, hasValidReviewRating } from '@/src/utils/ratings';
 
 const DishDetailsScreen = () => {
   const { id } = useLocalSearchParams();
@@ -104,10 +105,12 @@ const DishDetailsScreen = () => {
   }
 
   const { profiles, reviews = [] } = dish;
-  const averageRating =
-    reviews.length > 0
-      ? (reviews.reduce((sum: number, r: any) => sum + r.rating, 0) / reviews.length).toFixed(1)
-      : 'New';
+  const validReviews = reviews.filter(hasValidReviewRating);
+  const ratingSummary = getRatingSummary(validReviews);
+  const averageRating = formatRating(ratingSummary.average);
+  const restaurantRatingSummary = getRatingSummary(dish.restaurant_reviews);
+  const favouriteRatingSummary =
+    restaurantRatingSummary.count > 0 ? restaurantRatingSummary : ratingSummary;
 
   const handleAddToCart = () => {
     if (dish && selectedDate) {
@@ -135,8 +138,19 @@ const DishDetailsScreen = () => {
       restaurantName: profiles?.restaurant_name || profiles?.full_name || 'Restaurant',
       imageUrl: dish.image_url,
       fullChefName: profiles?.full_name,
-      rating: averageRating,
-      reviewCount: reviews.length,
+      rating: formatRating(favouriteRatingSummary.average),
+      reviewCount: favouriteRatingSummary.count,
+    });
+  };
+
+  const handleReportListing = () => {
+    router.push({
+      pathname: '/report-listing',
+      params: {
+        targetType: 'listing',
+        targetId: dish.id,
+        targetName: dish.title || 'Dish listing',
+      },
     });
   };
 
@@ -189,7 +203,9 @@ const DishDetailsScreen = () => {
             <View style={styles.statItem}>
               <Ionicons name="star" size={18} color="#FFB800" />
               <Text style={styles.statTextBold}>{averageRating}</Text>
-              <Text style={styles.statText}>({reviews.length} reviews)</Text>
+              <Text style={styles.statText}>
+                ({ratingSummary.count} {ratingSummary.count === 1 ? 'review' : 'reviews'})
+              </Text>
             </View>
             <View style={styles.divider} />
             <View style={styles.statItem}>
@@ -281,14 +297,7 @@ const DishDetailsScreen = () => {
               <Text style={styles.chefCardTitle}>Prepared by</Text>
               <View style={styles.chefNameRow}>
                 <Text style={styles.chefName}>{profiles?.full_name}</Text>
-                {profiles?.is_verified && (
-                  <MaterialIcons
-                    name="verified"
-                    size={18}
-                    color="#0084ff"
-                    style={{ marginLeft: 4 }}
-                  />
-                )}
+                {profiles?.is_verified && <VerifiedBadge size={18} style={styles.verifiedBadge} />}
               </View>
               <Text style={styles.chefRestaurant}>{profiles?.restaurant_name}</Text>
             </View>
@@ -302,11 +311,11 @@ const DishDetailsScreen = () => {
               <Text style={styles.seeAllText}>See all</Text>
             </View>
 
-            {reviews.length === 0 ? (
+            {validReviews.length === 0 ? (
               <Text style={styles.emptyText}>No reviews yet.</Text>
             ) : (
               <View style={styles.reviewsList}>
-                {reviews.slice(0, 3).map((review: any) => (
+                {validReviews.slice(0, 3).map((review: any) => (
                   <View key={review.id} style={styles.reviewCard}>
                     <View style={styles.reviewHeader}>
                       <Image
@@ -333,6 +342,16 @@ const DishDetailsScreen = () => {
               </View>
             )}
           </View>
+
+          <TouchableOpacity
+            style={styles.reportButton}
+            onPress={handleReportListing}
+            accessibilityRole="button"
+            accessibilityLabel={`Report ${dish.title || 'this dish listing'}`}
+          >
+            <Ionicons name="flag-outline" size={18} color="#B42318" />
+            <Text style={styles.reportButtonText}>Report this dish</Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
       <StickyCartBar />
@@ -594,6 +613,9 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#1A1A1A',
   },
+  verifiedBadge: {
+    marginLeft: 4,
+  },
   chefRestaurant: {
     fontSize: 14,
     color: '#666',
@@ -667,6 +689,24 @@ const styles = StyleSheet.create({
   emptyText: {
     color: '#888',
     fontStyle: 'italic',
+  },
+  reportButton: {
+    minHeight: 52,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    borderWidth: 1,
+    borderColor: '#F1C7C4',
+    borderRadius: 14,
+    backgroundColor: '#FFF5F4',
+    marginBottom: 30,
+    paddingHorizontal: 16,
+  },
+  reportButtonText: {
+    color: '#B42318',
+    fontSize: 14,
+    fontWeight: '700',
   },
   errorText: {
     fontSize: 18,

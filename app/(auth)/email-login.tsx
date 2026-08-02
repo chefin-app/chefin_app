@@ -1,7 +1,7 @@
 import { useAuth } from '@/src/services/auth-context';
 import { supabase } from '@/src/utils/supabaseClient';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams, type Href } from 'expo-router';
 import React, { useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -39,6 +39,11 @@ function passwordChecks(password: string) {
 }
 
 export default function EmailLoginScreen() {
+  const { returnTo } = useLocalSearchParams<{ returnTo?: string }>();
+  const safeReturnTo =
+    typeof returnTo === 'string' && returnTo.startsWith('/') && !returnTo.startsWith('//')
+      ? returnTo
+      : null;
   const [step, setStep] = useState<Step>('email');
   const [mode, setMode] = useState<Mode>('unknown');
   const [email, setEmail] = useState('');
@@ -63,7 +68,10 @@ export default function EmailLoginScreen() {
   // profile, which is worse.
   const routeAfterAuth = async (userId: string | undefined) => {
     if (!userId) {
-      router.replace('/(auth)/onboarding');
+      router.replace({
+        pathname: '/(auth)/onboarding',
+        params: safeReturnTo ? { returnTo: safeReturnTo } : undefined,
+      });
       return;
     }
     const { data, error } = await supabase
@@ -72,7 +80,18 @@ export default function EmailLoginScreen() {
       .eq('user_id', userId)
       .maybeSingle();
     const completed = !error && data?.onboarding_completed === true;
-    router.replace(completed ? '/(user)/(tabs)/home' : '/(auth)/onboarding');
+    if (!completed) {
+      router.replace({
+        pathname: '/(auth)/onboarding',
+        params: safeReturnTo ? { returnTo: safeReturnTo } : undefined,
+      });
+      return;
+    }
+    if (safeReturnTo) {
+      router.dismissTo(safeReturnTo as Href);
+    } else {
+      router.replace('/(user)/(tabs)/home');
+    }
   };
 
   const emailValid = EMAIL_REGEX.test(email.trim());
