@@ -2,6 +2,8 @@ import express from 'express';
 import type { AdminRequest } from '../middleware/requireAdmin';
 import { requireAdmin } from '../middleware/requireAdmin';
 import { supabase } from '../supabaseClient';
+import adminUsersRoutes from './adminUsers';
+import adminModerationRoutes from './adminModeration';
 
 const router = express.Router();
 
@@ -108,6 +110,9 @@ const buildSalesSeries = (orders: OrderRow[], days: number, now = new Date()) =>
 };
 
 router.use(requireAdmin);
+
+router.use('/users', adminUsersRoutes);
+router.use('/moderation', adminModerationRoutes);
 
 router.get('/session', (req: AdminRequest, res) => {
   res.json({ admin: req.admin });

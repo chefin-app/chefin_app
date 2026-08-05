@@ -52,6 +52,7 @@ const STATUS_META: Record<VerificationDocStatus, { label: string; color: string;
   pending: { label: 'Pending review', color: '#B26A00', bg: '#FFF3E0' },
   approved: { label: 'Verified', color: '#2E7D32', bg: '#E8F5E9' },
   rejected: { label: 'Rejected', color: '#C62828', bg: '#FFEBEE' },
+  more_info_requested: { label: 'More information needed', color: '#175CD3', bg: '#EFF8FF' },
 };
 
 export default function FoodSafetyScreen() {
@@ -316,8 +317,10 @@ export default function FoodSafetyScreen() {
         {TIER1_DOCUMENTS.map(doc => {
           const submitted = submittedDocs[doc.type];
           const pending = pendingAssets[doc.type];
-          // A rejected doc can be re-submitted; pending/approved ones are locked.
-          const locked = submitted != null && submitted.status !== 'rejected' && !pending;
+          // A rejected document or one needing more information can be replaced.
+          const canResubmit =
+            submitted?.status === 'rejected' || submitted?.status === 'more_info_requested';
+          const locked = submitted != null && !canResubmit && !pending;
 
           return (
             <View key={doc.type} style={styles.docBlock}>
@@ -345,8 +348,13 @@ export default function FoodSafetyScreen() {
                 )}
               </View>
 
-              {submitted?.status === 'rejected' && submitted.reviewer_note && !pending && (
-                <Text style={styles.rejectionNote}>Reviewer note: {submitted.reviewer_note}</Text>
+              {canResubmit && submitted?.reviewer_note && !pending && (
+                <Text style={styles.rejectionNote}>
+                  {submitted.status === 'more_info_requested'
+                    ? 'Information requested'
+                    : 'Reviewer note'}
+                  : {submitted.reviewer_note}
+                </Text>
               )}
 
               {!locked && (

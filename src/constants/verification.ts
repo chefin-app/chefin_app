@@ -10,7 +10,7 @@ export const VERIFICATION_BUCKET = 'food-safety-licenses';
 
 export type VerificationDocType = 'food_handler_certificate' | 'typhoid_vaccination';
 
-export type VerificationDocStatus = 'pending' | 'approved' | 'rejected';
+export type VerificationDocStatus = 'pending' | 'approved' | 'rejected' | 'more_info_requested';
 
 export interface VerificationDocMeta {
   type: VerificationDocType;

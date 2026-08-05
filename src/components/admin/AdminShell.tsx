@@ -21,18 +21,24 @@ type NavItem = {
   key: string;
   label: string;
   icon: React.ComponentProps<typeof Ionicons>['name'];
-  route?: '/admin/overview';
+  route?: '/admin/overview' | '/admin/users' | '/admin/moderation';
 };
 
-const NAV_ITEMS: NavItem[] = [
+const WORKSPACE_NAV_ITEMS: NavItem[] = [
   { key: 'overview', label: 'Overview', icon: 'grid-outline', route: '/admin/overview' },
-  { key: 'users', label: 'User Management', icon: 'people-outline' },
+  { key: 'users', label: 'User Management', icon: 'people-outline', route: '/admin/users' },
   { key: 'cooks', label: 'Cook Management', icon: 'restaurant-outline' },
   { key: 'dishes', label: 'Dish Management', icon: 'fast-food-outline' },
+  {
+    key: 'moderation',
+    label: 'Moderation',
+    icon: 'shield-checkmark-outline',
+    route: '/admin/moderation',
+  },
   { key: 'orders', label: 'Order Monitoring', icon: 'receipt-outline' },
   { key: 'payments', label: 'Payments', icon: 'card-outline' },
-  { key: 'settings', label: 'Settings', icon: 'settings-outline' },
 ];
+const SETTINGS_ITEM: NavItem = { key: 'settings', label: 'Settings', icon: 'settings-outline' };
 
 const initials = (name: string): string =>
   name
@@ -114,8 +120,8 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
 
       <Text style={styles.navLabel}>WORKSPACE</Text>
       <View style={styles.navList}>
-        {NAV_ITEMS.slice(0, 6).map(item => {
-          const active = item.route ? pathname.endsWith('/overview') : false;
+        {WORKSPACE_NAV_ITEMS.map(item => {
+          const active = item.route ? pathname === item.route : false;
           return (
             <TouchableOpacity
               key={item.key}
@@ -137,7 +143,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
 
       <View style={styles.sidebarSpacer} />
       <Text style={styles.navLabel}>SYSTEM</Text>
-      <TouchableOpacity style={styles.navItem} onPress={() => selectNav(NAV_ITEMS[6])}>
+      <TouchableOpacity style={styles.navItem} onPress={() => selectNav(SETTINGS_ITEM)}>
         <Ionicons name="settings-outline" size={19} color="#59665E" />
         <Text style={styles.navItemText}>Settings</Text>
         <View style={styles.soonDot} />

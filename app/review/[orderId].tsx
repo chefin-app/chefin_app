@@ -47,7 +47,7 @@ const RATING_LABELS = ['', 'Poor', 'Fair', 'Good', 'Very good', 'Excellent!'];
 export default function ReviewOrderScreen() {
   const router = useRouter();
   const { orderId } = useLocalSearchParams<{ orderId: string }>();
-  const { user } = useAuth();
+  const { user, session, canMutate } = useAuth();
 
   const [loading, setLoading] = useState(true);
   const [order, setOrder] = useState<OrderDetails | null>(null);
@@ -71,9 +71,9 @@ export default function ReviewOrderScreen() {
             )
             .eq('id', orderId)
             .single(),
-          fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/reviews/order/${orderId}`).catch(
-            () => null
-          ),
+          fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/reviews/order/${orderId}`, {
+            headers: { Authorization: `Bearer ${session?.access_token ?? ''}` },
+          }).catch(() => null),
         ]);
         if (cancelled) return;
         if (orderErr) throw orderErr;
@@ -92,7 +92,7 @@ export default function ReviewOrderScreen() {
     return () => {
       cancelled = true;
     };
-  }, [orderId]);
+  }, [orderId, session?.access_token]);
 
   const handleSubmit = async () => {
     if (rating < 1) {
@@ -103,11 +103,21 @@ export default function ReviewOrderScreen() {
       Alert.alert('Sign in required', 'Please sign in to leave a review.');
       return;
     }
+    if (!canMutate) {
+      Alert.alert(
+        'Read-only account',
+        'Reviews cannot be submitted while your account is restricted.'
+      );
+      return;
+    }
     setSubmitting(true);
     try {
       const res = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/reviews`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session?.access_token ?? ''}`,
+        },
         body: JSON.stringify({
           userId: user.id,
           orderId,

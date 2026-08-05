@@ -77,7 +77,7 @@ export default function PaymentMethodScreen() {
   // When opened from checkout (cart has no saved card yet), come back to the
   // cart afterwards instead of leaving the user stranded on this screen.
   const { returnTo } = useLocalSearchParams<{ returnTo?: string }>();
-  const { user } = useAuth();
+  const { user, canMutate } = useAuth();
   const [paymentMethods, setPaymentMethods] = useState<StoredPaymentMethods>(() =>
     emptyPaymentMethods()
   );
@@ -158,6 +158,13 @@ export default function PaymentMethodScreen() {
   };
 
   const handleSubmit = async () => {
+    if (!canMutate) {
+      Alert.alert(
+        'Payment methods are read-only',
+        'You cannot add or change payment methods while your account is restricted.'
+      );
+      return;
+    }
     const err = validate();
     if (err) {
       Alert.alert('Check your card details', err);
@@ -212,6 +219,13 @@ export default function PaymentMethodScreen() {
   };
 
   const handleRemove = (card: SavedPaymentCard) => {
+    if (!canMutate) {
+      Alert.alert(
+        'Payment methods are read-only',
+        'You cannot remove payment methods while your account is restricted.'
+      );
+      return;
+    }
     Alert.alert('Remove card?', `${card.brand} ending in ${card.last4} will be removed.`, [
       { text: 'Cancel', style: 'cancel' },
       {
@@ -239,6 +253,13 @@ export default function PaymentMethodScreen() {
   };
 
   const handleSetDefault = async (card: SavedPaymentCard) => {
+    if (!canMutate) {
+      Alert.alert(
+        'Payment methods are read-only',
+        'You cannot change your default card while your account is restricted.'
+      );
+      return;
+    }
     if (paymentMethods.defaultCardId === card.id) return;
     const nextMethods: StoredPaymentMethods = {
       ...paymentMethods,
@@ -253,6 +274,13 @@ export default function PaymentMethodScreen() {
   };
 
   const beginAddFlow = () => {
+    if (!canMutate) {
+      Alert.alert(
+        'Payment methods are read-only',
+        'You cannot add payment methods while your account is restricted.'
+      );
+      return;
+    }
     resetForm();
     setShowForm(true);
     // Defer to allow render, then focus
@@ -366,10 +394,10 @@ export default function PaymentMethodScreen() {
             <TouchableOpacity
               style={[
                 styles.primaryButton,
-                (!isComplete || saving) && styles.primaryButtonDisabled,
+                (!isComplete || saving || !canMutate) && styles.primaryButtonDisabled,
               ]}
               onPress={handleSubmit}
-              disabled={!isComplete || saving}
+              disabled={!isComplete || saving || !canMutate}
             >
               {saving ? (
                 <ActivityIndicator color="#fff" />
@@ -443,7 +471,10 @@ export default function PaymentMethodScreen() {
             })}
           </View>
 
-          <TouchableOpacity style={styles.addAnotherButton} onPress={beginAddFlow}>
+          <TouchableOpacity
+            style={[styles.addAnotherButton, !canMutate && styles.restrictedAction]}
+            onPress={beginAddFlow}
+          >
             <Ionicons name="add-circle-outline" size={22} color="#2E7D32" />
             <Text style={styles.addAnotherButtonText}>Add another card</Text>
           </TouchableOpacity>
@@ -472,7 +503,10 @@ export default function PaymentMethodScreen() {
         <Text style={styles.emptySubtitle}>
           Add a demo card to choose a default payment method for checkout.
         </Text>
-        <TouchableOpacity style={styles.addButton} onPress={beginAddFlow}>
+        <TouchableOpacity
+          style={[styles.addButton, !canMutate && styles.restrictedAction]}
+          onPress={beginAddFlow}
+        >
           <Ionicons name="add" size={20} color="#4CAF50" />
           <Text style={styles.addButtonText}> Add a card</Text>
         </TouchableOpacity>
@@ -516,6 +550,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
   },
   addButtonText: { color: '#4CAF50', fontWeight: '600', fontSize: 16 },
+  restrictedAction: { opacity: 0.45 },
   formContainer: { padding: 20 },
   demoNotice: {
     flexDirection: 'row',

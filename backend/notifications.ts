@@ -19,11 +19,13 @@ export type NotificationType =
   | 'payout_sent' // cook: earnings for a completed order are on the way
   | 'verification_approved' // cook: food-safety document approved → badge granted
   | 'verification_rejected' // cook: food-safety document rejected, resubmit
+  | 'verification_more_info' // cook: admin needs another document/detail
   | 'dish_approved' // cook: admin approved a dish, it's now live
   | 'dish_rejected' // cook: admin rejected a dish
   | 'favourite_new_dish' // buyer: a favourited cook has a new dish live
   | 'favourite_new_slots' // buyer: a favourited cook opened new pickup times
-  | 'review_request'; // buyer: order completed — rate the dish
+  | 'review_request' // buyer: order completed — rate the dish
+  | 'admin_message'; // administrator support message
 
 /**
  * One account can act as both customer and cook; every type belongs to
@@ -39,11 +41,13 @@ const ROLE_BY_TYPE: Record<NotificationType, 'customer' | 'cook'> = {
   payout_sent: 'cook',
   verification_approved: 'cook',
   verification_rejected: 'cook',
+  verification_more_info: 'cook',
   dish_approved: 'cook',
   dish_rejected: 'cook',
   favourite_new_dish: 'customer',
   favourite_new_slots: 'customer',
   review_request: 'customer',
+  admin_message: 'customer',
 };
 
 interface NotificationPayload {
@@ -199,6 +203,18 @@ export function notifyCookVerificationReviewed(
     type: 'verification_rejected',
     title: 'Document not approved',
     body: `Your ${docLabel} couldn't be approved${reviewerNote ? `: ${reviewerNote}` : '.'} You can resubmit it from your food safety settings.`,
+  });
+}
+
+export function notifyCookVerificationMoreInfo(
+  cookUserId: string,
+  docLabel: string,
+  reviewerNote: string
+) {
+  return createNotification(cookUserId, {
+    type: 'verification_more_info',
+    title: 'More verification information needed',
+    body: `We need more information for your ${docLabel}: ${reviewerNote}`,
   });
 }
 

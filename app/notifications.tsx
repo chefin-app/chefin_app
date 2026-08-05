@@ -43,6 +43,10 @@ export default function NotificationsScreen() {
     // Actionable notifications deep-link to their screen.
     if (item.type === 'review_request' && typeof item.data?.order_id === 'string') {
       router.push(`/review/${item.data.order_id}`);
+      return;
+    }
+    if (item.type === 'verification_more_info') {
+      router.push('/(cook)/food-safety');
     }
   };
 

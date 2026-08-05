@@ -26,7 +26,7 @@ type FulfillmentType = 'pickup' | 'delivery';
 
 export default function CartScreen() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, session, canMutate, accountStatus } = useAuth();
   const { cartItems, removeFromCart, updateQuantity, clearCart, cartTotal, cartCount } = useCart();
   const [placingOrder, setPlacingOrder] = useState(false);
   // Pickup is the default — it's always available with no fee, unlike
@@ -126,6 +126,15 @@ export default function CartScreen() {
       ]);
       return;
     }
+    if (!canMutate) {
+      Alert.alert(
+        'Checkout unavailable',
+        accountStatus === 'suspended'
+          ? 'Your account is currently read-only, so new orders cannot be placed.'
+          : 'Account access must be verified before placing an order.'
+      );
+      return;
+    }
 
     // Require a saved payment method before allowing checkout. The storage
     // helper also understands the original single-card format.
@@ -156,7 +165,10 @@ export default function CartScreen() {
     try {
       const res = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/orders`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session?.access_token ?? ''}`,
+        },
         body: JSON.stringify({
           userId: user.id,
           fulfillmentType,

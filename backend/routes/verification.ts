@@ -1,7 +1,8 @@
 import express from 'express';
 import { supabase } from '../supabaseClient';
-import { notifyCookVerificationReviewed } from '../notifications';
-import { requireAdmin } from '../middleware/requireAdmin';
+import { notifyCookVerificationMoreInfo, notifyCookVerificationReviewed } from '../notifications';
+import { writeAdminAudit } from '../adminAudit';
+import { requireAdmin, type AdminRequest } from '../middleware/requireAdmin';
 
 const router = express.Router();
 
@@ -76,10 +77,46 @@ router.get('/pending', requireAdmin, async (req, res) => {
   }
 });
 
+// GET /document/:documentId/file - Generate a fresh, short-lived URL only
+// after authenticating the administrator. The private storage path is never
+// exposed to the browser as a permanent public URL.
+router.get('/document/:documentId/file', requireAdmin, async (req: AdminRequest, res) => {
+  const { documentId } = req.params;
+  try {
+    const { data: document, error } = await supabase
+      .from('verification_documents')
+      .select('id, user_id, doc_type, storage_path')
+      .eq('id', documentId)
+      .maybeSingle();
+    if (error) throw error;
+    if (!document) return res.status(404).json({ error: 'Verification document not found.' });
+
+    const { data: signed, error: signedError } = await supabase.storage
+      .from(BUCKET)
+      .createSignedUrl(document.storage_path, 10 * 60);
+    if (signedError || !signed?.signedUrl) {
+      throw signedError ?? new Error('A secure document link could not be created.');
+    }
+
+    await writeAdminAudit({
+      actorUserId: req.admin!.userId,
+      targetUserId: document.user_id,
+      action: 'verification_document_viewed',
+      details: { documentId: document.id, documentType: document.doc_type },
+    });
+
+    res.json({ fileUrl: signed.signedUrl, expiresInSeconds: 10 * 60 });
+  } catch (err: unknown) {
+    res.status(400).json({
+      error: err instanceof Error ? err.message : 'Verification document could not be opened.',
+    });
+  }
+});
+
 // POST /review - Approve or reject a submitted document.
 // Body: { document_id, decision: 'approved' | 'rejected', reviewer_note? }
 // Approving any Tier 1 document grants the Tier 1 "Verified" badge.
-router.post('/review', requireAdmin, async (req, res) => {
+router.post('/review', requireAdmin, async (req: AdminRequest, res) => {
   const { document_id, decision, reviewer_note } = req.body as {
     document_id?: string;
     decision?: string;
@@ -89,14 +126,32 @@ router.post('/review', requireAdmin, async (req, res) => {
   if (!document_id || !decision) {
     return res.status(400).json({ error: 'document_id and decision are required' });
   }
-  if (decision !== 'approved' && decision !== 'rejected') {
-    return res.status(400).json({ error: "decision must be 'approved' or 'rejected'" });
+  if (!['approved', 'rejected', 'more_info_requested'].includes(decision)) {
+    return res.status(400).json({
+      error: "decision must be 'approved', 'rejected', or 'more_info_requested'",
+    });
   }
-  if (decision === 'rejected' && !reviewer_note?.trim()) {
-    return res.status(400).json({ error: 'reviewer_note is required when rejecting' });
+  if (decision !== 'approved' && !reviewer_note?.trim()) {
+    return res.status(400).json({ error: 'reviewer_note is required for this decision' });
   }
 
   try {
+    const { data: existingDocument, error: lookupError } = await supabase
+      .from('verification_documents')
+      .select('id, status')
+      .eq('id', document_id)
+      .maybeSingle();
+    if (lookupError) throw lookupError;
+    if (!existingDocument) {
+      return res.status(404).json({ error: 'Verification document not found.' });
+    }
+    if (existingDocument.status !== 'pending') {
+      return res.status(409).json({
+        error: `This document has already been ${existingDocument.status.replace(/_/g, ' ')}. Refresh the user details before taking another action.`,
+        currentStatus: existingDocument.status,
+      });
+    }
+
     const { data: doc, error: updateErr } = await supabase
       .from('verification_documents')
       .update({
@@ -107,9 +162,18 @@ router.post('/review', requireAdmin, async (req, res) => {
       .eq('id', document_id)
       .eq('status', 'pending')
       .select('id, user_id, doc_type')
-      .single();
-    if (updateErr || !doc) {
-      return res.status(404).json({ error: 'Pending document not found' });
+      .maybeSingle();
+    if (updateErr) throw updateErr;
+    if (!doc) {
+      const { data: latest } = await supabase
+        .from('verification_documents')
+        .select('status')
+        .eq('id', document_id)
+        .maybeSingle();
+      return res.status(409).json({
+        error: `This document was reviewed by another action${latest?.status ? ` and is now ${latest.status.replace(/_/g, ' ')}` : ''}. Refresh the user details and try again.`,
+        currentStatus: latest?.status ?? null,
+      });
     }
 
     let verification_tier: number | undefined;
@@ -130,12 +194,38 @@ router.post('/review', requireAdmin, async (req, res) => {
     }
 
     // Tell the cook the outcome (best-effort — the review already landed).
-    await notifyCookVerificationReviewed(
-      doc.user_id,
-      DOC_LABELS[doc.doc_type] ?? 'food safety document',
-      decision === 'approved',
-      reviewer_note
-    );
+    if (decision === 'more_info_requested') {
+      await notifyCookVerificationMoreInfo(
+        doc.user_id,
+        DOC_LABELS[doc.doc_type] ?? 'food safety document',
+        reviewer_note!.trim()
+      );
+    } else {
+      await notifyCookVerificationReviewed(
+        doc.user_id,
+        DOC_LABELS[doc.doc_type] ?? 'food safety document',
+        decision === 'approved',
+        reviewer_note
+      );
+    }
+
+    try {
+      await writeAdminAudit({
+        actorUserId: req.admin!.userId,
+        targetUserId: doc.user_id,
+        action: `verification_document_${decision}`,
+        details: {
+          documentId: doc.id,
+          documentType: doc.doc_type,
+          reviewerNote: reviewer_note?.trim() || null,
+        },
+      });
+    } catch (auditError) {
+      // The review has already landed. Do not tell the admin it failed and
+      // encourage a duplicate decision merely because secondary audit logging
+      // encountered a transient error.
+      console.error('Verification review audit logging failed:', auditError);
+    }
 
     res.json({
       message: `Document ${decision}`,

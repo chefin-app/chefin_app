@@ -16,6 +16,7 @@ import verificationRoutes from './routes/verification';
 import reviewsRoutes from './routes/reviews';
 import reportsRoutes from './routes/reports';
 import adminRoutes from './routes/admin';
+import accountRoutes from './routes/account';
 
 const app = express();
 const PORT = process.env.PORT || 8000;
@@ -62,6 +63,7 @@ app.use('/api/verification', verificationRoutes);
 app.use('/api/reviews', reviewsRoutes);
 app.use('/api/reports', reportsRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/account', accountRoutes);
 
 // 404 handler
 app.use('/{*any}', (req, res) => {

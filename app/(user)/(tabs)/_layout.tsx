@@ -3,6 +3,8 @@ import TopNavBarHomeUser from '@/src/components/navigation/TopNavBarHomeUser';
 import BottomTabBarUser from '@/src/components/navigation/BottomTabBarUser';
 import { useCallback } from 'react';
 import { useAuth } from '@/src/services/auth-context';
+import { View } from 'react-native';
+import AccountRestrictionBanner from '@/src/components/feedback/AccountRestrictionBanner';
 
 const NavBar = (props: any) => <TopNavBarHomeUser {...props} />;
 const TabBar = (props: any) => <BottomTabBarUser {...props} />;
@@ -21,28 +23,31 @@ export default function TabLayout() {
   const isLoggedIn = !!user;
 
   return (
-    <Tabs
-      tabBar={TabBar}
-      screenOptions={{
-        header: NavBar,
-      }}
-    >
-      <Tabs.Screen name="home" options={{ title: 'Home' }} />
-      <Tabs.Screen name="search" options={{ title: 'Search' }} />
-      <Tabs.Screen
-        name="account"
-        options={{
-          title: isLoggedIn ? 'Account' : 'Log In',
+    <View style={{ flex: 1 }}>
+      <AccountRestrictionBanner />
+      <Tabs
+        tabBar={TabBar}
+        screenOptions={{
+          header: NavBar,
         }}
-        listeners={{
-          tabPress: e => {
-            if (!isLoggedIn) {
-              e.preventDefault();
-              router.push('/(auth)/login');
-            }
-          },
-        }}
-      />
-    </Tabs>
+      >
+        <Tabs.Screen name="home" options={{ title: 'Home' }} />
+        <Tabs.Screen name="search" options={{ title: 'Search' }} />
+        <Tabs.Screen
+          name="account"
+          options={{
+            title: isLoggedIn ? 'Account' : 'Log In',
+          }}
+          listeners={{
+            tabPress: e => {
+              if (!isLoggedIn) {
+                e.preventDefault();
+                router.push('/(auth)/login');
+              }
+            },
+          }}
+        />
+      </Tabs>
+    </View>
   );
 }

@@ -7,6 +7,7 @@ import {
   validateReportPayload,
   type ReportTargetType,
 } from '../reporting';
+import { authenticateAccount } from '../accountAccess';
 
 const router = express.Router();
 
@@ -24,30 +25,12 @@ type ReportTarget = {
 type AuthResult = { ok: true; reporter: Reporter } | { ok: false; status: number; error: string };
 
 const authenticateReporter = async (req: Request): Promise<AuthResult> => {
-  const authorization = req.header('authorization')?.trim() ?? '';
-  const match = authorization.match(/^Bearer\s+(.+)$/i);
-  if (!match?.[1]) {
-    return { ok: false, status: 401, error: 'Sign in to submit a report.' };
-  }
-
-  const { data, error } = await supabase.auth.getUser(match[1]);
-  if (error || !data.user) {
-    return { ok: false, status: 401, error: 'Your session has expired. Please sign in again.' };
-  }
-
-  const { data: profile, error: profileError } = await supabase
-    .from('profiles')
-    .select('id')
-    .eq('user_id', data.user.id)
-    .maybeSingle();
-  if (profileError) throw profileError;
-  if (!profile) {
-    return { ok: false, status: 403, error: 'Complete your profile before submitting a report.' };
-  }
+  const account = await authenticateAccount(req);
+  if (!account.ok) return account;
 
   return {
     ok: true,
-    reporter: { authUserId: data.user.id, profileId: profile.id },
+    reporter: { authUserId: account.account.userId, profileId: account.account.profileId },
   };
 };
 
@@ -167,6 +150,14 @@ router.post('/', async (req, res) => {
   try {
     const auth = await authenticateReporter(req);
     if (!auth.ok) return sendAuthError(res, auth);
+    const account = await authenticateAccount(req);
+    if (!account.ok) return res.status(account.status).json({ error: account.error });
+    if (account.account.status !== 'active') {
+      return res.status(403).json({
+        error: 'Suspended accounts cannot submit reports while in read-only mode.',
+        code: 'ACCOUNT_SUSPENDED',
+      });
+    }
     const targetNoun = validation.value.targetType === 'restaurant' ? 'restaurant' : 'listing';
 
     const target = await resolveTarget(validation.value.targetType, validation.value.targetId);

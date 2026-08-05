@@ -1,4 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { Alert } from 'react-native';
 import { supabase } from '@/src/utils/supabaseClient';
 import { useAuth } from '@/src/services/auth-context';
 import { formatPersistedRating, formatRating, getRatingSummary } from '@/src/utils/ratings';
@@ -37,7 +38,7 @@ const rowToFavourite = (row: any): FavouriteRestaurant => ({
  * a dish or new pickup slots). Guests keep session-only favourites.
  */
 export const FavouritesProvider = ({ children }: { children: React.ReactNode }) => {
-  const { user } = useAuth();
+  const { user, canMutate, accountStatus } = useAuth();
   const userId = user?.id ?? null;
   const [favourites, setFavourites] = useState<FavouriteRestaurant[]>([]);
 
@@ -101,6 +102,13 @@ export const FavouritesProvider = ({ children }: { children: React.ReactNode }) 
 
   const toggleFavourite = useCallback(
     (item: FavouriteRestaurant) => {
+      if (accountStatus === 'suspended' || accountStatus === 'deactivated' || !canMutate) {
+        Alert.alert(
+          'Read-only account',
+          'Favourites cannot be changed while this account is restricted.'
+        );
+        return;
+      }
       let removed = false;
       // Optimistic flip; persistence follows for signed-in users.
       setFavourites(prev => {
@@ -143,7 +151,7 @@ export const FavouritesProvider = ({ children }: { children: React.ReactNode }) 
         }
       })();
     },
-    [userId]
+    [userId, canMutate, accountStatus]
   );
 
   const isFavourite = useCallback(

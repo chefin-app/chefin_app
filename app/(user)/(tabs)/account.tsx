@@ -39,16 +39,19 @@ export default function AccountScreen() {
 
   React.useEffect(() => {
     const fetchUserRole = async () => {
-      if (!user) return;
+      if (!user) {
+        setUserRole(null);
+        return;
+      }
       try {
         const { data, error } = await supabase
           .from('user_roles')
           .select('role')
-          .eq('user_id', user.id)
-          .single();
+          .eq('user_id', user.id);
 
-        if (error && error.code !== 'PGRST116') throw error;
-        setUserRole(data?.role || 'guest');
+        if (error) throw error;
+        const roles = (data ?? []).map(row => row.role);
+        setUserRole(roles.includes('cook') ? 'cook' : 'guest');
       } catch (err) {
         console.error('Error fetching user role:', err);
         setUserRole('guest');

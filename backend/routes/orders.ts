@@ -9,17 +9,35 @@ import {
   notifyCookNewOrder,
   notifyCookPayoutSent,
 } from '../notifications';
+import type { AccountRequest } from '../accountAccess';
+import { requireActiveAccount, requireReadableAccount } from '../accountAccess';
 
 const router = express.Router();
 
-router.get('/', async (req, res) => {
+router.get('/', requireReadableAccount, async (req: AccountRequest, res) => {
   const { status } = req.query;
   const today = new Date().toISOString().split('T')[0]; // Get current date in YYYY-MM-DD format
 
   try {
+    const { data: cookProfile, error: cookError } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('user_id', req.account!.userId)
+      .single();
+    if (cookError || !cookProfile)
+      return res.status(403).json({ error: 'Cook profile not found.' });
+    const { data: cookListings, error: listingsError } = await supabase
+      .from('listings')
+      .select('id')
+      .eq('cook_id', cookProfile.id);
+    if (listingsError) throw listingsError;
+    const listingIds = (cookListings ?? []).map(listing => listing.id);
+    if (listingIds.length === 0) return res.json([]);
+
     let query = supabase
       .from('orders')
       .select('*')
+      .in('listing_id', listingIds)
       .eq('status', status)
       .gte('created_at', `${today}T00:00:00`)
       .lte('created_at', `${today}T23:59:59`)
@@ -45,7 +63,7 @@ router.get('/', async (req, res) => {
 const FULFILLMENT_TYPES = ['pickup', 'delivery'];
 
 // POST / - Place an order from the cart
-router.post('/', async (req, res) => {
+router.post('/', requireActiveAccount, async (req: AccountRequest, res) => {
   const { userId, items, fulfillmentType } = req.body as {
     userId?: string;
     items: {
@@ -58,8 +76,8 @@ router.post('/', async (req, res) => {
     fulfillmentType?: string; // 'pickup' | 'delivery', applies to the whole order
   };
 
-  if (!userId) {
-    return res.status(401).json({ error: 'userId is required to place an order.' });
+  if (userId && userId !== req.account!.userId) {
+    return res.status(403).json({ error: 'The order user does not match the signed-in account.' });
   }
   if (!items || items.length === 0) {
     return res.status(400).json({ error: 'No items in order.' });
@@ -70,16 +88,7 @@ router.post('/', async (req, res) => {
 
   try {
     // orders.customer_id references profiles.id, not auth.users.id — look it up.
-    const { data: profile, error: profileErr } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('user_id', userId)
-      .single();
-
-    if (profileErr || !profile) {
-      console.error('No profile for user', userId, profileErr);
-      return res.status(404).json({ error: 'Profile not found for this user.' });
-    }
+    const profile = { id: req.account!.profileId };
 
     const orderRows = items.map(item => {
       const scheduled = item.pickupDate
@@ -168,7 +177,7 @@ router.post('/', async (req, res) => {
       const createdOrders = data ?? [];
       const total = createdOrders.reduce((sum, o) => sum + Number(o.total_price), 0);
       await notifyBuyerOrderPlaced(
-        userId,
+        req.account!.userId,
         total,
         createdOrders.length,
         createdOrders.map(o => o.id)
@@ -211,26 +220,21 @@ const ORDER_STATUSES = ['pending', 'confirmed', 'ready', 'completed', 'cancelled
 // Runs through the service-role client because orders are owned (RLS-wise) by
 // the customer, not the cook — a cook updating status has no row-level grant
 // from the client, so this has to be a privileged, server-verified write.
-router.patch('/:id/status', async (req, res) => {
+router.patch('/:id/status', requireReadableAccount, async (req: AccountRequest, res) => {
   const { id } = req.params;
   const { status, userId } = req.body as { status?: string; userId?: string };
 
-  if (!userId) {
-    return res.status(401).json({ error: 'userId is required.' });
+  if (userId && userId !== req.account!.userId) {
+    return res
+      .status(403)
+      .json({ error: 'The request user does not match the signed-in account.' });
   }
   if (!status || !ORDER_STATUSES.includes(status)) {
     return res.status(400).json({ error: 'Invalid status.' });
   }
 
   try {
-    const { data: profile, error: profileErr } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('user_id', userId)
-      .single();
-    if (profileErr || !profile) {
-      return res.status(404).json({ error: 'Profile not found for this user.' });
-    }
+    const profile = { id: req.account!.profileId };
 
     // Verify the order belongs to a listing owned by the requesting cook
     // before allowing the write.
@@ -272,7 +276,7 @@ router.patch('/:id/status', async (req, res) => {
 
       if (status === 'completed') {
         // The requester is the verified cook — userId is their auth id.
-        await notifyCookPayoutSent(userId, orderCtx);
+        await notifyCookPayoutSent(req.account!.userId, orderCtx);
       }
 
       const { data: buyer } = await supabase

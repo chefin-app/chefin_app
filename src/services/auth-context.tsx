@@ -20,8 +20,13 @@ interface AuthContextType {
    * `null` while unknown (no session, or the status hasn't loaded yet).
    */
   onboardingCompleted: boolean | null;
+  accountStatus: 'active' | 'suspended' | 'deactivated' | null;
+  suspensionReason: string | null;
+  suspensionEndsAt: string | null;
+  canMutate: boolean;
   /** Re-read onboarding status from the DB (call after completing onboarding). */
   refreshOnboardingStatus: () => Promise<void>;
+  refreshAccountStatus: () => Promise<void>;
   signUp: (
     email: string,
     password: string
@@ -50,6 +55,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [loading, setLoading] = useState(false);
   const [initializing, setInitializing] = useState(true);
   const [onboardingCompleted, setOnboardingCompleted] = useState<boolean | null>(null);
+  const [accountStatus, setAccountStatus] = useState<AuthContextType['accountStatus']>(null);
+  const [suspensionReason, setSuspensionReason] = useState<string | null>(null);
+  const [suspensionEndsAt, setSuspensionEndsAt] = useState<string | null>(null);
 
   // Read the onboarding flag for a given user. Missing profile row or missing
   // column → treat as not-yet-onboarded so we route them through it.
@@ -75,11 +83,89 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     await loadOnboardingStatus(user?.id);
   };
 
+  const loadAccountStatus = async (currentSession: Session | null) => {
+    if (!currentSession?.access_token) {
+      setAccountStatus(null);
+      setSuspensionReason(null);
+      setSuspensionEndsAt(null);
+      return;
+    }
+
+    const applyAccountStatus = (account: {
+      status: Exclude<AuthContextType['accountStatus'], null>;
+      suspensionReason?: string | null;
+      suspensionEndsAt?: string | null;
+    }) => {
+      const suspensionExpired =
+        account.status === 'suspended' &&
+        Boolean(account.suspensionEndsAt) &&
+        new Date(account.suspensionEndsAt!).getTime() <= Date.now();
+      setAccountStatus(suspensionExpired ? 'active' : account.status);
+      setSuspensionReason(suspensionExpired ? null : (account.suspensionReason ?? null));
+      setSuspensionEndsAt(suspensionExpired ? null : (account.suspensionEndsAt ?? null));
+    };
+
+    let apiError: unknown = null;
+    try {
+      const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/account/status`, {
+        headers: { Authorization: `Bearer ${currentSession.access_token}` },
+      });
+      const payload = (await response.json().catch(() => ({}))) as {
+        account?: {
+          status?: AuthContextType['accountStatus'];
+          suspensionReason?: string | null;
+          suspensionEndsAt?: string | null;
+        };
+        error?: string;
+      };
+      const status = payload.account?.status;
+      if (!response.ok || !status) {
+        throw new Error(payload.error ?? `Account status request failed (${response.status}).`);
+      }
+      applyAccountStatus({ ...payload.account, status });
+      return;
+    } catch (error) {
+      apiError = error;
+    }
+
+    // Status is stored on the user's own profile, which is already readable
+    // under the profile RLS policy. This fallback keeps the app usable when a
+    // newly deployed client briefly reaches an older or restarting API server.
+    const { data, error: profileError } = await supabase
+      .from('profiles')
+      .select('account_status, suspension_reason, suspension_ends_at')
+      .eq('user_id', currentSession.user.id)
+      .maybeSingle();
+    if (!profileError && data?.account_status) {
+      applyAccountStatus({
+        status: data.account_status as Exclude<AuthContextType['accountStatus'], null>,
+        suspensionReason: data.suspension_reason,
+        suspensionEndsAt: data.suspension_ends_at,
+      });
+      return;
+    }
+
+    console.warn('Could not load account status', {
+      apiError: apiError instanceof Error ? apiError.message : String(apiError),
+      profileError: profileError?.message ?? 'Profile status was unavailable.',
+    });
+    if (profileError || !data) {
+      setAccountStatus(null);
+      setSuspensionReason(null);
+      setSuspensionEndsAt(null);
+    }
+  };
+
+  const refreshAccountStatus = async () => {
+    await loadAccountStatus(session);
+  };
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       loadOnboardingStatus(session?.user?.id);
+      loadAccountStatus(session);
       setInitializing(false);
     });
 
@@ -90,6 +176,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       setSession(session);
       setUser(session?.user ?? null);
       loadOnboardingStatus(session?.user?.id);
+      loadAccountStatus(session);
       setInitializing(false);
     });
 
@@ -150,6 +237,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       setUser(null);
       setSession(null);
       setOnboardingCompleted(null);
+      setAccountStatus(null);
+      setSuspensionReason(null);
+      setSuspensionEndsAt(null);
       console.log('👋 Signed out successfully');
       return { error: null };
     } catch (err: any) {
@@ -193,7 +283,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     loading,
     initializing,
     onboardingCompleted,
+    accountStatus,
+    suspensionReason,
+    suspensionEndsAt,
+    canMutate: accountStatus === 'active',
     refreshOnboardingStatus,
+    refreshAccountStatus,
     signUp,
     signIn,
     signOut,

@@ -219,6 +219,9 @@ export function DonutBreakdown({
 }
 
 const STATUS_META: Record<string, { label: string; color: string; background: string }> = {
+  active: { label: 'Active', color: '#237A3B', background: '#DDF6E5' },
+  suspended: { label: 'Suspended', color: '#B42318', background: '#FEE4E2' },
+  deactivated: { label: 'Deactivated', color: '#667085', background: '#EEF0F3' },
   completed: { label: 'Completed', color: '#237A3B', background: '#DDF6E5' },
   delivered: { label: 'Delivered', color: '#237A3B', background: '#DDF6E5' },
   ready: { label: 'Ready', color: '#175CD3', background: '#E8F1FF' },

@@ -65,7 +65,7 @@ const formatDateHeading = (dateStr: string): string => {
 };
 
 export default function Today() {
-  const { user } = useAuth();
+  const { user, session } = useAuth();
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [activeTab, setActiveTab] = useState<ActiveStatus>('pending');
   const [loading, setLoading] = useState(true);
@@ -200,7 +200,10 @@ export default function Today() {
   const updateOrderStatus = async (orderId: string, status: OrderStatus): Promise<void> => {
     const res = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/orders/${orderId}/status`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session?.access_token ?? ''}`,
+      },
       body: JSON.stringify({ status, userId: user?.id }),
     });
     if (!res.ok) {

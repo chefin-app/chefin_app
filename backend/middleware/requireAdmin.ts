@@ -1,4 +1,5 @@
 import type { NextFunction, Request, RequestHandler, Response } from 'express';
+import { normalizeExpiredSuspension } from '../accountAccess';
 import { supabase } from '../supabaseClient';
 
 export interface AdminIdentity {
@@ -51,10 +52,25 @@ export const requireAdmin: RequestHandler = async (
 
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('full_name, profile_image')
+      .select(
+        'id, user_id, full_name, profile_image, account_status, suspension_reason, suspension_ends_at, restricted_listing_ids'
+      )
       .eq('user_id', authData.user.id)
       .maybeSingle();
     if (profileError) throw profileError;
+
+    if (profile) {
+      const account = await normalizeExpiredSuspension(profile);
+      if (account.status !== 'active') {
+        res.status(403).json({
+          error:
+            account.status === 'suspended'
+              ? 'This administrator account is suspended.'
+              : 'This administrator account is deactivated.',
+        });
+        return;
+      }
+    }
 
     req.admin = {
       userId: authData.user.id,

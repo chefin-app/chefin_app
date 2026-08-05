@@ -13,11 +13,13 @@ export type NotificationType =
   | 'payout_sent'
   | 'verification_approved'
   | 'verification_rejected'
+  | 'verification_more_info'
   | 'dish_approved'
   | 'dish_rejected'
   | 'favourite_new_dish'
   | 'favourite_new_slots'
-  | 'review_request';
+  | 'review_request'
+  | 'admin_message';
 
 interface NotificationTypeMeta {
   icon: keyof typeof Ionicons.glyphMap;
@@ -40,11 +42,17 @@ export const NOTIFICATION_TYPE_META: Record<NotificationType, NotificationTypeMe
     background: '#E8F5E9',
   },
   verification_rejected: { icon: 'shield-outline', color: '#C62828', background: '#FFEBEE' },
+  verification_more_info: {
+    icon: 'document-text-outline',
+    color: '#9A6700',
+    background: '#FFF3E0',
+  },
   dish_approved: { icon: 'checkmark-done-outline', color: '#2E7D32', background: '#E8F5E9' },
   dish_rejected: { icon: 'alert-circle-outline', color: '#C62828', background: '#FFEBEE' },
   favourite_new_dish: { icon: 'heart-outline', color: '#E91E63', background: '#FCE4EC' },
   favourite_new_slots: { icon: 'time-outline', color: '#E91E63', background: '#FCE4EC' },
   review_request: { icon: 'star-outline', color: '#B26A00', background: '#FFF3E0' },
+  admin_message: { icon: 'mail-outline', color: '#237A3B', background: '#E8F5E9' },
 };
 
 export const DEFAULT_NOTIFICATION_META: NotificationTypeMeta = {
