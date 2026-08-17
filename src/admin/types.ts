@@ -179,3 +179,104 @@ export interface ModerationReport {
     | Array<{ full_name: string; profile_image: string | null; user_id: string }>
     | null;
 }
+
+export type CookManagementFilter =
+  | 'all'
+  | 'active'
+  | 'inactive'
+  | 'pending'
+  | 'reverification'
+  | 'rejected';
+export type CookManagementSort = 'newest' | 'oldest' | 'name_asc' | 'name_desc';
+
+export interface ManagedCook {
+  userId: string;
+  profileId: string;
+  displayId: string;
+  name: string;
+  restaurantName: string | null;
+  email: string;
+  avatarUrl: string | null;
+  address: string;
+  joinedAt: string;
+  accountStatus: ManagedAccountStatus;
+  applicationStatus: string;
+  identityStatus: string;
+  complianceStatus: string;
+  reverificationDueAt: string | null;
+  eligibleToSell: boolean;
+  verified: boolean;
+  dishCount: number;
+}
+
+export interface CookManagementResponse {
+  stats: {
+    totalCooks: number;
+    activeCooks: number;
+    pendingVerification: number;
+    reverificationRequired: number;
+  };
+  cooks: ManagedCook[];
+  pagination: { page: number; pageSize: number; total: number; totalPages: number };
+}
+
+export interface ManagedCookDetails {
+  cook: {
+    userId: string;
+    profileId: string;
+    displayId: string;
+    name: string;
+    restaurantName: string | null;
+    email: string;
+    phone: string | null;
+    avatarUrl: string | null;
+    bio: string | null;
+    address: string;
+    joinedAt: string;
+    lastSignInAt: string | null;
+    accountStatus: ManagedAccountStatus;
+    verified: boolean;
+    verificationTier: number;
+    hostingType: string | null;
+  };
+  application: {
+    status: string;
+    identity_status: string;
+    compliance_status: string;
+    citizenship_type: string | null;
+    submitted_at: string | null;
+    reviewer_note: string | null;
+    reverification_due_at: string | null;
+  } | null;
+  summary: {
+    ordersDone: number;
+    totalEarned: number;
+    averageRating: number | null;
+    ratingCount: number;
+    dishCount: number;
+  };
+  listings: Array<{
+    id: string;
+    title: string;
+    cuisine: string | null;
+    status: string;
+    is_active: boolean;
+  }>;
+  complianceDocuments: Array<{
+    id: string;
+    doc_type: string;
+    status: string;
+    reviewer_note: string | null;
+    submitted_at: string;
+    reviewed_at: string | null;
+  }>;
+  identityDocuments: Array<{
+    id: string;
+    document_type: string;
+    status: string;
+    reviewer_note: string | null;
+    submitted_at: string;
+    reviewed_at: string | null;
+  }>;
+  canReviewIdentity: boolean;
+}

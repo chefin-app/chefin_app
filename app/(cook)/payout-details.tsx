@@ -21,6 +21,7 @@ import { VERIFICATION_BUCKET, VerificationDocType } from '@/src/constants/verifi
 import { BankSelect } from '@/src/components/inputs/BankSelect';
 import { FOOD_SAFETY_WAIVER_VERSION } from '@/src/constants/foodSafetyWaiver';
 import { recordFoodComplianceAcceptance } from '@/src/utils/foodCompliance';
+import { saveRestaurantDiscoveryLocation } from '@/src/utils/restaurantLocation';
 
 const DISH_IMAGES_BUCKET = 'dish-images';
 
@@ -38,7 +39,7 @@ export default function PayoutDetailsScreen() {
   const router = useRouter();
   const { onboarding } = useLocalSearchParams<{ onboarding?: string }>();
   const isCookOnboarding = onboarding === 'cook';
-  const { user } = useAuth();
+  const { user, session } = useAuth();
   const {
     dish: onboardingDish,
     address: onboardingAddress,
@@ -170,6 +171,7 @@ export default function PayoutDetailsScreen() {
           price: onboardingDish.price,
           image_url: dishImageUrl,
           cuisine: onboardingDish.cuisine,
+          menu_category: onboardingDish.menuCategory || 'Uncategorised',
           dietary_tags: onboardingDish.dietaryTags,
           ingredients: onboardingDish.ingredients,
           location: onboardingAddress.locality || null,
@@ -223,6 +225,13 @@ export default function PayoutDetailsScreen() {
           })
           .eq('user_id', user.id);
         if (profileUpdateErr) throw profileUpdateErr;
+
+        await saveRestaurantDiscoveryLocation(session?.access_token, {
+          latitude: onboardingAddress.discoveryLatitude,
+          longitude: onboardingAddress.discoveryLongitude,
+          label: onboardingAddress.discoveryLabel,
+          source: onboardingAddress.discoverySource,
+        });
 
         resetOnboarding();
 

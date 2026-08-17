@@ -17,6 +17,9 @@ import reviewsRoutes from './routes/reviews';
 import reportsRoutes from './routes/reports';
 import adminRoutes from './routes/admin';
 import accountRoutes from './routes/account';
+import cookApplicationRoutes from './routes/cookApplications';
+import cookMenuRoutes from './routes/cookMenu';
+import customerReviewRoutes from './routes/customerReviews';
 
 const app = express();
 const PORT = process.env.PORT || 8000;
@@ -44,7 +47,8 @@ app.use(
   })
 );
 
-app.use(express.json());
+// 8mb accommodates base64-encoded proof-of-preparation photos (5 MB raw).
+app.use(express.json({ limit: '8mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 // Health check endpoint
@@ -64,6 +68,9 @@ app.use('/api/reviews', reviewsRoutes);
 app.use('/api/reports', reportsRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/account', accountRoutes);
+app.use('/api/cook-applications', cookApplicationRoutes);
+app.use('/api/cook-menu', cookMenuRoutes);
+app.use('/api/customer-reviews', customerReviewRoutes);
 
 // 404 handler
 app.use('/{*any}', (req, res) => {

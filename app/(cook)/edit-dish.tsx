@@ -10,6 +10,7 @@ import {
   Alert,
   ActivityIndicator,
   KeyboardAvoidingView,
+  Keyboard,
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -36,31 +37,12 @@ const CUISINE_OPTIONS = [
 
 const DIETARY_TAG_OPTIONS = [
   'Vegetarian',
-  'Vegan',
-  'Keto',
-  'Organic',
-  'Halal',
-  'Nut-free',
-  'Gluten-free',
-  'Spicy',
-  'Fish',
-  'Shellfish',
-  'Low-carb',
-  'Dairy-free',
-  'Healthy',
-  'Comfort food',
-  'Snacks',
-  'Breakfast',
-  'Lunch',
-  'Dinner',
-  'Desserts',
-  'Drinks',
-  'Pastry',
+  'Non-pork',
 ];
 
 export default function EditDishScreen() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, session } = useAuth();
   const { id } = useLocalSearchParams<{ id: string }>();
 
   const [loading, setLoading] = useState(true);
@@ -73,6 +55,7 @@ export default function EditDishScreen() {
   const [description, setDescription] = useState('');
   const [ingredientsText, setIngredientsText] = useState('');
   const [cuisine, setCuisine] = useState<string | null>(null);
+  const [menuCategory, setMenuCategory] = useState('Uncategorised');
   const [dietaryTags, setDietaryTags] = useState<string[]>([]);
   const [priceText, setPriceText] = useState('');
   const [imageUrl, setImageUrl] = useState<string | null>(null);
@@ -80,6 +63,8 @@ export default function EditDishScreen() {
   const [existingImagePath, setExistingImagePath] = useState<string | null>(null);
   // Pending-review dishes are read-only until an admin approves them.
   const [status, setStatus] = useState<string>('approved');
+  const [sellingSchedules, setSellingSchedules] = useState<Array<{ id: string; name: string }>>([]);
+  const [sellingScheduleId, setSellingScheduleId] = useState<string | null>(null);
   const isPending = status === 'pending';
 
   // Snapshot of the moderation-relevant fields at load time, so we can detect
@@ -103,7 +88,7 @@ export default function EditDishScreen() {
         const { data, error } = await supabase
           .from('listings')
           .select(
-            'title, description, ingredients, cuisine, dietary_tags, price, image_url, status'
+            'title, description, ingredients, cuisine, menu_category, dietary_tags, price, image_url, status'
           )
           .eq('id', id)
           .single();
@@ -121,6 +106,7 @@ export default function EditDishScreen() {
         setDescription(loadedDescription);
         setIngredientsText(loadedIngredients.join('\n'));
         setCuisine(loadedCuisine);
+        setMenuCategory(data.menu_category ?? 'Uncategorised');
         setDietaryTags(loadedTags);
         setPriceText(String(data.price ?? ''));
         setImageUrl(loadedImageUrl);
@@ -135,6 +121,27 @@ export default function EditDishScreen() {
           dietaryTags: loadedTags,
           imageUrl: loadedImageUrl,
         });
+
+        if (session?.access_token) {
+          const response = await fetch(
+            `${process.env.EXPO_PUBLIC_API_URL?.replace(/\/$/, '') ?? ''}/api/availability/cook/selling-schedules`,
+            { headers: { Authorization: `Bearer ${session.access_token}` } }
+          );
+          const payload = await response.json().catch(() => ({}));
+          if (response.ok) {
+            const schedules = (payload.schedules ?? []) as Array<{
+              id: string;
+              name: string;
+              listingIds: string[];
+            }>;
+            setSellingSchedules(
+              schedules.map(schedule => ({ id: schedule.id, name: schedule.name }))
+            );
+            setSellingScheduleId(
+              schedules.find(schedule => schedule.listingIds.includes(String(id)))?.id ?? null
+            );
+          }
+        }
       } catch (e: any) {
         Alert.alert('Could not load dish', e.message ?? 'Unknown error', [
           { text: 'OK', onPress: () => router.back() },
@@ -143,7 +150,7 @@ export default function EditDishScreen() {
         setLoading(false);
       }
     })();
-  }, [id, user, router]);
+  }, [id, user, router, session?.access_token]);
 
   // ── Photo ──────────────────────────────────────────────────────
   const pickAndUploadPhoto = async () => {
@@ -253,6 +260,7 @@ export default function EditDishScreen() {
         description: descTrim,
         ingredients: ingredientsList,
         cuisine,
+        menu_category: menuCategory.trim() || 'Uncategorised',
         dietary_tags: dietaryTags,
         price: priceNum,
         image_url: imageUrl,
@@ -261,6 +269,23 @@ export default function EditDishScreen() {
 
       const { error } = await supabase.from('listings').update(updates).eq('id', id);
       if (error) throw error;
+
+      if (session?.access_token) {
+        const response = await fetch(
+          `${process.env.EXPO_PUBLIC_API_URL?.replace(/\/$/, '') ?? ''}/api/availability/cook/listings/${id}/selling-schedule`,
+          {
+            method: 'PATCH',
+            headers: {
+              Authorization: `Bearer ${session.access_token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ scheduleId: sellingScheduleId }),
+          }
+        );
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok)
+          throw new Error(payload.error ?? 'Selling schedule could not be assigned.');
+      }
 
       if (moderationChanged) {
         Alert.alert(
@@ -385,6 +410,9 @@ export default function EditDishScreen() {
               placeholderTextColor="#bbb"
               maxLength={32}
               editable={!isPending}
+              returnKeyType="done"
+              submitBehavior="blurAndSubmit"
+              onSubmitEditing={Keyboard.dismiss}
             />
           </View>
 
@@ -398,6 +426,7 @@ export default function EditDishScreen() {
               placeholder="Double cheeseburger with lettuce, tomato…"
               placeholderTextColor="#bbb"
               multiline
+              submitBehavior="newline"
               maxLength={200}
               textAlignVertical="top"
               editable={!isPending}
@@ -415,6 +444,7 @@ export default function EditDishScreen() {
               placeholder={'One ingredient per line\n\nChicken breast\nOlive oil\nGarlic'}
               placeholderTextColor="#bbb"
               multiline
+              submitBehavior="newline"
               maxLength={500}
               textAlignVertical="top"
               editable={!isPending}
@@ -435,6 +465,9 @@ export default function EditDishScreen() {
                 placeholder="0.00"
                 placeholderTextColor="#bbb"
                 editable={!isPending}
+                returnKeyType="done"
+                submitBehavior="blurAndSubmit"
+                onSubmitEditing={Keyboard.dismiss}
               />
             </View>
           </View>
@@ -442,6 +475,21 @@ export default function EditDishScreen() {
           {/* Keywords */}
           <View style={styles.card}>
             <Text style={styles.cardLabel}>Keywords</Text>
+
+            <View style={styles.categoryField}>
+              <Text style={styles.sectionLabel}>Menu category</Text>
+              <TextInput
+                style={styles.categoryInput}
+                value={menuCategory}
+                onChangeText={text => setMenuCategory(text.slice(0, 80))}
+                placeholder="e.g. Nasi Lemak, Pasta, Drinks"
+                placeholderTextColor="#bbb"
+                editable={!isPending}
+                returnKeyType="done"
+                submitBehavior="blurAndSubmit"
+                onSubmitEditing={Keyboard.dismiss}
+              />
+            </View>
 
             <View style={styles.sectionHeaderRow}>
               <Text style={styles.sectionLabel}>Cuisine</Text>
@@ -507,6 +555,49 @@ export default function EditDishScreen() {
                 );
               })}
             </View>
+          </View>
+
+          <View style={styles.card}>
+            <Text style={styles.cardLabel}>Availability schedule</Text>
+            <Text style={styles.scheduleHelp}>
+              This schedule is intersected with Business Hours. Outside a custom schedule, the dish
+              is hidden from customers.
+            </Text>
+            <TouchableOpacity
+              style={styles.scheduleChoice}
+              disabled={isPending}
+              onPress={() => setSellingScheduleId(null)}
+            >
+              <View style={styles.scheduleChoiceCopy}>
+                <Text style={styles.scheduleChoiceTitle}>All opening hours</Text>
+                <Text style={styles.scheduleChoiceMeta}>
+                  Uses the restaurant’s full Business Hours
+                </Text>
+              </View>
+              <Ionicons
+                name={sellingScheduleId == null ? 'radio-button-on' : 'radio-button-off'}
+                size={23}
+                color={sellingScheduleId == null ? '#4CAF50' : '#B7BDB9'}
+              />
+            </TouchableOpacity>
+            {sellingSchedules.map(schedule => (
+              <TouchableOpacity
+                key={schedule.id}
+                style={styles.scheduleChoice}
+                disabled={isPending}
+                onPress={() => setSellingScheduleId(schedule.id)}
+              >
+                <Text style={styles.scheduleChoiceTitle}>{schedule.name}</Text>
+                <Ionicons
+                  name={sellingScheduleId === schedule.id ? 'radio-button-on' : 'radio-button-off'}
+                  size={23}
+                  color={sellingScheduleId === schedule.id ? '#4CAF50' : '#B7BDB9'}
+                />
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity onPress={() => router.push('/(cook)/add-selling-schedule')}>
+              <Text style={styles.createSchedule}>+ Create new schedule</Text>
+            </TouchableOpacity>
           </View>
 
           {/* Save */}
@@ -645,6 +736,16 @@ const styles = StyleSheet.create({
     alignItems: 'baseline',
     marginBottom: 8,
   },
+  categoryField: { gap: 8, marginBottom: 18 },
+  categoryInput: {
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 15,
+    color: '#1A1A1A',
+  },
   sectionLabel: {
     fontSize: 11,
     fontWeight: '700',
@@ -669,6 +770,19 @@ const styles = StyleSheet.create({
   chipText: { fontSize: 13, fontWeight: '500', color: '#1A1A1A' },
   chipTextSelected: { color: '#fff' },
   chipTextDisabled: { color: '#BBB' },
+  scheduleHelp: { fontSize: 12, color: '#6D766F', lineHeight: 18 },
+  scheduleChoice: {
+    minHeight: 58,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: '#E3E7E4',
+    paddingVertical: 10,
+  },
+  scheduleChoiceCopy: { flex: 1 },
+  scheduleChoiceTitle: { flex: 1, fontSize: 14, fontWeight: '700', color: '#252B27' },
+  scheduleChoiceMeta: { fontSize: 11, color: '#78817B', marginTop: 3 },
+  createSchedule: { color: '#1473E6', fontSize: 13, fontWeight: '800', paddingVertical: 10 },
 
   saveBtn: {
     backgroundColor: '#4CAF50',

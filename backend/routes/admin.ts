@@ -4,6 +4,7 @@ import { requireAdmin } from '../middleware/requireAdmin';
 import { supabase } from '../supabaseClient';
 import adminUsersRoutes from './adminUsers';
 import adminModerationRoutes from './adminModeration';
+import adminCooksRoutes from './adminCooks';
 
 const router = express.Router();
 
@@ -113,6 +114,7 @@ router.use(requireAdmin);
 
 router.use('/users', adminUsersRoutes);
 router.use('/moderation', adminModerationRoutes);
+router.use('/cooks', adminCooksRoutes);
 
 router.get('/session', (req: AdminRequest, res) => {
   res.json({ admin: req.admin });

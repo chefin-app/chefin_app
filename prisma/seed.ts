@@ -39,21 +39,7 @@ const cuisines = [
 
 const dietaryTags = [
   'vegetarian',
-  'vegan',
-  'gluten-free',
-  'gluten',
-  'dairy-free',
-  'nut-free',
-  'spicy',
-  'halal',
-  'kosher',
-  'low-carb',
-  'keto',
-  'organic',
-  'shellfish',
-  'fish',
-  'coconut',
-  'soy-free',
+  'non-pork',
 ];
 
 const klangValleyAreas = [

@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import React, { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface MainFilterProps {
   onFilterToggle?: (filterId: string, active: boolean) => void;
@@ -24,6 +25,8 @@ interface FilterItem {
 interface DietaryOption {
   id: string;
   name: string;
+  description: string;
+  icon: React.ComponentProps<typeof Ionicons>['name'];
   selected: boolean;
 }
 
@@ -34,16 +37,24 @@ const initialFilters: FilterItem[] = [
 ];
 
 const dietaryOptions: DietaryOption[] = [
-  { id: 'vegan', name: 'Vegan', selected: false },
-  { id: 'vegetarian', name: 'Vegetarian', selected: false },
-  { id: 'glutenFree', name: 'Gluten Free', selected: false },
-  { id: 'halal', name: 'Halal', selected: false },
-  { id: 'kosher', name: 'Kosher', selected: false },
-  { id: 'paleo', name: 'Paleo', selected: false },
-  { id: 'keto', name: 'Keto', selected: false },
+  {
+    id: 'non-pork',
+    name: 'Non-pork',
+    description: 'Does not mean halal-certified',
+    icon: 'ban-outline',
+    selected: false,
+  },
+  {
+    id: 'vegetarian',
+    name: 'Vegetarian',
+    description: 'May contain dairy, egg or alliums',
+    icon: 'leaf-outline',
+    selected: false,
+  },
 ];
 
 export default function MainFilter({ onFilterToggle, onDietarySelect }: MainFilterProps) {
+  const insets = useSafeAreaInsets();
   const [filters, setFilters] = useState<FilterItem[]>(initialFilters);
   const [dietaryDropdownVisible, setDietaryDropdownVisible] = useState(false);
   const [selectedDietaryOptions, setSelectedDietaryOptions] =
@@ -161,14 +172,23 @@ export default function MainFilter({ onFilterToggle, onDietarySelect }: MainFilt
 
       <Modal
         visible={dietaryDropdownVisible}
-        transparent={true}
-        animationType="fade"
+        transparent
+        animationType="slide"
         onRequestClose={() => setDietaryDropdownVisible(false)}
       >
         <Pressable style={styles.modalOverlay} onPress={() => setDietaryDropdownVisible(false)}>
-          <View style={styles.dropdownContainer}>
+          <Pressable
+            style={[styles.dropdownContainer, { paddingBottom: Math.max(insets.bottom, 24) }]}
+            onPress={event => event.stopPropagation()}
+          >
+            <View style={styles.sheetHandle} />
             <View style={styles.dropdownHeader}>
-              <Text style={styles.dropdownTitle}>Dietary Preferences</Text>
+              <View style={styles.headerCopy}>
+                <Text style={styles.dropdownTitle}>Dietary preferences</Text>
+                <Text style={styles.dropdownSubtitle}>
+                  Show home restaurants with at least one matching dish.
+                </Text>
+              </View>
               <TouchableOpacity
                 onPress={() => setDietaryDropdownVisible(false)}
                 style={styles.closeButton}
@@ -176,30 +196,47 @@ export default function MainFilter({ onFilterToggle, onDietarySelect }: MainFilt
                 <Ionicons name="close" size={24} color="#333" />
               </TouchableOpacity>
             </View>
-            <ScrollView style={styles.optionsContainer}>
+            <View style={styles.optionsContainer}>
               {selectedDietaryOptions.map(option => (
                 <TouchableOpacity
                   key={option.id}
                   style={styles.optionItem}
                   onPress={() => handleDietaryOptionToggle(option.id)}
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: option.selected }}
+                  accessibilityLabel={`${option.name}. ${option.description}`}
                 >
-                  <Text style={styles.optionText}>{option.name}</Text>
+                  <View style={styles.optionIcon}>
+                    <Ionicons name={option.icon} size={22} color="#25312A" />
+                  </View>
+                  <View style={styles.optionCopy}>
+                    <Text style={styles.optionText}>{option.name}</Text>
+                    <Text style={styles.optionDescription}>{option.description}</Text>
+                  </View>
                   <View style={[styles.checkbox, option.selected && styles.checkedBox]}>
                     {option.selected && <Ionicons name="checkmark" size={16} color="#fff" />}
                   </View>
                 </TouchableOpacity>
               ))}
-            </ScrollView>
+            </View>
+
+            <View style={styles.disclaimerCard}>
+              <Ionicons name="alert-circle-outline" size={22} color="#69736D" />
+              <Text style={styles.disclaimerText}>
+                Home-restaurant dietary declarations may not be 100% accurate. Non-pork does not
+                mean halal, and vegetarian dishes may be prepared in a shared kitchen.
+              </Text>
+            </View>
 
             <View style={styles.dropdownFooter}>
               <TouchableOpacity style={styles.clearButton} onPress={clearDietaryFilters}>
-                <Text style={styles.clearButtonText}>Clear all</Text>
+                <Text style={styles.clearButtonText}>Reset</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.applyButton} onPress={applyDietaryFilters}>
-                <Text style={styles.applyButtonText}>Apply Filters</Text>
+                <Text style={styles.applyButtonText}>Apply</Text>
               </TouchableOpacity>
             </View>
-          </View>
+          </Pressable>
         </Pressable>
       </Modal>
     </>
@@ -246,55 +283,63 @@ const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 20,
+    justifyContent: 'flex-end',
   },
   dropdownContainer: {
     backgroundColor: '#fff',
-    borderRadius: 16,
+    borderTopLeftRadius: 26,
+    borderTopRightRadius: 26,
     width: '100%',
-    maxWidth: 350,
-    maxHeight: '70%',
+    maxHeight: '88%',
+    paddingTop: 10,
+    paddingHorizontal: 22,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
     shadowRadius: 8,
     elevation: 8,
   },
+  sheetHandle: {
+    width: 42,
+    height: 4,
+    alignSelf: 'center',
+    borderRadius: 2,
+    backgroundColor: '#DDE2DF',
+  },
   dropdownHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    alignItems: 'flex-start',
+    paddingTop: 22,
+    paddingBottom: 14,
   },
+  headerCopy: { flex: 1, paddingRight: 12 },
   dropdownTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
+    fontSize: 25,
+    fontWeight: '900',
+    color: '#1F2521',
   },
+  dropdownSubtitle: { marginTop: 7, color: '#747D77', fontSize: 13, lineHeight: 19 },
   closeButton: {
     padding: 4,
   },
   optionsContainer: {
-    maxHeight: 300,
+    paddingVertical: 4,
   },
   optionItem: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f8f8f8',
+    minHeight: 76,
+    gap: 12,
   },
+  optionIcon: { width: 34, alignItems: 'center' },
+  optionCopy: { flex: 1 },
   optionText: {
     fontSize: 16,
-    color: '#333',
-    flex: 1,
+    color: '#242B27',
+    fontWeight: '700',
   },
+  optionDescription: { marginTop: 3, color: '#747D77', fontSize: 12 },
   checkbox: {
     width: 24,
     height: 24,
@@ -308,31 +353,40 @@ const styles = StyleSheet.create({
     backgroundColor: '#4CAF50',
     borderColor: '#4CAF50',
   },
+  disclaimerCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    marginTop: 10,
+    padding: 16,
+    borderRadius: 16,
+    backgroundColor: '#F4F5F4',
+  },
+  disclaimerText: { flex: 1, color: '#4F5852', fontSize: 13, lineHeight: 20 },
   dropdownFooter: {
     flexDirection: 'row',
-    padding: 20,
+    paddingTop: 22,
     gap: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
   },
   clearButton: {
     flex: 1,
-    paddingVertical: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#ddd',
+    minHeight: 54,
+    justifyContent: 'center',
+    borderRadius: 27,
+    backgroundColor: '#EAF8F9',
     alignItems: 'center',
   },
   clearButtonText: {
     fontSize: 16,
-    color: '#666',
-    fontWeight: '500',
+    color: '#174E49',
+    fontWeight: '800',
   },
   applyButton: {
     flex: 1,
-    paddingVertical: 12,
-    borderRadius: 8,
-    backgroundColor: '#4CAF50',
+    minHeight: 54,
+    justifyContent: 'center',
+    borderRadius: 27,
+    backgroundColor: '#00B85A',
     alignItems: 'center',
   },
   applyButtonText: {

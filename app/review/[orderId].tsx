@@ -239,6 +239,7 @@ export default function ReviewOrderScreen() {
                   value={comment}
                   onChangeText={t => setComment(t.slice(0, 500))}
                   multiline
+                  submitBehavior="newline"
                   textAlignVertical="top"
                 />
                 <Text style={styles.charCount}>{comment.length}/500</Text>

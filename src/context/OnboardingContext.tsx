@@ -9,6 +9,7 @@ export interface OnboardingDish {
   description: string;
   ingredients: string[];
   cuisine: string | null;
+  menuCategory: string;
   dietaryTags: string[];
   price: number;
   /** Local file URI from expo-image-picker. Uploaded on final commit. */
@@ -43,6 +44,10 @@ export interface OnboardingAddress {
   locality: string;
   town: string;
   postcode: string;
+  discoveryLatitude: number;
+  discoveryLongitude: number;
+  discoveryLabel: string;
+  discoverySource: 'address_search' | 'manual';
 }
 
 interface OnboardingContextType {

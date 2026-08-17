@@ -1,422 +1,242 @@
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ImageBackground,
-  Animated,
-  Image,
-} from 'react-native';
-import React, { useEffect, useState } from 'react';
-import { useRouter } from 'expo-router';
-import AvailabilityPicker from '@/src/components/inputs/AvailabilityPicker';
-import { useCart } from '@/src/context/CartContext';
-import type { Listing, Profile, Review } from '@/src/types/models';
-import { formatRating, getRatingSummary } from '@/src/utils/ratings';
-import {
-  formatAvailabilityLabel,
-  getAvailabilitySummary,
-  getLocalDateKey,
-  type AvailabilityRecord,
-  type AvailabilitySummary,
-} from '@/src/utils/listingAvailability';
+import React from 'react';
+import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-export interface MenuItemCardProps extends Listing {
-  title: string;
-  profiles?: Profile;
-  reviews?: Review[];
-  rating?: number;
-  isActive: boolean;
-  onSelect: () => void;
+import type { Listing } from '@/src/types/models';
+import { formatRating, getRatingSummary, type RatedReview } from '@/src/utils/ratings';
+
+export interface MenuItemCardProps extends Omit<Listing, 'reviews'> {
+  reviews?: RatedReview[];
+  isAvailable: boolean;
+  availabilityLabel: string;
+  cartQuantity?: number;
+  onPress: () => void;
 }
 
 const MenuItemCard: React.FC<MenuItemCardProps> = ({
-  id, // <-- ensure we have the listing id
   title,
-  cuisine,
   description,
   image_url,
-  created_at,
-  cook_id,
   price,
-  reviews = [], // Default to empty array if undefined
-  profiles, // Add profiles to destructured props
-  location,
-  isActive,
-  onSelect,
+  reviews = [],
+  isAvailable,
+  availabilityLabel,
+  cartQuantity = 0,
+  onPress,
 }) => {
-  const router = useRouter(); // <-- ADD ROUTER HOOK HERE
-  const { addToCart } = useCart();
-  const [addedFeedback, setAddedFeedback] = useState(false);
-  const [selectedDish, setSelectedDish] = useState<Listing | null>(null);
-  const [modalVisible, setModalVisible] = useState(false);
-  const [quantity, setQuantity] = useState(1);
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const [selectedSlot, setSelectedSlot] = useState<{
-    id: string;
-    startTime: string;
-    endTime: string;
-    remainingSlots: number;
-    isFull: boolean;
-  } | null>(null);
-  const isSlotSelected = !!selectedDate && !!selectedSlot && !selectedSlot.isFull;
-  const [availability, setAvailability] = useState<AvailabilitySummary>({ state: 'unavailable' });
-
-  // Cap quantity at whatever capacity the cook set for the selected slot.
-  const maxQuantity = selectedSlot?.remainingSlots ?? 99;
-
-  // Clamp down if a fuller slot gets picked after quantity was already raised.
-  useEffect(() => {
-    setQuantity(q => Math.min(q, Math.max(1, maxQuantity)));
-  }, [maxQuantity]);
-
-  // Fetch earliest available date for this listing on mount
-  useEffect(() => {
-    const today = getLocalDateKey();
-    fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/availability/${id}`)
-      .then(r => r.json())
-      .then(d => {
-        const avail = (d.availability ?? []) as AvailabilityRecord[];
-        setAvailability(getAvailabilitySummary(avail, today));
-      })
-      .catch(() => {
-        /* silent */
-      });
-  }, [id]);
-
-  const handlePressDish = (dish: Listing) => {
-    onSelect();
-    setSelectedDish(dish);
-    setModalVisible(true);
-    setSelectedDate(null);
-    setSelectedSlot(null);
-  };
-
-  // Handle both flattened props and nested profiles object
-  const displayName = title || 'Unknown Dish';
-  const displayDishImage = image_url;
+  const displayName = title || 'Unknown dish';
   const ratingSummary = getRatingSummary(reviews);
-  const displayDishRating = formatRating(ratingSummary.average);
-
-  useEffect(() => {
-    if (!isActive) setModalVisible(false);
-  }, [isActive]);
+  const displayRating = formatRating(ratingSummary.average);
 
   return (
-    <>
-      <TouchableOpacity
-        style={styles.card}
-        activeOpacity={0.7}
-        onPress={() =>
-          handlePressDish({
-            id: id,
-            title,
-            cuisine,
-            description,
-            image_url,
-            created_at,
-            cook_id,
-            price,
-            location,
-          })
-        }
-      >
-        <View style={styles.cardContent}>
-          <View style={styles.textContainer}>
-            <Text style={styles.title} numberOfLines={2}>
-              {displayName}
-            </Text>
-            {description ? (
-              <Text style={styles.description} numberOfLines={2}>
-                {description}
+    <TouchableOpacity
+      activeOpacity={0.72}
+      accessibilityRole="button"
+      accessibilityLabel={`${displayName}, RM ${price.toFixed(2)}. ${availabilityLabel}`}
+      accessibilityHint={isAvailable ? 'Opens dish details and ordering options' : undefined}
+      accessibilityState={{ disabled: !isAvailable }}
+      disabled={!isAvailable}
+      onPress={onPress}
+      style={[styles.card, !isAvailable && styles.cardUnavailable]}
+    >
+      <View style={styles.imageContainer}>
+        {image_url ? (
+          <Image
+            source={{ uri: image_url }}
+            resizeMode="cover"
+            style={[styles.image, !isAvailable && styles.imageUnavailable]}
+          />
+        ) : (
+          <View
+            style={[styles.image, styles.placeholderImage, !isAvailable && styles.imageUnavailable]}
+          >
+            <Text style={styles.placeholderText}>Chefin</Text>
+          </View>
+        )}
+      </View>
+
+      <View style={styles.content}>
+        <Text style={[styles.title, !isAvailable && styles.textUnavailable]} numberOfLines={2}>
+          {displayName}
+        </Text>
+
+        {description ? (
+          <Text
+            style={[styles.description, !isAvailable && styles.descriptionUnavailable]}
+            numberOfLines={2}
+          >
+            {description}
+          </Text>
+        ) : null}
+
+        <View style={styles.priceRatingRow}>
+          <Text style={[styles.price, !isAvailable && styles.textUnavailable]}>
+            RM {price.toFixed(2)}
+          </Text>
+          {ratingSummary.count > 0 ? (
+            <View style={[styles.ratingBadge, !isAvailable && styles.ratingBadgeUnavailable]}>
+              <Text style={[styles.ratingText, !isAvailable && styles.textUnavailable]}>
+                ★ {displayRating}
               </Text>
-            ) : null}
-            <View style={styles.footerRow}>
-              <Text style={styles.price}>RM {price.toFixed(2)}</Text>
-              {ratingSummary.count > 0 && (
-                <View style={styles.ratingBadge}>
-                  <Text style={styles.ratingText}>★ {displayDishRating}</Text>
-                </View>
-              )}
             </View>
-            <Text style={styles.availabilityText}>{formatAvailabilityLabel(availability)}</Text>
-          </View>
-          <View style={styles.imageContainer}>
-            {displayDishImage ? (
-              <Image source={{ uri: displayDishImage }} style={styles.image} />
-            ) : (
-              <View style={[styles.image, styles.placeholderImage]} />
-            )}
-            <View style={styles.addButtonIcon}>
-              <Text style={styles.addButtonIconText}>+</Text>
-            </View>
-          </View>
+          ) : null}
         </View>
-      </TouchableOpacity>
-      {modalVisible && selectedDish ? (
-        <Animated.View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>{selectedDish?.title}</Text>
 
-            {/* Availability Calendar + Time Slots */}
-            <View style={{ marginVertical: 10, width: '100%' }}>
-              <Text style={{ fontWeight: '700', marginBottom: 10, fontSize: 15, color: '#1A1A1A' }}>
-                Choose a date & time:
-              </Text>
-              {selectedDish?.id && (
-                <AvailabilityPicker
-                  listingId={selectedDish.id}
-                  onSelect={(date, slot) => {
-                    setSelectedDate(date);
-                    setSelectedSlot(slot);
-                  }}
-                />
-              )}
-            </View>
+        <Text
+          style={[styles.availabilityText, !isAvailable && styles.availabilityTextUnavailable]}
+          numberOfLines={1}
+        >
+          {availabilityLabel}
+        </Text>
+      </View>
 
-            {/* Quantity Picker */}
-            <View style={styles.quantityRow}>
-              <TouchableOpacity
-                onPress={() => setQuantity(q => Math.max(1, q - 1))}
-                style={styles.qtyBtn}
-              >
-                <Text style={styles.qtyButtonText}>-</Text>
-              </TouchableOpacity>
-              <Text style={styles.qtyValue}>{quantity}</Text>
-              <TouchableOpacity
-                onPress={() => setQuantity(q => Math.min(maxQuantity, q + 1))}
-                style={[styles.qtyBtn, quantity >= maxQuantity && styles.qtyBtnDisabled]}
-                disabled={quantity >= maxQuantity}
-              >
-                <Text style={styles.qtyButtonText}>+</Text>
-              </TouchableOpacity>
-            </View>
-            {isSlotSelected && (
-              <Text style={styles.maxQtyNote}>
-                {maxQuantity} order{maxQuantity === 1 ? '' : 's'} left for this slot
-              </Text>
-            )}
-
-            {/* Add to Cart Button */}
-            <TouchableOpacity
-              style={[styles.addButton, !isSlotSelected && { backgroundColor: '#E5E5E5' }]}
-              disabled={!isSlotSelected}
-              onPress={() => {
-                if (selectedDish?.id && selectedDate) {
-                  addToCart({
-                    listingId: selectedDish.id,
-                    cookId: selectedDish.cook_id,
-                    title: selectedDish.title,
-                    price: selectedDish.price,
-                    imageUrl: selectedDish.image_url,
-                    cookName: profiles?.full_name,
-                    quantity,
-                    selectedDate: new Date(selectedDate),
-                    pickupSlotStart: selectedSlot?.startTime,
-                    maxQuantity: selectedSlot?.remainingSlots,
-                  });
-                  setAddedFeedback(true);
-                  setTimeout(() => {
-                    setAddedFeedback(false);
-                    setModalVisible(false);
-                  }, 800);
-                }
-              }}
-            >
-              <Text style={[styles.addButtonText, !isSlotSelected && { color: '#A0A0A0' }]}>
-                {isSlotSelected
-                  ? `Add ${quantity} to Cart (RM ${((selectedDish?.price ?? 0) * quantity).toFixed(2)})`
-                  : 'Select a date & time'}
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.viewMoreBtn}
-              onPress={() => {
-                setModalVisible(false);
-                router.push(`/dish/${selectedDish?.id}`);
-              }}
-            >
-              <Text style={styles.viewMoreText}>View full dish details</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.closeBtn}>
-              <Text style={styles.closeText}>Cancel</Text>
-            </TouchableOpacity>
+      <View style={styles.trailingControl} pointerEvents="none">
+        {isAvailable ? (
+          <View style={styles.addButton}>
+            <Text style={styles.addButtonText}>{cartQuantity > 0 ? cartQuantity : '+'}</Text>
           </View>
-        </Animated.View>
-      ) : null}
-    </>
+        ) : (
+          <View style={styles.unavailableBadge}>
+            <Text style={styles.unavailableBadgeText}>Unavailable</Text>
+          </View>
+        )}
+      </View>
+    </TouchableOpacity>
   );
 };
 
-// ...styles unchanged (copy your existing styles)...
 const styles = StyleSheet.create({
   card: {
-    width: '100%',
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
-    marginBottom: 0,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
-    elevation: 2,
-  },
-  cardContent: {
+    minHeight: 126,
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#E8EBE9',
   },
-  textContainer: {
-    flex: 1,
-    paddingRight: 16,
+  cardUnavailable: {
+    backgroundColor: '#F7F8F7',
+  },
+  imageContainer: {
+    width: 98,
+    height: 98,
+    marginRight: 14,
+  },
+  image: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  imageUnavailable: {
+    opacity: 0.38,
+  },
+  placeholderImage: {
+    alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: '#EDF2EE',
+  },
+  placeholderText: {
+    color: '#9AA39C',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  content: {
+    flex: 1,
+    minWidth: 0,
+    alignSelf: 'stretch',
+    justifyContent: 'center',
+    paddingRight: 48,
   },
   title: {
-    fontSize: 16,
+    color: '#171A18',
+    fontSize: 17,
     fontWeight: '700',
-    color: '#1A1A1A',
-    marginBottom: 6,
     lineHeight: 22,
   },
   description: {
-    fontSize: 14,
-    color: '#666666',
-    lineHeight: 20,
-    marginBottom: 10,
+    marginTop: 4,
+    color: '#6B746E',
+    fontSize: 13,
+    lineHeight: 18,
   },
-  footerRow: {
+  descriptionUnavailable: {
+    color: '#A5ABA7',
+  },
+  textUnavailable: {
+    color: '#959C97',
+  },
+  priceRatingRow: {
+    marginTop: 7,
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 'auto',
   },
   price: {
+    color: '#171A18',
     fontSize: 15,
-    fontWeight: '600',
-    color: '#1A1A1A',
+    fontWeight: '700',
   },
   ratingBadge: {
-    backgroundColor: '#F7F7F7',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-    marginLeft: 10,
+    marginLeft: 8,
+    borderRadius: 8,
+    backgroundColor: '#FFF6D9',
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+  },
+  ratingBadgeUnavailable: {
+    backgroundColor: '#ECEEEC',
   },
   ratingText: {
+    color: '#805E00',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  availabilityText: {
+    marginTop: 6,
+    color: '#18884B',
     fontSize: 12,
     fontWeight: '600',
-    color: '#666666',
   },
-  imageContainer: {
-    position: 'relative',
+  availabilityTextUnavailable: {
+    color: '#8F9691',
   },
-  image: {
-    width: 100,
-    height: 100,
-    borderRadius: 12,
-  },
-  placeholderImage: {
-    backgroundColor: '#F0F0F0',
-  },
-  addButtonIcon: {
+  trailingControl: {
     position: 'absolute',
-    bottom: -8,
-    right: -8,
-    backgroundColor: '#fff',
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  addButtonIconText: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#1A1A1A',
-    marginTop: -2,
-  },
-  modalContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 24,
-    elevation: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    zIndex: 1000,
-  },
-  modalContent: { alignItems: 'flex-start' },
-  modalTitle: { fontSize: 22, fontWeight: '800', color: '#1A1A1A', marginBottom: 6 },
-  availabilityText: { marginVertical: 12, color: '#4CAF50', fontWeight: '600' },
-  quantityRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 16,
-    alignSelf: 'center',
-  },
-  qtyBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#F0F0F0',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  qtyBtnDisabled: { opacity: 0.4 },
-  qtyButtonText: { fontSize: 24, fontWeight: '500', color: '#1A1A1A', marginTop: -2 },
-  qtyValue: { fontSize: 20, fontWeight: '600', width: 40, textAlign: 'center' },
-  maxQtyNote: {
-    fontSize: 12,
-    color: '#888',
-    textAlign: 'center',
-    marginTop: -8,
-    marginBottom: 8,
+    right: 16,
+    bottom: 17,
+    alignItems: 'flex-end',
   },
   addButton: {
-    backgroundColor: '#4CAF50',
-    width: '100%',
-    paddingVertical: 16,
-    borderRadius: 16,
+    width: 34,
+    height: 34,
     alignItems: 'center',
-    marginTop: 10,
+    justifyContent: 'center',
+    borderRadius: 17,
+    backgroundColor: '#19B85A',
+    shadowColor: '#0C6533',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.16,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  addButtonText: { color: '#fff', fontWeight: '700', fontSize: 16 },
-  closeBtn: {
-    width: '100%',
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginTop: 8,
+  addButtonText: {
+    marginTop: -2,
+    color: '#FFFFFF',
+    fontSize: 20,
+    fontWeight: '700',
+    lineHeight: 28,
   },
-  closeText: { color: '#666', fontSize: 16, fontWeight: '600' },
-  viewMoreBtn: {
-    width: '100%',
-    paddingVertical: 14,
-    alignItems: 'center',
-    marginTop: 8,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#E5E5E5',
-    backgroundColor: '#FAFAFA',
+  unavailableBadge: {
+    borderRadius: 10,
+    backgroundColor: '#E5E8E6',
+    paddingHorizontal: 8,
+    paddingVertical: 5,
   },
-  viewMoreText: {
-    color: '#1A1A1A',
-    fontSize: 15,
-    fontWeight: '600',
+  unavailableBadgeText: {
+    color: '#707873',
+    fontSize: 10,
+    fontWeight: '700',
   },
 });
 

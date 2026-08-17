@@ -1,12 +1,9 @@
 import React from 'react';
-import { useRouter, useSegments } from 'expo-router';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSegments } from 'expo-router';
+import { Alert, View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import Entypo from '@expo/vector-icons/Entypo';
 import { createShadowStyle } from '../../utils/platform-utils';
 import { useAuth } from '@/src/services/auth-context';
-import { useNotifications } from '@/src/context/NotificationsContext';
 
 interface NavBarProps {
   options?: {
@@ -17,24 +14,20 @@ interface NavBarProps {
 }
 
 export default function TopNavBarHomeCook({ options }: NavBarProps) {
-  const router = useRouter();
   const segments = useSegments();
-  const { user, initializing } = useAuth();
-  const { unreadCounts } = useNotifications();
+  const { user } = useAuth();
 
   // Get current tab from segments or props
   const currentTab = options?.headerProps?.currentTab || segments[segments.length - 1];
 
   const getGreeting = (tab: string) => {
     switch (tab) {
-      case 'today':
+      case 'orders':
         return getTimeGreeting();
       case 'menu':
         return 'Your Menu';
       case 'account':
         return 'Your Profile';
-      case 'calendar':
-        return null; // No greeting for calendar
       default:
         return getTimeGreeting();
     }
@@ -59,43 +52,13 @@ export default function TopNavBarHomeCook({ options }: NavBarProps) {
     return rawName.charAt(0).toUpperCase() + rawName.slice(1);
   };
 
-  const getTabTitle = (tab: string) => {
-    switch (tab) {
-      case 'today':
-        return 'Today';
-      case 'calendar':
-        return 'Calendar';
-      case 'menu':
-        return 'Menu';
-      case 'account':
-        return user ? 'Account' : 'Log In';
-      default:
-        return 'Welcome';
-    }
-  };
-
-  const shouldShowGreeting = (tab: string) => {
-    // Hide greeting for calendar tab
-    return tab !== 'calendar';
-  };
-
   const renderContent = () => {
     const greeting = getGreeting(currentTab);
 
-    if (currentTab === 'calendar') {
-      // Calendar tab - minimal header with just title
-      return (
-        <View style={styles.calendarHeader}>
-          <Text style={styles.calendarTitle}>Calendar</Text>
-        </View>
-      );
-    }
-
     if (currentTab === 'menu') {
-      // Menu tab - show plus button for adding new items
       return (
         <View style={styles.calendarHeader}>
-          <Text style={styles.calendarTitle}>Your Menu</Text>
+          <Text style={styles.calendarTitle}>Menu</Text>
         </View>
       );
     }
@@ -123,34 +86,30 @@ export default function TopNavBarHomeCook({ options }: NavBarProps) {
       return (
         <TouchableOpacity
           style={styles.plusButton}
-          onPress={() => {
-            console.log('[+] add-dish pressed');
-            router.push('/add-dish');
-          }}
+          accessibilityRole="button"
+          accessibilityLabel="Menu help"
+          onPress={() =>
+            Alert.alert(
+              'Managing your menu',
+              'Group dishes into categories, set restaurant opening hours, and use each dish switch only when it sells out for the day. Sold-out dishes turn back on automatically on the next open day.'
+            )
+          }
         >
-          <Entypo name="plus" size={24} color="black" />
-        </TouchableOpacity>
-      );
-    } else {
-      return (
-        <TouchableOpacity
-          style={styles.notificationButton}
-          onPress={() => router.push({ pathname: '/notifications', params: { role: 'cook' } })}
-        >
-          <Ionicons name="notifications" size={24} color="#333" />
-          {user && unreadCounts.cook > 0 && <View style={styles.notificationDot} />}
+          <Ionicons name="help-circle-outline" size={27} color="#242A26" />
         </TouchableOpacity>
       );
     }
+
+    return <View style={styles.headerSpacer} />;
   };
 
   return (
-    <SafeAreaView edges={['top']} style={styles.container}>
+    <View style={styles.container}>
       <View style={styles.header}>
         {renderContent()}
         {renderRightButton()}
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -182,29 +141,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#333',
   },
-  notificationButton: {
-    width: 44,
-    height: 44,
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
-    ...createShadowStyle({
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.1,
-      shadowRadius: 4,
-      elevation: 3,
-    }),
-  },
-  notificationDot: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#FF5252',
-  },
+  headerSpacer: { width: 44, height: 44 },
   plusButton: {
     width: 44,
     height: 44,

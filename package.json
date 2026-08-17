@@ -30,6 +30,7 @@
     "@testing-library/react-native": "^13.3.3",
     "dotenv": "^17.2.2",
     "expo": "54.0.12",
+    "expo-clipboard": "~8.0.7",
     "expo-constants": "~18.0.9",
     "expo-document-picker": "^56.0.4",
     "expo-font": "~14.0.8",

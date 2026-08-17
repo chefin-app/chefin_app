@@ -17,6 +17,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/src/utils/supabaseClient';
 import { useAuth } from '@/src/services/auth-context';
 import { useOnboarding } from '@/src/context/OnboardingContext';
+import {
+  geocodeRestaurantAddress,
+  saveRestaurantDiscoveryLocation,
+  type RestaurantDiscoveryLocationDraft,
+} from '@/src/utils/restaurantLocation';
 
 type AddressFields = {
   country: string;
@@ -63,12 +68,14 @@ type NominatimAddress = {
 type NominatimResult = {
   place_id: number;
   display_name: string;
+  lat: string;
+  lon: string;
   address?: NominatimAddress;
 };
 
 export default function CookAddressScreen() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, session } = useAuth();
   // When mounted as a gate, the caller passes ?next=/add-dish so we know
   // where to bounce the cook after they save.
   const { next, onboarding } = useLocalSearchParams<{ next?: string; onboarding?: string }>();
@@ -83,6 +90,8 @@ export default function CookAddressScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [suggestions, setSuggestions] = useState<NominatimResult[]>([]);
   const [searching, setSearching] = useState(false);
+  const [discoveryLocation, setDiscoveryLocation] =
+    useState<RestaurantDiscoveryLocationDraft | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
   // Debounced Nominatim lookup.
@@ -132,6 +141,16 @@ export default function CookAddressScreen() {
     }));
     setSearchQuery('');
     setSuggestions([]);
+    const latitude = Number(s.lat);
+    const longitude = Number(s.lon);
+    if (Number.isFinite(latitude) && Number.isFinite(longitude)) {
+      setDiscoveryLocation({
+        latitude,
+        longitude,
+        label: s.display_name,
+        source: 'address_search',
+      });
+    }
   };
 
   useEffect(() => {
@@ -181,24 +200,36 @@ export default function CookAddressScreen() {
       return;
     }
 
-    // ── Onboarding path: stash to context and continue to food safety.
-    // The actual DB write happens at the final payment-methods step.
-    if (isOnboarding) {
-      stashAddress({
-        country: fields.country.trim(),
-        flat: fields.flat.trim(),
-        property_name: fields.property_name.trim(),
-        street: fields.street.trim(),
-        locality: fields.locality.trim(),
-        town: fields.town.trim(),
-        postcode: fields.postcode.trim(),
-      });
-      router.push({ pathname: '/(cook)/food-safety', params: { onboarding: '1' } });
-      return;
-    }
-
     setSaving(true);
     try {
+      const publicArea =
+        discoveryLocation ??
+        (await geocodeRestaurantAddress(
+          [fields.street, fields.locality, fields.postcode, fields.town, fields.country]
+            .filter(Boolean)
+            .join(', ')
+        ));
+
+      // ── Onboarding path: stash to context and continue to food safety.
+      // The actual DB write happens at the final payment-methods step.
+      if (isOnboarding) {
+        stashAddress({
+          country: fields.country.trim(),
+          flat: fields.flat.trim(),
+          property_name: fields.property_name.trim(),
+          street: fields.street.trim(),
+          locality: fields.locality.trim(),
+          town: fields.town.trim(),
+          postcode: fields.postcode.trim(),
+          discoveryLatitude: publicArea.latitude,
+          discoveryLongitude: publicArea.longitude,
+          discoveryLabel: publicArea.label,
+          discoverySource: publicArea.source,
+        });
+        router.push({ pathname: '/(cook)/food-safety', params: { onboarding: '1' } });
+        return;
+      }
+
       const { error } = await supabase
         .from('profiles')
         .update({
@@ -212,6 +243,7 @@ export default function CookAddressScreen() {
         })
         .eq('user_id', user.id);
       if (error) throw error;
+      await saveRestaurantDiscoveryLocation(session?.access_token, publicArea);
 
       if (next) {
         router.replace(next as any);
@@ -243,6 +275,9 @@ export default function CookAddressScreen() {
           value={fields[key]}
           onChangeText={text => {
             setFields(prev => ({ ...prev, [key]: text }));
+            if (['country', 'street', 'locality', 'town', 'postcode'].includes(key)) {
+              setDiscoveryLocation(null);
+            }
             if (showErrors && text.trim() !== '') {
               // Re-check completion to clear errors optionally, or just clear all
             }

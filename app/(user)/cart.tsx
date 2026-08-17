@@ -20,6 +20,7 @@ import {
   loadPaymentMethods,
   type SavedPaymentCard,
 } from '@/src/utils/payment-method-storage';
+import { toRequestedOptionSelections } from '@/src/utils/menuOptions';
 
 const DELIVERY_FEE = 3.0;
 type FulfillmentType = 'pickup' | 'delivery';
@@ -102,7 +103,7 @@ export default function CartScreen() {
         if (threshold != null) {
           const remaining = threshold - subtotal;
           notes.push(
-            `Add RM ${remaining.toFixed(2)} more from ${cookName ?? 'this cook'} for free delivery (over RM ${threshold.toFixed(2)})`
+            `Add RM ${remaining.toFixed(2)} more for free delivery`
           );
         }
       }
@@ -175,9 +176,11 @@ export default function CartScreen() {
           items: cartItems.map(item => ({
             listingId: item.listingId,
             quantity: item.quantity,
-            pickupDate: item.selectedDate,
+            pickupDate: item.serviceDate ?? item.selectedDate,
             pickupTime: item.pickupSlotStart,
             priceAtOrder: item.price,
+            customerNote: item.customerNote,
+            selectedOptions: toRequestedOptionSelections(item.selectedOptions),
           })),
         }),
       });
@@ -259,26 +262,46 @@ export default function CartScreen() {
 
         {/* Items */}
         {cartItems.map((item: CartItem) => (
-          <View key={item.listingId} style={styles.cartCard}>
+          <View key={item.lineId} style={styles.cartCard}>
             <Image source={{ uri: item.imageUrl ?? '' }} style={styles.cartItemImage} />
             <View style={styles.cartItemInfo}>
               <View style={styles.cartItemHeader}>
                 <Text style={styles.cartItemTitle} numberOfLines={1}>
                   {item.title}
                 </Text>
-                <TouchableOpacity onPress={() => removeFromCart(item.listingId)}>
+                <TouchableOpacity onPress={() => removeFromCart(item.lineId)}>
                   <Ionicons name="trash-outline" size={18} color="#FF4D4D" />
                 </TouchableOpacity>
               </View>
               {item.cookName && <Text style={styles.cartItemChef}>by {item.cookName}</Text>}
+              {(item.selectedOptions?.length ?? 0) > 0 ? (
+                <View style={styles.cartOptions}>
+                  {item.selectedOptions!.map(option => (
+                    <Text key={option.optionId} style={styles.cartOptionText}>
+                      {option.groupName}: {option.optionName}
+                      {option.priceDelta > 0 ? ` (+RM ${option.priceDelta.toFixed(2)})` : ''}
+                    </Text>
+                  ))}
+                </View>
+              ) : null}
               <Text style={styles.cartItemDate}>
-                Pickup/Delivery Date:{' '}
-                {item.selectedDate.toLocaleDateString(undefined, {
+                Date & Time:{' '}
+                {new Date(item.pickupSlotStart ?? item.selectedDate).toLocaleDateString(undefined, {
                   month: 'short',
                   day: 'numeric',
                   year: 'numeric',
+                })}{' '}
+                at{' '}
+                {new Date(item.pickupSlotStart ?? item.selectedDate).toLocaleTimeString(undefined, {
+                  hour: 'numeric',
+                  minute: '2-digit',
                 })}
               </Text>
+              {item.customerNote ? (
+                <Text style={styles.cartItemNote} numberOfLines={2}>
+                  Note: {item.customerNote}
+                </Text>
+              ) : null}
               <View style={styles.cartItemFooter}>
                 <Text style={styles.cartItemPrice}>
                   RM {(item.price * item.quantity).toFixed(2)}
@@ -286,7 +309,7 @@ export default function CartScreen() {
                 <View style={styles.quantityRow}>
                   <TouchableOpacity
                     style={styles.qtyBtn}
-                    onPress={() => updateQuantity(item.listingId, item.quantity - 1)}
+                    onPress={() => updateQuantity(item.lineId, item.quantity - 1)}
                   >
                     <Text style={styles.qtyBtnText}>−</Text>
                   </TouchableOpacity>
@@ -299,7 +322,7 @@ export default function CartScreen() {
                         styles.qtyBtnDisabled,
                     ]}
                     disabled={item.maxQuantity != null && item.quantity >= item.maxQuantity}
-                    onPress={() => updateQuantity(item.listingId, item.quantity + 1)}
+                    onPress={() => updateQuantity(item.lineId, item.quantity + 1)}
                   >
                     <Text style={styles.qtyBtnText}>+</Text>
                   </TouchableOpacity>
@@ -432,6 +455,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontSize: 14,
   },
+  cartItemNote: {
+    marginTop: 4,
+    color: '#69737B',
+    fontSize: 12,
+    lineHeight: 17,
+  },
   emptyStateContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -512,6 +541,15 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#888',
     marginBottom: 4,
+  },
+  cartOptions: {
+    marginBottom: 7,
+    gap: 2,
+  },
+  cartOptionText: {
+    fontSize: 11,
+    lineHeight: 16,
+    color: '#657069',
   },
   cartItemDate: {
     fontSize: 12,

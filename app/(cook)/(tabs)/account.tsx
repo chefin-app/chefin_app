@@ -8,7 +8,7 @@ import {
   SafeAreaView,
   ScrollView,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { type Href, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/src/utils/supabaseClient';
 
@@ -17,7 +17,7 @@ interface MenuItem {
   title: string;
   subtitle?: string;
   icon: keyof typeof Ionicons.glyphMap;
-  route: string;
+  route: Href | 'SignOut';
   section?: 'main' | 'more';
 }
 
@@ -47,6 +47,14 @@ const Account: React.FC = () => {
       route: '/(cook)/address',
       section: 'main',
     },
+    {
+      id: '4',
+      title: 'Business Hours',
+      subtitle: 'Set regular and special opening hours',
+      icon: 'time-outline',
+      route: '/(cook)/business-hours',
+      section: 'main',
+    },
     // {
     //   id: '4',
     //   title: 'Invite Friends',
@@ -71,6 +79,14 @@ const Account: React.FC = () => {
     //   section: 'more',
     // },
     {
+      id: '6',
+      title: 'Help & Support',
+      subtitle: 'Cook FAQs and contact support',
+      icon: 'help-circle-outline',
+      route: '/(cook)/help-support',
+      section: 'main',
+    },
+    {
       id: '7',
       title: 'Switch to customer mode',
       subtitle: 'Explore Chefins near you',
@@ -87,7 +103,7 @@ const Account: React.FC = () => {
     },
   ];
 
-  const handleNavigation = (route: string, title: string) => {
+  const handleNavigation = (route: Href | 'SignOut', title: string) => {
     if (route === 'SignOut') {
       // Handle signout logic
       handleSignOut();
@@ -97,7 +113,7 @@ const Account: React.FC = () => {
     // Navigate to the specific route
     try {
       router.push(route);
-    } catch (error) {
+    } catch {
       console.log(`Navigation to ${route} not configured yet`);
       // For development - you can remove this alert in production
       console.log(`Would navigate to: ${title}`);
@@ -126,7 +142,11 @@ const Account: React.FC = () => {
     return (
       <TouchableOpacity
         key={item.id}
-        style={styles.menuItem}
+        style={[
+          styles.menuItem,
+          item.route === 'SignOut' && isSigningOut && styles.menuItemDisabled,
+        ]}
+        disabled={item.route === 'SignOut' && isSigningOut}
         onPress={() => handleNavigation(item.route, item.title)}
         activeOpacity={0.7}
       >
@@ -210,6 +230,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#F5F5F5',
   },
+  menuItemDisabled: { opacity: 0.5 },
   menuItemLeft: {
     flexDirection: 'row',
     alignItems: 'center',

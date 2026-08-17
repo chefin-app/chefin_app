@@ -8,6 +8,7 @@ import {
   FlatList,
   Text,
   TouchableOpacity,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { createShadowStyle } from '../../../src/utils/platform-utils';
@@ -19,7 +20,8 @@ import LoadingSpinner from '@/src/components/feedback/LoadingSpinner';
 
 import PromoImage from '@/src/assets/images/promo-food.webp';
 import MealCard from '@/src/components/cards/MealCard';
-import StickyCartBar from '@/src/components/navigation/StickyCartBar';
+import FloatingCartButton from '@/src/components/navigation/FloatingCartButton';
+import LocationPromptModal from '@/src/components/location/LocationPromptModal';
 
 import { Listing, Profile, Review } from '@/src/types/models';
 import {
@@ -29,14 +31,17 @@ import {
   type AvailabilitySummaryMap,
 } from '@/src/utils/listingAvailability';
 import { getListingsRatingSummary, getRatingSummary } from '@/src/utils/ratings';
-import { fetchCooks } from '@/src/utils/fetchCooks';
+import { fetchCooks, fetchNearestCooks } from '@/src/utils/fetchCooks';
+import { useCustomerLocation } from '@/src/context/CustomerLocationContext';
+import { useAuth } from '@/src/services/auth-context';
+import { listingMatchesDietaryPreferences } from '@/src/utils/dietary';
 
 interface ListingWithProfile extends Listing {
   profiles: Profile;
   reviews?: Review[];
 }
 
-type DiscoveryMode = 'all' | 'availableNow' | 'topRated';
+type DiscoveryMode = 'all' | 'availableNow' | 'topRated' | 'nearest';
 
 function uniqueByCook(listings: ListingWithProfile[]): ListingWithProfile[] {
   const seenCookIds = new Set<string>();
@@ -51,7 +56,14 @@ const RailSeparator = () => <View style={styles.railSeparator} />;
 
 export default function HomeScreen() {
   const router = useRouter();
+  const { user } = useAuth();
+  const { location, prompted: locationPrompted, loading: locationLoading } = useCustomerLocation();
   const [popularChefins, setPopularChefins] = useState<ListingWithProfile[]>([]);
+  const [nearestChefins, setNearestChefins] = useState<ListingWithProfile[]>([]);
+  const [nearestLoading, setNearestLoading] = useState(false);
+  const [nearestError, setNearestError] = useState<string | null>(null);
+  const [locationPromptVisible, setLocationPromptVisible] = useState(false);
+  const [autoPromptedUserId, setAutoPromptedUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -75,6 +87,13 @@ export default function HomeScreen() {
     () => uniqueByCook(filteredChefins).slice(0, 10),
     [filteredChefins]
   );
+
+  const nearestRestaurants = useMemo(() => {
+    const matchingCookIds = new Set(filteredChefins.map(listing => listing.cook_id));
+    return uniqueByCook(
+      nearestChefins.filter(listing => matchingCookIds.has(listing.cook_id))
+    ).slice(0, 10);
+  }, [filteredChefins, nearestChefins]);
 
   const featuredAvailableToday = useMemo(
     () =>
@@ -124,16 +143,11 @@ export default function HomeScreen() {
       result = result.filter(chefin => chefin.profiles?.is_verified);
     }
 
-    // 3. Dietary Filter (Must contain all selected dietary tags)
+    // 3. Dietary declarations are dish-level. Filtering the dish rows before
+    // de-duplicating cooks means a restaurant appears if it has at least one
+    // customer-visible dish that satisfies every selected preference.
     if (selectedDietary.length > 0) {
-      result = result.filter(chefin => {
-        if (!chefin.dietary_tags || !Array.isArray(chefin.dietary_tags)) return false;
-
-        // Ensure all selected dietary options are present in the dish's tags
-        return selectedDietary.every(diet =>
-          chefin.dietary_tags!.some(tag => tag.toLowerCase() === diet.toLowerCase())
-        );
-      });
+      result = result.filter(chefin => listingMatchesDietaryPreferences(chefin, selectedDietary));
     }
 
     // 4. Available Now — earliest valid slot is today and still has capacity.
@@ -179,6 +193,60 @@ export default function HomeScreen() {
       fetchData();
     }, [fetchData])
   );
+
+  const fetchNearest = useCallback(async () => {
+    if (!location) {
+      setNearestChefins([]);
+      setNearestError(null);
+      setNearestLoading(false);
+      return;
+    }
+    setNearestLoading(true);
+    setNearestError(null);
+    try {
+      const nearby = (await fetchNearestCooks({
+        latitude: location.latitude,
+        longitude: location.longitude,
+        limit: 20,
+      })) as ListingWithProfile[];
+      setNearestChefins(nearby);
+    } catch (caught) {
+      setNearestChefins([]);
+      setNearestError(
+        caught instanceof Error ? caught.message : 'Nearby home restaurants are unavailable.'
+      );
+    } finally {
+      setNearestLoading(false);
+    }
+  }, [location]);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchNearest();
+    }, [fetchNearest])
+  );
+
+  useEffect(() => {
+    if (!user) {
+      setAutoPromptedUserId(null);
+      setLocationPromptVisible(false);
+      return;
+    }
+    if (!locationLoading && !locationPrompted && autoPromptedUserId !== user.id) {
+      // New accounts land here immediately after the required name/phone step.
+      // Existing accounts are offered the same one-time choice after rollout.
+      setAutoPromptedUserId(user.id);
+      setLocationPromptVisible(true);
+    }
+  }, [autoPromptedUserId, locationLoading, locationPrompted, user]);
+
+  const openLocationPrompt = () => {
+    if (!user) {
+      router.push('/(auth)/login');
+      return;
+    }
+    setLocationPromptVisible(true);
+  };
 
   const openDiscovery = (discover: DiscoveryMode, title: string) => {
     router.push({
@@ -331,13 +399,84 @@ export default function HomeScreen() {
           </View>
         </TouchableOpacity>
 
+        <TouchableOpacity
+          style={styles.locationSelector}
+          onPress={openLocationPrompt}
+          accessibilityRole="button"
+          accessibilityLabel={
+            location
+              ? `Delivery and pickup area: ${location.label}. Tap to change.`
+              : 'Set a delivery and pickup area to find nearby home restaurants'
+          }
+        >
+          <View style={styles.locationSelectorIcon}>
+            <Ionicons name="location" size={20} color="#2E7D32" />
+          </View>
+          <View style={styles.locationSelectorCopy}>
+            <Text style={styles.locationSelectorEyebrow}>DELIVERY &amp; PICKUP AREA</Text>
+            <Text style={styles.locationSelectorLabel} numberOfLines={1}>
+              {locationLoading
+                ? 'Loading your location…'
+                : location?.label || 'Choose your location'}
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#647067" />
+        </TouchableOpacity>
+
         <CuisineFilter onCuisineSelect={handleCuisineSelect} />
         <MainFilter onFilterToggle={handleMainFilterToggle} onDietarySelect={handleDietarySelect} />
 
         {hasAnyResults ? (
           <>
+            {location ? (
+              nearestLoading ? (
+                <View style={styles.nearestStatusCard}>
+                  <ActivityIndicator size="small" color="#4CAF50" />
+                  <Text style={styles.nearestStatusText}>Finding the closest kitchens…</Text>
+                </View>
+              ) : nearestRestaurants.length > 0 ? (
+                renderRail('Nearest to You', nearestRestaurants, 'nearest')
+              ) : (
+                <View style={styles.nearestEmptyCard}>
+                  <Ionicons
+                    name={nearestError ? 'cloud-offline-outline' : 'location-outline'}
+                    size={24}
+                    color="#4C6651"
+                  />
+                  <View style={styles.nearestEmptyCopy}>
+                    <Text style={styles.nearestEmptyTitle}>
+                      {nearestError
+                        ? 'Nearby restaurants could not load'
+                        : 'No nearby kitchens yet'}
+                    </Text>
+                    <Text style={styles.nearestEmptyText} numberOfLines={2}>
+                      {nearestError ||
+                        'Try a different area or check again as new home restaurants join.'}
+                    </Text>
+                  </View>
+                  <TouchableOpacity onPress={nearestError ? fetchNearest : openLocationPrompt}>
+                    <Text style={styles.nearestActionText}>
+                      {nearestError ? 'Retry' : 'Change'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )
+            ) : (
+              <TouchableOpacity style={styles.nearestCta} onPress={openLocationPrompt}>
+                <View style={styles.nearestCtaIcon}>
+                  <Ionicons name="navigate-outline" size={22} color="#2E7D32" />
+                </View>
+                <View style={styles.nearestCtaCopy}>
+                  <Text style={styles.nearestCtaTitle}>See the nearest home restaurants</Text>
+                  <Text style={styles.nearestCtaText}>
+                    Set an area to receive privacy-friendly local recommendations.
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color="#2E7D32" />
+              </TouchableOpacity>
+            )}
             {renderRail(
-              'Popular Chefins Near You',
+              'Popular Home Restaurants',
               popularRestaurants,
               'all',
               'All Home Restaurants'
@@ -355,7 +494,11 @@ export default function HomeScreen() {
           </View>
         )}
       </ScrollView>
-      <StickyCartBar />
+      <FloatingCartButton />
+      <LocationPromptModal
+        visible={locationPromptVisible}
+        onClose={() => setLocationPromptVisible(false)}
+      />
     </SafeAreaView>
   );
 }
@@ -474,6 +617,80 @@ const styles = StyleSheet.create({
   section: {
     marginBottom: 24,
   },
+  locationSelector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#DFE8E1',
+    padding: 12,
+    marginBottom: 14,
+  },
+  locationSelectorIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#E8F5EA',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+  },
+  locationSelectorCopy: { flex: 1 },
+  locationSelectorEyebrow: {
+    color: '#758077',
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+  },
+  locationSelectorLabel: {
+    color: '#243528',
+    fontSize: 14,
+    fontWeight: '700',
+    marginTop: 2,
+  },
+  nearestStatusCard: {
+    minHeight: 90,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 18,
+  },
+  nearestStatusText: { color: '#5E6C61', fontSize: 12, marginTop: 8 },
+  nearestEmptyCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F1F7F2',
+    borderRadius: 16,
+    padding: 14,
+    gap: 10,
+    marginBottom: 18,
+  },
+  nearestEmptyCopy: { flex: 1 },
+  nearestEmptyTitle: { color: '#29432F', fontSize: 14, fontWeight: '700' },
+  nearestEmptyText: { color: '#627065', fontSize: 11, lineHeight: 16, marginTop: 2 },
+  nearestActionText: { color: '#2E7D32', fontSize: 12, fontWeight: '700', padding: 6 },
+  nearestCta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#EDF8EF',
+    borderWidth: 1,
+    borderColor: '#D1E9D5',
+    borderRadius: 18,
+    padding: 14,
+    marginBottom: 20,
+  },
+  nearestCtaIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 11,
+  },
+  nearestCtaCopy: { flex: 1 },
+  nearestCtaTitle: { color: '#214128', fontSize: 14, fontWeight: '700' },
+  nearestCtaText: { color: '#5D6F61', fontSize: 11, lineHeight: 16, marginTop: 2 },
   railContent: {
     paddingVertical: 10,
   },

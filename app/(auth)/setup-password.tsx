@@ -9,10 +9,17 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams, type Href } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useAuth } from '@/src/services/auth-context';
 
 export default function SetupPasswordStep3() {
+  const { updatePassword, onboardingCompleted } = useAuth();
+  const { returnTo } = useLocalSearchParams<{ returnTo?: string }>();
+  const safeReturnTo =
+    typeof returnTo === 'string' && returnTo.startsWith('/') && !returnTo.startsWith('//')
+      ? returnTo
+      : null;
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -37,20 +44,24 @@ export default function SetupPasswordStep3() {
     setIsLoading(true);
 
     try {
-      const res = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/auth/sign-up`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: password }),
-      });
-
-      if (!res.ok) {
-        const { error } = await res.json();
-        throw new Error(error || 'Failed to set up password');
-      }
+      const { error } = await updatePassword(password);
+      if (error) throw new Error(error);
       Alert.alert('Success', 'Your account has been created successfully!', [
         {
           text: 'OK',
-          onPress: () => router.replace('/(user)/(tabs)/home'),
+          onPress: () => {
+            if (onboardingCompleted !== true) {
+              router.replace(
+                safeReturnTo
+                  ? (`/(auth)/onboarding?returnTo=${encodeURIComponent(safeReturnTo)}` as Href)
+                  : '/(auth)/onboarding'
+              );
+            } else if (safeReturnTo) {
+              router.replace(safeReturnTo as Href);
+            } else {
+              router.replace('/(user)/(tabs)/home');
+            }
+          },
         },
       ]);
     } catch (error) {

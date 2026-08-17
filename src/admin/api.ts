@@ -8,6 +8,10 @@ import type {
   UserManagementFilter,
   UserManagementResponse,
   UserManagementSort,
+  CookManagementFilter,
+  CookManagementResponse,
+  CookManagementSort,
+  ManagedCookDetails,
 } from './types';
 
 export class AdminApiError extends Error {
@@ -184,3 +188,62 @@ export const fetchVerificationDocumentFile = async (
     expiresInSeconds: payload.expiresInSeconds ?? 600,
   };
 };
+
+export const fetchManagedCooks = (
+  accessToken: string,
+  options: {
+    search: string;
+    filter: CookManagementFilter;
+    sort: CookManagementSort;
+    page: number;
+    pageSize: number;
+  }
+): Promise<CookManagementResponse> => {
+  const params = new URLSearchParams({
+    search: options.search,
+    filter: options.filter,
+    sort: options.sort,
+    page: String(options.page),
+    pageSize: String(options.pageSize),
+  });
+  return adminRequest(`/cooks?${params.toString()}`, accessToken);
+};
+
+export const fetchManagedCookDetails = (
+  accessToken: string,
+  userId: string
+): Promise<ManagedCookDetails> => adminRequest(`/cooks/${userId}`, accessToken);
+
+export const fetchIdentityDocumentFile = (
+  accessToken: string,
+  userId: string,
+  documentId: string
+): Promise<{ fileUrl: string; expiresInSeconds: number }> =>
+  adminRequest(`/cooks/${userId}/identity/${documentId}/file`, accessToken);
+
+export const reviewIdentityDocument = (
+  accessToken: string,
+  userId: string,
+  documentId: string,
+  input: { decision: 'approved' | 'rejected' | 'more_info_requested'; reviewerNote?: string }
+) =>
+  adminRequest<{ success: true }>(`/cooks/${userId}/identity/${documentId}/review`, accessToken, {
+    method: 'POST',
+    body: input,
+  });
+
+export const reviewCookApplication = (
+  accessToken: string,
+  userId: string,
+  action: 'approve' | 'reject',
+  reviewerNote?: string
+) =>
+  adminRequest<{ success: true }>(`/cooks/${userId}/application/${action}`, accessToken, {
+    method: 'POST',
+    body: { reviewerNote },
+  });
+
+export const hideCookListings = (accessToken: string, userId: string) =>
+  adminRequest<{ success: true }>(`/cooks/${userId}/hide-listings`, accessToken, {
+    method: 'POST',
+  });

@@ -79,9 +79,19 @@ export default function CookLayout() {
         options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
       />
       <Stack.Screen name="profile-information" />
+      <Stack.Screen name="business-hours" />
+      <Stack.Screen name="help-support" />
+      <Stack.Screen name="add-selling-schedule" />
+      <Stack.Screen name="option-group" />
       <Stack.Screen name="edit-dish" />
+      <Stack.Screen name="review-customer/[orderId]" />
+      <Stack.Screen name="order/[orderId]" />
       <Stack.Screen
         name="food-safety"
+        options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
+      />
+      <Stack.Screen
+        name="identity-verification"
         options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
       />
     </Stack>

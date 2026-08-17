@@ -40,6 +40,7 @@ const MealCard: React.FC<MealCardProps> = ({
   cook_id,
   reviews = [], // Default to empty array if undefined
   restaurant_reviews,
+  distance_label,
   profiles, // Add profiles to destructured props
   listings = [],
   availability,
@@ -130,6 +131,12 @@ const MealCard: React.FC<MealCardProps> = ({
         <Text style={[styles.available, availability?.state !== 'available' && styles.unavailable]}>
           {getAvailabilityLabel(availability)}
         </Text>
+        {distance_label && (
+          <View style={styles.distanceRow}>
+            <Ionicons name="location-outline" size={13} color="#526B56" />
+            <Text style={styles.distanceText}>{distance_label}</Text>
+          </View>
+        )}
       </View>
     </TouchableOpacity>
   );
@@ -205,6 +212,10 @@ const styles = StyleSheet.create({
   },
   availabilityRow: {
     flex: 1,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    paddingRight: 14,
   },
   available: {
     color: '#4CAF50',
@@ -215,6 +226,17 @@ const styles = StyleSheet.create({
   },
   unavailable: {
     color: '#666666',
+  },
+  distanceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    marginTop: 2,
+  },
+  distanceText: {
+    color: '#526B56',
+    fontSize: 11,
+    fontWeight: '600',
   },
   rating: {
     flexDirection: 'row',

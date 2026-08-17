@@ -2,6 +2,16 @@ import express from 'express';
 import { supabase } from '../supabaseClient';
 import { notifyCookDishReviewed, notifyFavouritersNewDish } from '../notifications';
 import { requireAdmin } from '../middleware/requireAdmin';
+import {
+  getCookEligibilityByProfileId,
+  getEligibleCookUserIds,
+  getPausedCookProfileIds,
+} from '../cookEligibility';
+import {
+  filterListingsWithFutureAvailability,
+  listingHasFutureAvailability,
+} from '../availabilityService';
+import { getListingOptionGroups } from '../menuOptionService';
 
 const router = express.Router();
 
@@ -9,19 +19,72 @@ const router = express.Router();
 router.get('/all-listings', async (req, res) => {
   const query = req.query.query as string | undefined;
   try {
-    let request = supabase.from('listings').select('*').eq('status', 'approved');
-
-    if (query && query.trim() !== '') {
-      // ilike is case-insensitive LIKE (good for search)
-      request = request.ilike('title', `%${query}%`);
-    }
-
-    const { data, error } = await request;
+    const { data, error } = await supabase
+      .from('listings')
+      .select(
+        '*, reviews(id, rating, comment), profiles!inner(user_id, full_name, profile_image, is_verified, restaurant_name)'
+      )
+      .eq('status', 'approved')
+      .eq('is_active', true);
 
     if (error) {
       return res.status(400).json({ error: error.message });
     }
-    return res.json(data ?? []);
+    const rows = data ?? [];
+    const userIds = rows.flatMap(row => {
+      const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
+      return profile?.user_id ? [profile.user_id] : [];
+    });
+    const eligibleUserIds = await getEligibleCookUserIds(userIds);
+    const normalizedQuery = query?.trim().toLowerCase() ?? '';
+    const eligibleRows = rows.filter(row => {
+      const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
+      if (!profile?.user_id || !eligibleUserIds.has(profile.user_id)) return false;
+      if (!normalizedQuery) return true;
+      return [
+        row.title,
+        row.description,
+        row.cuisine,
+        row.location,
+        profile.full_name,
+        profile.restaurant_name,
+      ].some(value =>
+        String(value ?? '')
+          .toLowerCase()
+          .includes(normalizedQuery)
+      );
+    });
+    const scheduledRows = await filterListingsWithFutureAvailability(eligibleRows);
+    const pausedCookIds = await getPausedCookProfileIds(scheduledRows.map(row => row.cook_id));
+    const visibleRows = scheduledRows.filter(row => !pausedCookIds.has(row.cook_id));
+    const cookIds = [...new Set(visibleRows.map(row => row.cook_id))];
+    const { data: ratingRows, error: ratingError } = cookIds.length
+      ? await supabase
+          .from('listings')
+          .select('id, cook_id, reviews(rating)')
+          .in('cook_id', cookIds)
+          .eq('status', 'approved')
+          .eq('is_active', true)
+      : { data: [], error: null };
+    if (ratingError) throw ratingError;
+    const reviewsByCook = new Map<string, Array<{ rating: number }>>();
+    const listingIdsByCook = new Map<string, string[]>();
+    for (const row of ratingRows ?? []) {
+      reviewsByCook.set(row.cook_id, [
+        ...(reviewsByCook.get(row.cook_id) ?? []),
+        ...(row.reviews ?? []),
+      ]);
+    }
+    for (const row of visibleRows) {
+      listingIdsByCook.set(row.cook_id, [...(listingIdsByCook.get(row.cook_id) ?? []), row.id]);
+    }
+    return res.json(
+      visibleRows.map(row => ({
+        ...row,
+        restaurant_reviews: reviewsByCook.get(row.cook_id) ?? [],
+        restaurant_listing_ids: listingIdsByCook.get(row.cook_id) ?? [row.id],
+      }))
+    );
   } catch (err: unknown) {
     const errorMessage = err instanceof Error ? err.message : 'Unknown error';
     console.error('Error fetching all listings:', errorMessage);
@@ -67,6 +130,16 @@ router.get('/:id', async (req, res) => {
       throw new Error(listingError.message);
     }
 
+    const eligibility = await getCookEligibilityByProfileId(listing.cook_id);
+    if (
+      !eligibility.eligibleToSell ||
+      listing.status !== 'approved' ||
+      listing.is_active !== true ||
+      !(await listingHasFutureAvailability({ id: listing.id, cook_id: listing.cook_id }))
+    ) {
+      return res.status(404).json({ error: 'Listing not found.' });
+    }
+
     const { data: ratingRows, error: ratingError } = await supabase
       .from('listings')
       .select('reviews(rating)')
@@ -76,7 +149,12 @@ router.get('/:id', async (req, res) => {
     if (ratingError) throw ratingError;
 
     const restaurantReviews = (ratingRows ?? []).flatMap(row => row.reviews ?? []);
-    return res.json({ ...listing, restaurant_reviews: restaurantReviews });
+    const optionGroupsByListing = await getListingOptionGroups([listing.id]);
+    return res.json({
+      ...listing,
+      restaurant_reviews: restaurantReviews,
+      option_groups: optionGroupsByListing[listing.id] ?? [],
+    });
   } catch (err: any) {
     console.error(`Error fetching listing ${id}:`, err);
     res.status(500).json({ error: 'Internal Server Error' });
@@ -107,9 +185,19 @@ router.patch('/:id/status', requireAdmin, async (req, res) => {
     }
     const alreadyApproved = listing.status === 'approved';
 
+    if (status === 'approved') {
+      const eligibility = await getCookEligibilityByProfileId(listing.cook_id);
+      if (!eligibility.eligibleToSell) {
+        return res.status(409).json({
+          error: 'This cook is not yet approved to sell. Complete the cook verification first.',
+          cookApplicationStatus: eligibility.status,
+        });
+      }
+    }
+
     const { data, error } = await supabase
       .from('listings')
-      .update({ status })
+      .update({ status, ...(status === 'approved' ? { is_active: true } : {}) })
       .eq('id', id)
       .select()
       .single();

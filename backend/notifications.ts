@@ -172,7 +172,7 @@ export function notifyCookNewOrder(cookUserId: string, o: OrderContext) {
   return createNotification(cookUserId, {
     type: 'new_order',
     title: 'New order received',
-    body: `${o.quantity}× ${o.listingTitle} for ${pickupPhrase(o)} — ${formatRM(o.totalPrice)} already paid. Confirm it in Today.`,
+    body: `${o.quantity}× ${o.listingTitle} for ${pickupPhrase(o)} — ${formatRM(o.totalPrice)} already paid. Confirm it in Orders tab.`,
     data: { order_id: o.orderId },
   });
 }

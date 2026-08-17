@@ -7,9 +7,14 @@ import { requireAdmin, type AdminRequest } from '../middleware/requireAdmin';
 const router = express.Router();
 
 const BUCKET = 'food-safety-licenses';
-const TIER1_DOC_TYPES = ['food_handler_certificate', 'typhoid_vaccination'];
+const REQUIRED_COMPLIANCE_DOC_TYPES = [
+  'fosim_registration',
+  'food_handler_certificate',
+  'typhoid_vaccination',
+];
 
 const DOC_LABELS: Record<string, string> = {
+  fosim_registration: 'FoSIM food premises registration',
   food_handler_certificate: 'MOH Food Handler Certificate',
   typhoid_vaccination: 'anti-typhoid vaccination record',
 };
@@ -115,7 +120,8 @@ router.get('/document/:documentId/file', requireAdmin, async (req: AdminRequest,
 
 // POST /review - Approve or reject a submitted document.
 // Body: { document_id, decision: 'approved' | 'rejected', reviewer_note? }
-// Approving any Tier 1 document grants the Tier 1 "Verified" badge.
+// Document decisions feed the application-level compliance stage. The public
+// Verified badge is granted only by final cook approval, never by one file.
 router.post('/review', requireAdmin, async (req: AdminRequest, res) => {
   const { document_id, decision, reviewer_note } = req.body as {
     document_id?: string;
@@ -138,12 +144,26 @@ router.post('/review', requireAdmin, async (req: AdminRequest, res) => {
   try {
     const { data: existingDocument, error: lookupError } = await supabase
       .from('verification_documents')
-      .select('id, status')
+      .select('id, status, user_id')
       .eq('id', document_id)
       .maybeSingle();
     if (lookupError) throw lookupError;
     if (!existingDocument) {
       return res.status(404).json({ error: 'Verification document not found.' });
+    }
+    if (existingDocument.user_id === req.admin!.userId) {
+      return res.status(403).json({ error: 'Administrators cannot review their own documents.' });
+    }
+    const { data: application, error: applicationError } = await supabase
+      .from('cook_applications')
+      .select('identity_status')
+      .eq('user_id', existingDocument.user_id)
+      .maybeSingle();
+    if (applicationError) throw applicationError;
+    if (application && application.identity_status !== 'approved') {
+      return res.status(409).json({
+        error: 'Complete and approve the identity review before food compliance review.',
+      });
     }
     if (existingDocument.status !== 'pending') {
       return res.status(409).json({
@@ -176,21 +196,43 @@ router.post('/review', requireAdmin, async (req: AdminRequest, res) => {
       });
     }
 
-    let verification_tier: number | undefined;
-    if (decision === 'approved' && TIER1_DOC_TYPES.includes(doc.doc_type)) {
-      // Tier 1 badge: any one approved Tier 1 document is enough.
-      const { data: profile, error: tierErr } = await supabase
-        .from('profiles')
-        .update({ verification_tier: 1, is_verified: true })
+    let complianceStatus: string | undefined;
+    if (REQUIRED_COMPLIANCE_DOC_TYPES.includes(doc.doc_type)) {
+      const { data: latestDocuments, error: latestError } = await supabase
+        .from('verification_documents')
+        .select('doc_type, status, submitted_at')
         .eq('user_id', doc.user_id)
-        .lt('verification_tier', 1)
-        .select('verification_tier')
-        .maybeSingle();
-      if (tierErr) {
-        return res.status(400).json({ error: tierErr.message });
+        .in('doc_type', REQUIRED_COMPLIANCE_DOC_TYPES)
+        .order('submitted_at', { ascending: false });
+      if (latestError) throw latestError;
+      const latestByType = new Map<string, string>();
+      for (const item of latestDocuments ?? []) {
+        if (!latestByType.has(item.doc_type)) latestByType.set(item.doc_type, item.status);
       }
-      // maybeSingle() is null when the cook already held tier >= 1.
-      verification_tier = profile?.verification_tier ?? undefined;
+      const allApproved = REQUIRED_COMPLIANCE_DOC_TYPES.every(
+        type => latestByType.get(type) === 'approved'
+      );
+      complianceStatus = allApproved
+        ? 'approved'
+        : decision === 'more_info_requested'
+          ? 'more_info_requested'
+          : decision === 'rejected'
+            ? 'rejected'
+            : 'pending';
+      const { error: applicationUpdateError } = await supabase
+        .from('cook_applications')
+        .update({
+          compliance_status: complianceStatus,
+          ...(complianceStatus !== 'pending'
+            ? {
+                compliance_reviewed_at: new Date().toISOString(),
+                compliance_reviewed_by: req.admin!.userId,
+              }
+            : {}),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('user_id', doc.user_id);
+      if (applicationUpdateError) throw applicationUpdateError;
     }
 
     // Tell the cook the outcome (best-effort — the review already landed).
@@ -230,7 +272,7 @@ router.post('/review', requireAdmin, async (req: AdminRequest, res) => {
     res.json({
       message: `Document ${decision}`,
       document: doc,
-      ...(verification_tier !== undefined && { verification_tier }),
+      ...(complianceStatus !== undefined && { compliance_status: complianceStatus }),
     });
   } catch (err: any) {
     res.status(500).json({ error: err.message });

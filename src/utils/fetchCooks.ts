@@ -1,134 +1,70 @@
-import { supabase } from '../services/supabase';
 import type { Listing, Profile } from '@/src/types/models';
 
 interface ListingWithProfile extends Listing {
   profiles: Profile;
 }
 
-type CookRatingRow = Pick<Listing, 'id' | 'cook_id'> & {
-  reviews?: Array<{ rating: number }> | null;
+const getApiUrl = (): string => {
+  const apiUrl = process.env.EXPO_PUBLIC_API_URL?.replace(/\/$/, '');
+  if (!apiUrl) throw new Error('The Chefin API URL is not configured.');
+  return apiUrl;
 };
 
-const attachCookWideReviews = (
-  listings: ListingWithProfile[],
-  ratingRows: CookRatingRow[]
-): ListingWithProfile[] => {
-  const reviewsByCook = new Map<string, Array<{ rating: number }>>();
-  const listingIdsByCook = new Map<string, string[]>();
-
-  for (const row of ratingRows) {
-    const current = reviewsByCook.get(row.cook_id) ?? [];
-    current.push(...(row.reviews ?? []).map(review => ({ rating: review.rating })));
-    reviewsByCook.set(row.cook_id, current);
-
-    const listingIds = listingIdsByCook.get(row.cook_id) ?? [];
-    listingIds.push(row.id);
-    listingIdsByCook.set(row.cook_id, listingIds);
+const readListingsResponse = async (response: Response): Promise<ListingWithProfile[]> => {
+  const payload = (await response.json().catch(() => ({}))) as
+    | ListingWithProfile[]
+    | { error?: string };
+  if (!response.ok || !Array.isArray(payload)) {
+    throw new Error(!Array.isArray(payload) && payload.error ? payload.error : 'Listings failed.');
   }
-
-  return listings.map(listing => ({
-    ...listing,
-    restaurant_reviews: reviewsByCook.get(listing.cook_id) ?? [],
-    restaurant_listing_ids: listingIdsByCook.get(listing.cook_id) ?? [listing.id],
-  }));
+  return payload;
 };
 
+/**
+ * Discovery is served by the backend so the 90-day reverification deadline is
+ * enforced even after an already-approved listing has been sitting untouched.
+ * A client-side Supabase query cannot safely inspect another cook's private
+ * application record.
+ */
 export const fetchCooks = async ({ query }: { query: string }): Promise<ListingWithProfile[]> => {
-  const search = `%${query?.trim() ?? ''}%`;
-
-  // Base selection used across all queries
-  const baseSelect = `
-    *,
-    reviews ( id, rating, comment ),
-    profiles!inner ( user_id, full_name, profile_image, is_verified, restaurant_name )
-  `;
-
+  const apiUrl = getApiUrl();
+  const params = new URLSearchParams();
+  if (query.trim()) params.set('query', query.trim());
+  const suffix = params.toString() ? `?${params.toString()}` : '';
+  let response: Response;
   try {
-    // CASE 1: No query — fetch everything
-    if (!query || query.trim() === '') {
-      const { data, error } = await supabase
-        .from('listings')
-        .select(baseSelect)
-        .eq('status', 'approved')
-        .eq('is_active', true);
-      if (error) throw error;
-      const listings = (data ?? []) as ListingWithProfile[];
-      return attachCookWideReviews(listings, listings);
-    }
-
-    // CASE 2: Run separate queries for each filter
-    const [titleRes, descriptionRes, cuisineRes, restaurantRes, chefRes, locationRes] =
-      await Promise.all([
-        supabase
-          .from('listings')
-          .select(baseSelect)
-          .eq('status', 'approved')
-          .eq('is_active', true)
-          .ilike('title', search),
-        supabase
-          .from('listings')
-          .select(baseSelect)
-          .eq('status', 'approved')
-          .eq('is_active', true)
-          .ilike('description', search),
-        supabase
-          .from('listings')
-          .select(baseSelect)
-          .eq('status', 'approved')
-          .eq('is_active', true)
-          .ilike('cuisine', search),
-        supabase
-          .from('listings')
-          .select(baseSelect)
-          .eq('status', 'approved')
-          .eq('is_active', true)
-          .ilike('profiles.restaurant_name', search),
-        supabase
-          .from('listings')
-          .select(baseSelect)
-          .eq('status', 'approved')
-          .eq('is_active', true)
-          .ilike('profiles.full_name', search),
-        supabase
-          .from('listings')
-          .select(baseSelect)
-          .eq('status', 'approved')
-          .eq('is_active', true)
-          .ilike('location', search),
-      ]);
-
-    // Collect results
-    const allData = [
-      ...(titleRes.data ?? []),
-      ...(descriptionRes.data ?? []),
-      ...(cuisineRes.data ?? []),
-      ...(restaurantRes.data ?? []),
-      ...(chefRes.data ?? []),
-      ...(locationRes.data ?? []),
-    ];
-
-    // Combine and remove duplicates by ID
-    const uniqueResults = allData.filter(
-      (item, index, self) => index === self.findIndex(t => t.id === item.id)
-    ) as ListingWithProfile[];
-
-    const cookIds = [...new Set(uniqueResults.map(listing => listing.cook_id))];
-    let ratingRows: CookRatingRow[] = [];
-    if (cookIds.length > 0) {
-      const { data, error } = await supabase
-        .from('listings')
-        .select('id, cook_id, reviews(rating)')
-        .in('cook_id', cookIds)
-        .eq('status', 'approved')
-        .eq('is_active', true);
-      if (error) throw error;
-      ratingRows = (data ?? []) as CookRatingRow[];
-    }
-
-    console.log('✅ Search results:', uniqueResults.length);
-    return attachCookWideReviews(uniqueResults, ratingRows);
-  } catch (err) {
-    console.error('❌ fetchCooks error:', err);
-    throw err;
+    response = await fetch(`${apiUrl}/api/listings/all-listings${suffix}`);
+  } catch {
+    throw new Error(
+      `Chefin could not reach the backend at ${apiUrl}. On a physical device, use your computer's LAN IP instead of localhost and keep both devices on the same Wi-Fi.`
+    );
   }
+  return readListingsResponse(response);
+};
+
+export const fetchNearestCooks = async ({
+  latitude,
+  longitude,
+  limit = 20,
+  radiusKm = 25,
+}: {
+  latitude: number;
+  longitude: number;
+  limit?: number;
+  radiusKm?: number;
+}): Promise<ListingWithProfile[]> => {
+  const apiUrl = getApiUrl();
+  let response: Response;
+  try {
+    response = await fetch(`${apiUrl}/api/home/nearest-chefin-listings`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ latitude, longitude, limit, radiusKm }),
+    });
+  } catch {
+    throw new Error(
+      `Chefin could not reach the backend at ${apiUrl}. Check your connection and try again.`
+    );
+  }
+  return readListingsResponse(response);
 };

@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Slot, useRouter } from 'expo-router';
 
 import { useAdminAuth } from '@/src/admin/AdminAuthContext';
+import { showAdminFailure, showAdminSuccess } from '@/src/admin/feedback';
 import { useAuth } from '@/src/services/auth-context';
 import AdminShell from '@/src/components/admin/AdminShell';
 
@@ -38,7 +39,16 @@ export default function ProtectedAdminLayout() {
         <TouchableOpacity
           style={styles.primaryButton}
           onPress={async () => {
-            await signOut();
+            const { error: signOutError } = await signOut();
+            if (signOutError) {
+              showAdminFailure(
+                new Error(signOutError),
+                'This account could not be signed out.',
+                'Logout failed'
+              );
+              return;
+            }
+            showAdminSuccess('Signed out', 'You can now sign in with another account.');
             router.replace('/admin/login');
           }}
         >

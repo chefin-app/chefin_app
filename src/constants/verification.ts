@@ -1,14 +1,16 @@
 /**
  * Cook verification tiers and the documents that unlock them.
  *
- * Submitting documents is entirely optional — cooks can start selling without
- * any. Approval of at least one Tier 1 document by an admin grants the Tier 1
- * "Verified" badge (profiles.verification_tier = 1, profiles.is_verified = true).
+ * All three food/business compliance documents are required before a new cook
+ * can receive final selling approval.
  */
 
 export const VERIFICATION_BUCKET = 'food-safety-licenses';
 
-export type VerificationDocType = 'food_handler_certificate' | 'typhoid_vaccination';
+export type VerificationDocType =
+  | 'fosim_registration'
+  | 'food_handler_certificate'
+  | 'typhoid_vaccination';
 
 export type VerificationDocStatus = 'pending' | 'approved' | 'rejected' | 'more_info_requested';
 
@@ -18,8 +20,13 @@ export interface VerificationDocMeta {
   subtitle: string;
 }
 
-/** Either one of these earns the Tier 1 badge once approved. */
+/** Required evidence for final cook approval. */
 export const TIER1_DOCUMENTS: VerificationDocMeta[] = [
+  {
+    type: 'fosim_registration',
+    title: 'FoSIM food premises registration',
+    subtitle: 'Registration evidence for the home food premises',
+  },
   {
     type: 'food_handler_certificate',
     title: 'MOH Food Handler Certificate',

@@ -447,6 +447,7 @@ export default function ReportListingScreen() {
             placeholder="Share specific details that will help us review this listing…"
             placeholderTextColor="#9097A0"
             multiline
+            submitBehavior="newline"
             textAlignVertical="top"
             accessibilityLabel="Additional report details"
           />

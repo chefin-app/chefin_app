@@ -557,6 +557,7 @@ router.patch('/:userId', async (req: AdminRequest, res) => {
       'guest',
       ...(role === 'cook' ? ['cook'] : []),
       ...(role === 'admin' ? ['admin'] : []),
+      ...(req.body.preserveAdminRole === true && currentRoles.includes('admin') ? ['admin'] : []),
       ...(role === 'admin' && currentRoles.includes('cook') ? ['cook'] : []),
     ];
     const uniqueDesiredRoles = [...new Set(desiredRoles)];
@@ -622,30 +623,59 @@ router.post('/:userId/suspend', async (req: AdminRequest, res) => {
       ? ` until ${endsAt.toLocaleDateString('en-MY', { dateStyle: 'medium' })}`
       : ' indefinitely';
     const message = `Your Chefin account has been suspended${endText}. You may sign in and view existing information, but account actions are disabled. Reason: ${reason}`;
-    await createAccountNotice(userId, roles, 'Account suspended', message);
-    const { data: authUser } = await supabase.auth.admin.getUserById(userId);
-    const emailResult = authUser.user?.email
-      ? await sendAdminEmail({
-          to: authUser.user.email,
-          subject: 'Your Chefin account is suspended',
-          message,
-        })
-      : { sent: false, error: 'No email address.' };
-    await writeAdminAudit({
-      actorUserId: req.admin!.userId,
-      targetUserId: userId,
-      action: 'user_suspended',
-      details: {
-        reason,
-        durationDays,
-        endsAt: endsAt?.toISOString() ?? null,
-        emailSent: emailResult.sent,
-      },
-    });
+    let notificationResult: { sent: boolean; error?: string } = { sent: true };
+    try {
+      await createAccountNotice(userId, roles, 'Account suspended', message);
+    } catch (notificationError: unknown) {
+      notificationResult = {
+        sent: false,
+        error:
+          notificationError instanceof Error
+            ? notificationError.message
+            : 'In-app notification delivery failed.',
+      };
+      console.error(
+        'Account suspended, but the notification could not be created:',
+        notificationError
+      );
+    }
+    const { data: authUser, error: authUserError } = await supabase.auth.admin.getUserById(userId);
+    const emailResult = authUserError
+      ? { sent: false, error: authUserError.message }
+      : authUser.user?.email
+        ? await sendAdminEmail({
+            to: authUser.user.email,
+            subject: 'Your Chefin account is suspended',
+            message,
+          })
+        : { sent: false, error: 'No email address.' };
+    let auditResult: { recorded: boolean; error?: string } = { recorded: true };
+    try {
+      await writeAdminAudit({
+        actorUserId: req.admin!.userId,
+        targetUserId: userId,
+        action: 'user_suspended',
+        details: {
+          reason,
+          durationDays,
+          endsAt: endsAt?.toISOString() ?? null,
+          notificationSent: notificationResult.sent,
+          emailSent: emailResult.sent,
+        },
+      });
+    } catch (auditError: unknown) {
+      auditResult = {
+        recorded: false,
+        error: auditError instanceof Error ? auditError.message : 'Audit logging failed.',
+      };
+      console.error('Account suspended, but the audit entry could not be written:', auditError);
+    }
     res.json({
       success: true,
       suspensionEndsAt: endsAt?.toISOString() ?? null,
       email: emailResult,
+      notification: notificationResult,
+      audit: auditResult,
     });
   } catch (error: unknown) {
     console.error('Could not suspend user:', error);

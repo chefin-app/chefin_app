@@ -230,12 +230,24 @@ const STATUS_META: Record<string, { label: string; color: string; background: st
   cancelled: { label: 'Cancelled', color: '#B42318', background: '#FEE4E2' },
   rejected: { label: 'Rejected', color: '#B42318', background: '#FEE4E2' },
   approved: { label: 'Approved', color: '#237A3B', background: '#DDF6E5' },
+  draft: { label: 'Draft', color: '#667085', background: '#EEF0F3' },
+  reverification_required: {
+    label: 'Reverification required',
+    color: '#9A6700',
+    background: '#FFF1C2',
+  },
+  not_submitted: { label: 'Not submitted', color: '#667085', background: '#EEF0F3' },
+  more_info_requested: {
+    label: 'More info needed',
+    color: '#175CD3',
+    background: '#E8F1FF',
+  },
 };
 
 export function AdminStatusBadge({ status }: { status: string }) {
   const normalized = status.toLowerCase();
   const meta = STATUS_META[normalized] ?? {
-    label: normalized.charAt(0).toUpperCase() + normalized.slice(1),
+    label: normalized.replace(/_/g, ' ').replace(/^\w/, letter => letter.toUpperCase()),
     color: '#475467',
     background: '#EEF0F3',
   };

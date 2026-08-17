@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
   RefreshControl,
 } from 'react-native';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import AvailabilityPicker, {
@@ -19,6 +19,13 @@ import { useFavourites } from '@/src/context/FavouritesContext';
 import StickyCartBar from '@/src/components/navigation/StickyCartBar';
 import VerifiedBadge from '@/src/components/feedback/VerifiedBadge';
 import { formatRating, getRatingSummary, hasValidReviewRating } from '@/src/utils/ratings';
+import MenuOptionSelector from '@/src/components/restaurant/MenuOptionSelector';
+import {
+  areOptionSelectionsValid,
+  getOptionSurcharge,
+  getSelectedOptions,
+  type MenuOptionSelectionState,
+} from '@/src/utils/menuOptions';
 
 const DishDetailsScreen = () => {
   const { id } = useLocalSearchParams();
@@ -29,6 +36,7 @@ const DishDetailsScreen = () => {
   const [dish, setDish] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedOptionIds, setSelectedOptionIds] = useState<MenuOptionSelectionState>({});
 
   const [quantity, setQuantity] = useState(1);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
@@ -51,6 +59,14 @@ const DishDetailsScreen = () => {
 
   const pickerRef = useRef<AvailabilityPickerHandle>(null);
   const [refreshing, setRefreshing] = useState(false);
+
+  const optionGroups = useMemo(() => dish?.option_groups ?? [], [dish?.option_groups]);
+  const selectedOptions = useMemo(
+    () => getSelectedOptions(optionGroups, selectedOptionIds),
+    [optionGroups, selectedOptionIds]
+  );
+  const optionSelectionsValid = areOptionSelectionsValid(optionGroups, selectedOptionIds);
+  const unitPrice = Number(dish?.price ?? 0) + getOptionSurcharge(selectedOptions);
 
   const fetchDish = useCallback(
     async (showLoading = true) => {
@@ -118,11 +134,14 @@ const DishDetailsScreen = () => {
         listingId: dish.id,
         cookId: dish.cook_id,
         title: dish.title,
-        price: dish.price,
+        price: unitPrice,
+        basePrice: Number(dish.price),
+        selectedOptions,
         imageUrl: dish.image_url,
         cookName: profiles?.full_name,
         quantity,
         selectedDate: new Date(selectedDate),
+        serviceDate: selectedDate,
         pickupSlotStart: selectedSlot?.startTime,
         maxQuantity: selectedSlot?.remainingSlots,
       });
@@ -220,6 +239,12 @@ const DishDetailsScreen = () => {
             <Text style={styles.bodyText}>{dish.description || 'No description provided.'}</Text>
           </View>
 
+          <MenuOptionSelector
+            groups={optionGroups}
+            selected={selectedOptionIds}
+            onChange={setSelectedOptionIds}
+          />
+
           {/* Availability Picker */}
           <View style={styles.sectionContainer}>
             <Text style={styles.sectionTitle}>Select Date & Time</Text>
@@ -258,14 +283,19 @@ const DishDetailsScreen = () => {
             )}
 
             <TouchableOpacity
-              style={[styles.addToCartButton, !isSlotSelected && styles.disabledButton]}
-              disabled={!isSlotSelected}
+              style={[
+                styles.addToCartButton,
+                (!isSlotSelected || !optionSelectionsValid) && styles.disabledButton,
+              ]}
+              disabled={!isSlotSelected || !optionSelectionsValid}
               onPress={handleAddToCart}
             >
               <Text style={styles.addToCartButtonText}>
-                {isSlotSelected
-                  ? `Add ${quantity} to Cart (RM ${(dish.price * quantity).toFixed(2)})`
-                  : 'Select Date & Time'}
+                {!optionSelectionsValid
+                  ? 'Complete required selections'
+                  : isSlotSelected
+                    ? `Add ${quantity} to Cart (RM ${(unitPrice * quantity).toFixed(2)})`
+                    : 'Select Date & Time'}
               </Text>
             </TouchableOpacity>
           </View>

@@ -1,5 +1,7 @@
 import {
   buildAvailabilitySummaries,
+  buildListingAvailabilitySummaries,
+  buildMenuListingAvailabilitySummaries,
   buildNextAvailableDates,
   formatAvailabilityLabel,
   getAvailabilitySummary,
@@ -10,10 +12,9 @@ import {
 } from '@/src/utils/listingAvailability';
 
 describe('listing availability', () => {
-  it('uses the device-local calendar date', () => {
-    expect(getLocalDateKey(new Date(2026, 6, 21, 23, 59))).toBe('2026-07-21');
-    // In positive UTC offsets, toISOString() would incorrectly return July 21.
-    expect(getLocalDateKey(new Date(2026, 6, 22, 0, 15))).toBe('2026-07-22');
+  it('uses the Malaysian service date regardless of device timezone', () => {
+    expect(getLocalDateKey(new Date('2026-07-21T15:59:00.000Z'))).toBe('2026-07-21');
+    expect(getLocalDateKey(new Date('2026-07-21T16:15:00.000Z'))).toBe('2026-07-22');
   });
 
   it('chooses the earliest enabled future slot with remaining capacity', () => {
@@ -114,6 +115,24 @@ describe('listing availability', () => {
 
     const now = new Date(2026, 6, 22, 13, 59);
     expect(getEarliestAvailableDate(records, '2026-07-22', now)).toBe('2026-07-22');
+  });
+
+  it('does not mark a dish Available Now before its opening window starts', () => {
+    const records = [
+      {
+        available_date: '2026-07-22',
+        start_time: '2026-07-22T03:00:00.000Z', // 11:00 MYT
+        end_time: '2026-07-22T06:00:00.000Z',
+        is_available: true,
+        max_orders: 4,
+        orders_taken: 0,
+      },
+    ];
+
+    const now = new Date('2026-07-22T02:59:00.000Z');
+    expect(getAvailabilitySummary(records, '2026-07-22', now)).toEqual({
+      state: 'unavailable',
+    });
   });
 
   it('supports legacy rows without an enabled flag but excludes explicit false', () => {
@@ -233,6 +252,88 @@ describe('listing availability', () => {
 
     expect(result['cook-1']).toEqual({ state: 'noLongerAvailable' });
     expect(result['representative-dish']).toEqual({ state: 'noLongerAvailable' });
+  });
+
+  it('keeps sibling dish availability independent before restaurant roll-up', () => {
+    const listings = [
+      {
+        id: 'representative-dish',
+        cook_id: 'cook-1',
+        restaurant_listing_ids: [
+          'representative-dish',
+          'available-dish',
+          'disabled-dish',
+          'unscheduled-dish',
+        ],
+      },
+    ];
+    const records = [
+      {
+        listing_id: 'available-dish',
+        available_date: '2026-07-21',
+        start_time: '09:00:00',
+        end_time: '18:00:00',
+        is_available: true,
+        max_orders: 5,
+        orders_taken: 1,
+      },
+      {
+        listing_id: 'disabled-dish',
+        available_date: '2026-07-21',
+        start_time: '09:00:00',
+        end_time: '18:00:00',
+        is_available: false,
+        max_orders: 5,
+        orders_taken: 0,
+      },
+    ];
+    const now = new Date('2026-07-21T04:00:00.000Z'); // 12:00 MYT
+
+    const perDish = buildListingAvailabilitySummaries(listings, records, '2026-07-21', now);
+    const restaurant = buildAvailabilitySummaries(listings, records, '2026-07-21', now);
+
+    expect(perDish).toEqual({
+      'representative-dish': { state: 'unavailable' },
+      'available-dish': { nextAvailableDate: '2026-07-21', state: 'available' },
+      'disabled-dish': { state: 'unavailable' },
+      'unscheduled-dish': { state: 'unavailable' },
+    });
+    expect(restaurant['representative-dish']).toEqual({
+      nextAvailableDate: '2026-07-21',
+      state: 'available',
+    });
+  });
+
+  it('keeps a dish grayed for today after the cook marks it sold out', () => {
+    const listings = [{ id: 'sold-out-dish', cook_id: 'cook-1' }];
+    const records = [
+      {
+        listing_id: 'sold-out-dish',
+        available_date: '2026-07-21',
+        start_time: '09:00:00',
+        end_time: '18:00:00',
+        is_available: false,
+        max_orders: 5,
+        orders_taken: 0,
+      },
+      {
+        listing_id: 'sold-out-dish',
+        available_date: '2026-07-22',
+        start_time: '09:00:00',
+        end_time: '18:00:00',
+        is_available: true,
+        max_orders: 5,
+        orders_taken: 0,
+      },
+    ];
+    const now = new Date('2026-07-21T04:00:00.000Z');
+
+    expect(buildListingAvailabilitySummaries(listings, records, '2026-07-21', now)).toEqual({
+      'sold-out-dish': { nextAvailableDate: '2026-07-22', state: 'available' },
+    });
+    expect(buildMenuListingAvailabilitySummaries(listings, records, '2026-07-21', now)).toEqual({
+      'sold-out-dish': { state: 'unavailable' },
+    });
   });
 
   it('uses explicit labels for expired and missing availability', () => {

@@ -26,6 +26,11 @@ import {
   getCurrentFoodComplianceAcceptance,
   recordFoodComplianceAcceptance,
 } from '@/src/utils/foodCompliance';
+import {
+  geocodeRestaurantAddress,
+  saveRestaurantDiscoveryLocation,
+  type RestaurantDiscoveryLocationDraft,
+} from '@/src/utils/restaurantLocation';
 
 // ── Constants ───────────────────────────────────────────────────────
 const RESTAURANT_NAME_LIMIT = 40;
@@ -35,6 +40,7 @@ const INGREDIENTS_LIMIT = 500;
 const MAX_DIETARY_TAGS = 4;
 const DISH_IMAGES_BUCKET = 'dish-images';
 const FOOD_SAFETY_BUCKET = 'food-safety-licenses';
+const IDENTITY_BUCKET = 'cook-identity-documents';
 
 const CUISINE_OPTIONS = [
   'Chinese',
@@ -69,31 +75,14 @@ type NominatimAddress = {
 type NominatimResult = {
   place_id: number;
   display_name: string;
+  lat: string;
+  lon: string;
   address?: NominatimAddress;
 };
 
 const DIETARY_TAG_OPTIONS = [
   'Vegetarian',
-  'Vegan',
-  'Keto',
-  'Organic',
-  'Halal',
-  'Nut-free',
-  'Gluten-free',
-  'Spicy',
-  'Fish',
-  'Shellfish',
-  'Low-carb',
-  'Dairy-free',
-  'Healthy',
-  'Comfort food',
-  'Snacks',
-  'Breakfast',
-  'Lunch',
-  'Dinner',
-  'Desserts',
-  'Drinks',
-  'Pastry',
+  'Non-pork',
 ];
 
 type Step =
@@ -105,6 +94,7 @@ type Step =
   | 'keywords'
   | 'price'
   | 'address'
+  | 'identity'
   | 'food-safety'
   | 'payment';
 
@@ -117,6 +107,7 @@ const STEPS: Step[] = [
   'keywords',
   'price',
   'address',
+  'identity',
   'food-safety',
   'payment',
 ];
@@ -154,6 +145,11 @@ const STEP_HEADINGS: Record<Step, { title: string; subtitle: string }> = {
     title: 'Where will customers pick up from?',
     subtitle: 'Your exact address is only shared after a customer places an order.',
   },
+  identity: {
+    title: 'Confirm your eligibility to sell',
+    subtitle:
+      'Chefin currently accepts Malaysian citizens and permanent residents. Your document is kept private and only authorised identity reviewers can open it.',
+  },
   'food-safety': {
     title: 'Share food safety details',
     subtitle: '',
@@ -167,7 +163,7 @@ const STEP_HEADINGS: Record<Step, { title: string; subtitle: string }> = {
 // ── Component ───────────────────────────────────────────────────────
 export default function StartRestaurantWizard() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, session } = useAuth();
 
   const [stepIdx, setStepIdx] = useState(0);
   const step = STEPS[stepIdx];
@@ -206,6 +202,8 @@ export default function StartRestaurantWizard() {
   const [addrSearchQuery, setAddrSearchQuery] = useState('');
   const [addrSuggestions, setAddrSuggestions] = useState<NominatimResult[]>([]);
   const [addrSearching, setAddrSearching] = useState(false);
+  const [restaurantDiscoveryLocation, setRestaurantDiscoveryLocation] =
+    useState<RestaurantDiscoveryLocationDraft | null>(null);
   const addrAbortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
@@ -254,10 +252,29 @@ export default function StartRestaurantWizard() {
     }));
     setAddrSearchQuery('');
     setAddrSuggestions([]);
+    const latitude = Number(s.lat);
+    const longitude = Number(s.lon);
+    if (Number.isFinite(latitude) && Number.isFinite(longitude)) {
+      setRestaurantDiscoveryLocation({
+        latitude,
+        longitude,
+        label: s.display_name,
+        source: 'address_search',
+      });
+    }
   };
 
-  // Food safety step. Documents are optional for Chefin's platform badge, but
-  // that badge is not a licence or confirmation of full legal compliance.
+  const [citizenshipType, setCitizenshipType] = useState<
+    'malaysian_citizen' | 'permanent_resident' | null
+  >(null);
+  const [identityDocument, setIdentityDocument] = useState<{
+    uri: string;
+    mime: string;
+    name: string;
+    isPdf: boolean;
+  } | null>(null);
+
+  // All food/business compliance documents are required before final approval.
   const [hostingType, setHostingType] = useState<'private' | 'business' | null>(null);
   const [complianceAccepted, setComplianceAccepted] = useState(false);
   const [complianceAcceptedAt, setComplianceAcceptedAt] = useState<string | null>(null);
@@ -314,9 +331,14 @@ export default function StartRestaurantWizard() {
           addr.town.trim() !== '' &&
           addr.postcode.trim() !== ''
         );
+      case 'identity':
+        return citizenshipType != null && identityDocument != null;
       case 'food-safety':
-        // Documents are optional; the current compliance terms are not.
-        return hostingType != null && complianceAccepted;
+        return (
+          hostingType != null &&
+          complianceAccepted &&
+          TIER1_DOCUMENTS.every(document => Boolean(verificationDocs[document.type]))
+        );
       case 'payment':
         return (
           bankName.trim().length > 0 &&
@@ -400,6 +422,25 @@ export default function StartRestaurantWizard() {
     });
   };
 
+  const pickIdentityDocument = async () => {
+    const result = await DocumentPicker.getDocumentAsync({
+      type: ['application/pdf', 'image/jpeg', 'image/png', 'image/webp', 'image/heic'],
+      copyToCacheDirectory: true,
+      multiple: false,
+    });
+    if (result.canceled || !result.assets?.[0]) return;
+    const asset = result.assets[0];
+    const ext = (asset.name?.split('.').pop() ?? asset.uri.split('.').pop() ?? 'pdf').toLowerCase();
+    setIdentityDocument({
+      uri: asset.uri,
+      mime:
+        asset.mimeType ??
+        (ext === 'pdf' ? 'application/pdf' : `image/${ext === 'jpg' ? 'jpeg' : ext}`),
+      name: asset.name ?? `identity.${ext}`,
+      isPdf: ext === 'pdf',
+    });
+  };
+
   // ── Bank input handlers ──────────────────────────────────────────
   const onBankAccountNumberChange = (text: string) => {
     setBankAccountNumber(text.replace(/\D/g, '').slice(0, 20));
@@ -452,8 +493,23 @@ export default function StartRestaurantWizard() {
       );
       return;
     }
+    if (!citizenshipType || !identityDocument) {
+      Alert.alert('Identity required', 'Upload your MyKad or MyPR before submitting.');
+      return;
+    }
+    if (!TIER1_DOCUMENTS.every(document => verificationDocs[document.type])) {
+      Alert.alert('Documents required', 'Upload all three food compliance documents.');
+      return;
+    }
     setSubmitting(true);
     try {
+      const publicRestaurantArea =
+        restaurantDiscoveryLocation ??
+        (await geocodeRestaurantAddress(
+          [addr.street, addr.locality, addr.postcode, addr.town, addr.country]
+            .filter(Boolean)
+            .join(', ')
+        ));
       const { data: profile, error: profileErr } = await supabase
         .from('profiles')
         .select('id')
@@ -464,6 +520,20 @@ export default function StartRestaurantWizard() {
       // Fail before creating a listing or uploading documents if the
       // immutable acceptance cannot be recorded.
       await recordFoodComplianceAcceptance(user.id, 'start_restaurant');
+
+      // Identity evidence is stored separately from ordinary food-safety files.
+      const identityExt = identityDocument.name.split('.').pop()?.toLowerCase() ?? 'pdf';
+      const identityType = citizenshipType === 'malaysian_citizen' ? 'mykad' : 'mypr';
+      const identityPath = `${user.id}/${identityType}-${Date.now()}.${identityExt}`;
+      const identityResponse = await fetch(identityDocument.uri);
+      const identityBuffer = await identityResponse.arrayBuffer();
+      const { error: identityUploadError } = await supabase.storage
+        .from(IDENTITY_BUCKET)
+        .upload(identityPath, identityBuffer, {
+          contentType: identityDocument.mime,
+          upsert: false,
+        });
+      if (identityUploadError) throw identityUploadError;
 
       // 1. Upload dish photo
       let dishImageUrl: string | null = null;
@@ -481,7 +551,8 @@ export default function StartRestaurantWizard() {
         dishImageUrl = pub.publicUrl;
       }
 
-      // 2. Insert listing
+      // 2. Insert an inactive draft. It remains private until both the cook
+      // application and the dish itself have been approved.
       const { error: insertErr } = await supabase.from('listings').insert({
         cook_id: profile.id,
         title: title.trim(),
@@ -492,12 +563,12 @@ export default function StartRestaurantWizard() {
         dietary_tags: dietaryTags,
         ingredients: ingredientsList,
         location: addr.locality.trim() || null,
-        is_active: true,
+        is_active: false,
+        status: 'pending',
       });
       if (insertErr) throw insertErr;
 
-      // 3. Upload any optional verification documents and queue them for
-      // admin review. Approval of either doc grants the Tier 1 badge.
+      // 3. Upload the mandatory food/business compliance documents.
       const docEntries = Object.entries(verificationDocs) as [
         VerificationDocType,
         { uri: string; mime: string; name: string; isPdf: boolean },
@@ -535,6 +606,7 @@ export default function StartRestaurantWizard() {
           address_locality: addr.locality.trim() || null,
           address_town: addr.town.trim(),
           address_postcode: addr.postcode.trim(),
+          restaurant_name: restaurantName.trim(),
           hosting_type: hostingType,
           has_food_safety_license: certificatePath != null,
           food_safety_license_url: certificatePath,
@@ -544,6 +616,29 @@ export default function StartRestaurantWizard() {
         })
         .eq('user_id', user.id);
       if (profileUpdateErr) throw profileUpdateErr;
+
+      await saveRestaurantDiscoveryLocation(session?.access_token, publicRestaurantArea);
+
+      const response = await fetch(
+        `${process.env.EXPO_PUBLIC_API_URL}/api/cook-applications/submit`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${
+              (await supabase.auth.getSession()).data.session?.access_token
+            }`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            citizenshipType,
+            documentType: identityType,
+            identityStoragePath: identityPath,
+          }),
+        }
+      );
+      const applicationPayload = (await response.json().catch(() => ({}))) as { error?: string };
+      if (!response.ok)
+        throw new Error(applicationPayload.error ?? 'Application submission failed.');
 
       // 5. Grant the cook role (admin will revoke this if the application is
       // rejected later). Idempotent — skip if a row already exists, e.g. the
@@ -563,8 +658,8 @@ export default function StartRestaurantWizard() {
 
       Alert.alert(
         'Application submitted!',
-        "Welcome to your cook dashboard. Your dish is pending admin review — customers won't see it on the home feed until it's approved. In the meantime, feel free to look around and add more dishes.",
-        [{ text: 'Explore dashboard', onPress: () => router.replace('/(cook)/(tabs)/today') }]
+        "Welcome to your restricted cook dashboard. You can create draft dishes while identity and compliance checks are pending. Drafts won't be visible or orderable until your cook application and each dish are approved.",
+        [{ text: 'Explore dashboard', onPress: () => router.replace('/(cook)/(tabs)/orders') }]
       );
     } catch (e: any) {
       Alert.alert('Could not submit application', e.message ?? 'Unknown error');
@@ -624,6 +719,7 @@ export default function StartRestaurantWizard() {
               placeholder="e.g. The American Burger"
               placeholderTextColor="#bbb"
               multiline
+              submitBehavior="newline"
               autoFocus
               textAlignVertical="top"
             />
@@ -643,6 +739,7 @@ export default function StartRestaurantWizard() {
               placeholder="Double cheeseburger with lettuce, tomato…"
               placeholderTextColor="#bbb"
               multiline
+              submitBehavior="newline"
               autoFocus
               textAlignVertical="top"
             />
@@ -662,6 +759,7 @@ export default function StartRestaurantWizard() {
               placeholder={'One ingredient per line\n\nChicken breast\nOlive oil\nGarlic'}
               placeholderTextColor="#bbb"
               multiline
+              submitBehavior="newline"
               autoFocus
               textAlignVertical="top"
             />
@@ -828,7 +926,12 @@ export default function StartRestaurantWizard() {
                   <TextInput
                     style={[styles.fieldInput, showWarning && styles.fieldInputWarning]}
                     value={value}
-                    onChangeText={text => setAddr(prev => ({ ...prev, [key]: text }))}
+                    onChangeText={text => {
+                      setAddr(prev => ({ ...prev, [key]: text }));
+                      if (['street', 'locality', 'postcode', 'town', 'country'].includes(key)) {
+                        setRestaurantDiscoveryLocation(null);
+                      }
+                    }}
                     placeholder={required ? '' : '(optional)'}
                     placeholderTextColor="#bbb"
                     keyboardType={numeric ? 'number-pad' : 'default'}
@@ -863,12 +966,10 @@ export default function StartRestaurantWizard() {
             <View style={styles.tierCallout}>
               <Ionicons name="shield-checkmark" size={20} color="#4CAF50" />
               <View style={{ flex: 1 }}>
-                <Text style={styles.tierCalloutTitle}>
-                  Get a platform Verified badge (optional)
-                </Text>
+                <Text style={styles.tierCalloutTitle}>Required before you can sell</Text>
                 <Text style={styles.tierCalloutBody}>
-                  Upload one or both documents below for review. This badge is not a licence or
-                  proof of full regulatory compliance. You can skip the uploads and add them later.
+                  Upload all three documents below. Chefin reviews the evidence for platform
+                  approval; this does not replace your legal responsibilities.
                 </Text>
               </View>
             </View>
@@ -915,6 +1016,67 @@ export default function StartRestaurantWizard() {
                 </View>
               );
             })}
+          </>
+        );
+
+      case 'identity':
+        return (
+          <>
+            <Text style={styles.fsQuestion}>Residency status</Text>
+            <RadioRow
+              title="Malaysian citizen"
+              subtitle="Upload your MyKad"
+              selected={citizenshipType === 'malaysian_citizen'}
+              onPress={() => {
+                setCitizenshipType('malaysian_citizen');
+                setIdentityDocument(null);
+              }}
+            />
+            <RadioRow
+              title="Malaysian permanent resident"
+              subtitle="Upload your MyPR"
+              selected={citizenshipType === 'permanent_resident'}
+              onPress={() => {
+                setCitizenshipType('permanent_resident');
+                setIdentityDocument(null);
+              }}
+            />
+            <View style={styles.tierCallout}>
+              <Ionicons name="lock-closed-outline" size={20} color="#237A3B" />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.tierCalloutTitle}>Private identity review</Text>
+                <Text style={styles.tierCalloutBody}>
+                  Your document is not public. Only administrators with identity-review permission
+                  can open a short-lived secure link, and each access is logged.
+                </Text>
+              </View>
+            </View>
+            {citizenshipType && (
+              <View style={styles.uploadWrap}>
+                <Text style={styles.fsQuestion}>
+                  {citizenshipType === 'malaysian_citizen' ? 'MyKad' : 'MyPR'}
+                </Text>
+                <Text style={styles.fsHint}>Upload a clear scan or photo. Maximum 10 MB.</Text>
+                <TouchableOpacity style={styles.uploadBox} onPress={pickIdentityDocument}>
+                  {identityDocument ? (
+                    identityDocument.isPdf ? (
+                      <View style={styles.pdfBadge}>
+                        <Ionicons name="document-lock-outline" size={32} color="#1A1A1A" />
+                        <Text style={styles.pdfBadgeText}>{identityDocument.name}</Text>
+                        <Text style={styles.pdfBadgeHint}>Tap to replace</Text>
+                      </View>
+                    ) : (
+                      <Image source={{ uri: identityDocument.uri }} style={styles.uploadPreview} />
+                    )
+                  ) : (
+                    <View style={styles.pdfBadge}>
+                      <Ionicons name="add" size={32} color="#888" />
+                      <Text style={styles.pdfBadgeHint}>Upload a photo, scan or PDF</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              </View>
+            )}
           </>
         );
 

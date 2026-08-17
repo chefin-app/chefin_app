@@ -7,8 +7,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import MealCard from '@/src/components/cards/MealCard';
 import SearchHistoryCard from '@/src/components/cards/SearchHistoryCard';
+import LocationPromptModal from '@/src/components/location/LocationPromptModal';
+import FloatingCartButton from '@/src/components/navigation/FloatingCartButton';
 import useFetch from '@/src/hooks/useFetch';
-import { fetchCooks } from '@/src/utils/fetchCooks';
+import { fetchCooks, fetchNearestCooks } from '@/src/utils/fetchCooks';
 import {
   fetchAvailabilitySummaries,
   getLocalDateKey,
@@ -17,8 +19,10 @@ import {
 } from '@/src/utils/listingAvailability';
 import { getListingsRatingSummary, getRatingSummary } from '@/src/utils/ratings';
 import type { Listing } from '@/src/types/models';
+import { useCustomerLocation } from '@/src/context/CustomerLocationContext';
+import { useAuth } from '@/src/services/auth-context';
 
-type DiscoveryMode = 'all' | 'availableNow' | 'topRated';
+type DiscoveryMode = 'all' | 'availableNow' | 'topRated' | 'nearest';
 
 const discoveryContent: Record<
   DiscoveryMode,
@@ -39,10 +43,17 @@ const discoveryContent: Record<
     description: 'Home restaurants ordered by their verified customer ratings.',
     icon: 'star-outline',
   },
+  nearest: {
+    title: 'Nearest to You',
+    description: 'Home restaurants ordered by proximity to your selected area.',
+    icon: 'location-outline',
+  },
 };
 
 function parseDiscoveryMode(value?: string): DiscoveryMode | null {
-  return value === 'all' || value === 'availableNow' || value === 'topRated' ? value : null;
+  return value === 'all' || value === 'availableNow' || value === 'topRated' || value === 'nearest'
+    ? value
+    : null;
 }
 
 function uniqueByCook<T extends Pick<Listing, 'cook_id'>>(listings: T[]): T[] {
@@ -58,6 +69,8 @@ const CardSeparator = () => <View style={styles.cardSeparator} />;
 
 const SearchScreen = () => {
   const router = useRouter();
+  const { user } = useAuth();
+  const { location } = useCustomerLocation();
   const params = useLocalSearchParams<{ q?: string; discover?: string; title?: string }>();
   const discoveryMode = parseDiscoveryMode(params.discover);
   const [searchQuery, setSearchQuery] = useState(params.q ?? '');
@@ -69,6 +82,7 @@ const SearchScreen = () => {
     Boolean((params.q ?? '').trim() || discoveryMode)
   );
   const [today, setToday] = useState(getLocalDateKey);
+  const [locationPromptVisible, setLocationPromptVisible] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -82,7 +96,17 @@ const SearchScreen = () => {
     error: restaurantError,
     refetch: loadCooks,
     reset,
-  } = useFetch(() => fetchCooks({ query: searchQuery }), false);
+  } = useFetch(
+    () =>
+      discoveryMode === 'nearest' && location
+        ? fetchNearestCooks({
+            latitude: location.latitude,
+            longitude: location.longitude,
+            limit: 50,
+          })
+        : fetchCooks({ query: searchQuery }),
+    false
+  );
 
   useEffect(() => {
     setSearchQuery(typeof params.q === 'string' ? params.q : '');
@@ -128,6 +152,14 @@ const SearchScreen = () => {
       };
     }
 
+    if (discoveryMode === 'nearest' && !location) {
+      setQueryPending(false);
+      reset();
+      return () => {
+        isCurrent = false;
+      };
+    }
+
     setQueryPending(true);
     if (discoveryMode === 'availableNow') setAvailabilityLoading(true);
 
@@ -155,7 +187,7 @@ const SearchScreen = () => {
     };
     // loadCooks and reset intentionally track the latest searchQuery closure.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchQuery, discoveryMode]);
+  }, [searchQuery, discoveryMode, location]);
 
   useEffect(() => {
     let isCurrent = true;
@@ -223,6 +255,11 @@ const SearchScreen = () => {
         .map(item => item.listing);
     }
 
+    if (discoveryMode === 'nearest') {
+      // The backend already returned restaurants in proximity order.
+      return uniqueByCook(allListings);
+    }
+
     // Search responses contain dishes, so several matching dishes can belong
     // to the same home restaurant. Every result mode should render one card
     // per cook while preserving the first matching dish as its representative.
@@ -242,6 +279,14 @@ const SearchScreen = () => {
     setSearchQuery('');
     reset();
     router.replace('/(user)/(tabs)/search');
+  };
+
+  const chooseLocation = () => {
+    if (!user) {
+      router.push('/(auth)/login');
+      return;
+    }
+    setLocationPromptVisible(true);
   };
 
   const isLoading = queryPending || restaurantLoading || availabilityLoading;
@@ -338,8 +383,16 @@ const SearchScreen = () => {
                 <Text style={styles.emptyDescription}>
                   {discoveryMode === 'availableNow'
                     ? 'There are no remaining meal slots today. Check back soon for new availability.'
-                    : 'Try a different search or explore all home restaurants.'}
+                    : discoveryMode === 'nearest' && !location
+                      ? 'Choose a location to sort home restaurants near you.'
+                      : 'Try a different search or explore all home restaurants.'}
                 </Text>
+                {discoveryMode === 'nearest' && !location && (
+                  <TouchableOpacity style={styles.locationButton} onPress={chooseLocation}>
+                    <Ionicons name="location" size={18} color="#fff" />
+                    <Text style={styles.locationButtonText}>Choose location</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             ) : (
               <View style={styles.historyContainer}>
@@ -364,6 +417,11 @@ const SearchScreen = () => {
             )
           ) : null
         }
+      />
+      <FloatingCartButton />
+      <LocationPromptModal
+        visible={locationPromptVisible}
+        onClose={() => setLocationPromptVisible(false)}
       />
     </SafeAreaView>
   );
@@ -492,6 +550,18 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 6,
   },
+  locationButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 7,
+    backgroundColor: '#4CAF50',
+    paddingHorizontal: 18,
+    paddingVertical: 11,
+    borderRadius: 22,
+    marginTop: 15,
+  },
+  locationButtonText: { color: '#fff', fontSize: 13, fontWeight: '700' },
   historyContainer: {
     marginTop: 22,
   },

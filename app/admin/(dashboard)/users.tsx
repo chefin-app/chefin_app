@@ -35,6 +35,7 @@ import { useAdminAuth } from '@/src/admin/AdminAuthContext';
 import { useAuth } from '@/src/services/auth-context';
 import AdminDialog from '@/src/components/admin/AdminDialog';
 import { AdminPanel, AdminStatusBadge } from '@/src/components/admin/AdminOverviewUI';
+import { showAdminFailure, showAdminSuccess } from '@/src/admin/feedback';
 
 type ActionMode = 'invite' | 'edit' | 'suspend' | 'deactivate' | 'message' | 'verification' | null;
 
@@ -120,6 +121,7 @@ function FormField({
         placeholder={placeholder}
         placeholderTextColor="#A2AAA5"
         multiline={multiline}
+        submitBehavior={multiline ? 'newline' : 'blurAndSubmit'}
         style={[styles.input, multiline && styles.textarea]}
       />
     </View>
@@ -340,13 +342,17 @@ export default function UserManagementScreen() {
     setActionLoading(true);
     setActionError(null);
     try {
+      let successFeedback: { title: string; message: string } | null = null;
       if (actionMode === 'invite') {
         await inviteManagedUser(session.access_token, {
           fullName: formName,
           email: formEmail,
           role: formRole,
         });
-        Alert.alert('Invitation sent', `${formEmail} has been invited to Chefin.`);
+        successFeedback = {
+          title: 'Invitation sent',
+          message: `${formEmail} has been invited to Chefin.`,
+        };
       } else {
         if (!selectedUserId) throw new Error('Select a user first.');
         if (actionMode === 'edit') {
@@ -357,15 +363,45 @@ export default function UserManagementScreen() {
             restaurantName: formRestaurant,
             role: formRole,
           });
+          successFeedback = {
+            title: 'User updated',
+            message: 'The account details and role were saved successfully.',
+          };
         } else if (actionMode === 'suspend') {
-          await runManagedUserAction(session.access_token, selectedUserId, 'suspend', {
+          const result = await runManagedUserAction<{
+            success: true;
+            email: { sent: boolean; error?: string };
+            notification: { sent: boolean; error?: string };
+            audit: { recorded: boolean; error?: string };
+          }>(session.access_token, selectedUserId, 'suspend', {
             reason: formReason,
             durationDays: suspensionDuration === 'indefinite' ? null : Number(suspensionDuration),
           });
+          const deliveryWarnings = [
+            !result.notification.sent ? 'in-app notification' : null,
+            !result.email.sent ? 'email' : null,
+            !result.audit.recorded ? 'audit log' : null,
+          ].filter(Boolean);
+          successFeedback = {
+            title: deliveryWarnings.length
+              ? 'Account suspended with warnings'
+              : 'Account suspended',
+            message: `${
+              suspensionDuration === 'indefinite'
+                ? 'The account now has indefinite read-only access.'
+                : `The account is suspended for ${suspensionDuration} day(s).`
+            }${
+              deliveryWarnings.length ? ` Follow-up failures: ${deliveryWarnings.join(', ')}.` : ''
+            }`,
+          };
         } else if (actionMode === 'deactivate') {
           await runManagedUserAction(session.access_token, selectedUserId, 'deactivate', {
             reason: formReason,
           });
+          successFeedback = {
+            title: 'Account deactivated',
+            message: 'The account was soft-deactivated and its data was retained.',
+          };
         } else if (actionMode === 'message') {
           const result = await runManagedUserAction<{
             success: true;
@@ -374,26 +410,38 @@ export default function UserManagementScreen() {
             subject: messageSubject,
             message: messageBody,
           });
-          Alert.alert(
-            'Message delivered',
-            result.email.sent
+          successFeedback = {
+            title: result.email.sent ? 'Message delivered' : 'Message partially delivered',
+            message: result.email.sent
               ? 'The in-app notification and email were sent.'
-              : `The in-app notification was sent. Email was not delivered: ${result.email.error}`
-          );
+              : `The in-app notification was sent. Email was not delivered: ${result.email.error}`,
+          };
         } else if (actionMode === 'verification') {
           await reviewVerificationDocument(session.access_token, {
             documentId: verificationDocumentId,
             decision: verificationDecision,
             reviewerNote: formReason,
           });
+          successFeedback = {
+            title:
+              verificationDecision === 'rejected'
+                ? 'Document rejected'
+                : 'More information requested',
+            message:
+              verificationDecision === 'rejected'
+                ? 'The decision and reviewer note were saved, and the cook was notified.'
+                : 'The request was saved and the cook was notified to resubmit.',
+          };
         }
       }
       setActionMode(null);
       await refreshAfterAction();
+      if (successFeedback) showAdminSuccess(successFeedback.title, successFeedback.message);
     } catch (caught: unknown) {
       setActionError(
         caught instanceof Error ? caught.message : 'The action could not be completed.'
       );
+      showAdminFailure(caught);
     } finally {
       setActionLoading(false);
     }
@@ -407,7 +455,7 @@ export default function UserManagementScreen() {
     setActionLoading(true);
     try {
       await runManagedUserAction(session.access_token, user.userId, action);
-      Alert.alert(
+      showAdminSuccess(
         action === 'reset-password' ? 'Reset email sent' : 'Account updated',
         action === 'reset-password'
           ? `Password-reset instructions were sent to ${user.email}.`
@@ -415,7 +463,7 @@ export default function UserManagementScreen() {
       );
       await refreshAfterAction();
     } catch (caught: unknown) {
-      Alert.alert('Action failed', caught instanceof Error ? caught.message : 'Please try again.');
+      showAdminFailure(caught);
     } finally {
       setActionLoading(false);
     }
@@ -431,11 +479,9 @@ export default function UserManagementScreen() {
       });
       if (selectedUserId) await loadDetails(selectedUserId);
       await loadUsers(true);
+      showAdminSuccess('Document approved', 'The verification decision was saved successfully.');
     } catch (caught: unknown) {
-      Alert.alert(
-        'Verification failed',
-        caught instanceof Error ? caught.message : 'Please try again.'
-      );
+      showAdminFailure(caught, 'The document could not be approved.', 'Verification failed');
     } finally {
       setActionLoading(false);
     }
@@ -528,8 +574,12 @@ export default function UserManagementScreen() {
       anchor.download = `chefin-users-${new Date().toISOString().slice(0, 10)}.csv`;
       anchor.click();
       URL.revokeObjectURL(url);
+      showAdminSuccess(
+        'CSV exported',
+        `${exportData.users.length.toLocaleString('en-MY')} user record(s) were downloaded.`
+      );
     } catch (caught: unknown) {
-      Alert.alert('Export failed', caught instanceof Error ? caught.message : 'Please try again.');
+      showAdminFailure(caught, 'The user CSV could not be generated.', 'Export failed');
     }
   };
 

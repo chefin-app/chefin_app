@@ -25,93 +25,415 @@ model availability {
 }
 
 model listings {
-  id           String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  cook_id      String         @db.Uuid
-  title        String
-  description  String?
-  price        Decimal        @db.Decimal(10, 2)
-  image_url    String?
-  cuisine      String?
-  dietary_tags String[]       @default([])
-  location     String?
-  ingredients  String[]       @default([])
-  is_active    Boolean?       @default(true)
-  status       String         @default("pending")
-  created_at   DateTime?      @default(now()) @db.Timestamptz(6)
-  availability availability[]
-  profiles     profiles       @relation(fields: [cook_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  orders       orders[]
-  reviews      reviews[]
+  id                     String                           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cook_id                String                           @db.Uuid
+  title                  String
+  description            String?
+  price                  Decimal                          @db.Decimal(10, 2)
+  image_url              String?
+  cuisine                String?
+  dietary_tags           String[]                         @default([])
+  location               String?
+  ingredients            String[]                         @default([])
+  is_active              Boolean?                         @default(true)
+  status                 String                           @default("pending")
+  menu_category          String                           @default("Uncategorised") @db.VarChar(80)
+  created_at             DateTime?                        @default(now()) @db.Timestamptz(6)
+  availability           availability[]
+  profiles               profiles                         @relation(fields: [cook_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  orders                 orders[]
+  reviews                reviews[]
+  option_groups          listing_option_groups[]
+  availability_setting   listing_availability_settings?
+  availability_overrides listing_availability_overrides[]
+  daily_capacity         listing_daily_capacity[]
+  selling_schedule       listing_selling_schedules?
 
   @@schema("public")
 }
 
 model orders {
-  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  customer_id      String    @db.Uuid
-  listing_id       String    @db.Uuid
-  quantity         Int
-  total_price      Decimal   @db.Decimal(10, 2)
-  scheduled_date   DateTime  @db.Date
-  pickup_time      DateTime? @db.Timestamptz(6)
-  fulfillment_type String    @default("pickup")
-  status           String?
-  payment_status   String?
-  created_at       DateTime? @default(now()) @db.Timestamptz(6)
-  profiles         profiles  @relation(fields: [customer_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  listings         listings  @relation(fields: [listing_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  reviews          reviews?
+  id                       String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  customer_id              String            @db.Uuid
+  listing_id               String            @db.Uuid
+  quantity                 Int
+  total_price              Decimal           @db.Decimal(10, 2)
+  scheduled_date           DateTime          @db.Date
+  pickup_time              DateTime?         @db.Timestamptz(6)
+  customer_note            String?           @db.VarChar(500)
+  selected_options         Json              @default("[]")
+  fulfillment_type         String            @default("pickup")
+  status                   String?
+  payment_status           String?
+  cancelled_by             String?           @db.VarChar(20)
+  cancelled_at             DateTime?         @db.Timestamptz(6)
+  cancellation_reason      String?           @db.VarChar(500)
+  completed_at             DateTime?         @db.Timestamptz(6)
+  capacity_source          String?           @db.VarChar(20)
+  capacity_service_date    DateTime?         @db.Date
+  capacity_window_start    DateTime?         @db.Time(0)
+  capacity_availability_id String?           @db.Uuid
+  capacity_quantity        Int?
+  capacity_released_at     DateTime?         @db.Timestamptz(6)
+  proof_of_prep_url        String?
+  created_at               DateTime?         @default(now()) @db.Timestamptz(6)
+  profiles                 profiles          @relation(fields: [customer_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  listings                 listings          @relation(fields: [listing_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  reviews                  reviews?
+  customer_reviews         customer_reviews?
 
   @@schema("public")
 }
 
 model profiles {
-  id                      String                        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  user_id                 String                        @unique @db.Uuid
-  full_name               String
-  profile_image           String?
-  phone_number            String?                       @db.VarChar(20)
-  onboarding_completed    Boolean                       @default(false)
-  bio                     String?
-  is_verified             Boolean?                      @default(false)
-  created_at              DateTime?                     @default(now()) @db.Timestamptz(6)
-  restaurant_name         String?
-  free_delivery_threshold Decimal?                      @db.Decimal(10, 2)
-  address_country         String?
-  address_flat            String?
-  address_property_name   String?
-  address_street          String?
-  address_locality        String?
-  address_town            String?
-  address_postcode        String?
-  hosting_type            String?
-  has_food_safety_license Boolean?
-  food_safety_license_url String?
-  verification_tier       Int                           @default(0)
-  bank_name               String?
-  bank_account_name       String?
-  bank_account_number     String?
-  account_status          String                        @default("active") @db.VarChar(20)
-  suspension_reason       String?                       @db.VarChar(500)
-  suspended_at            DateTime?                     @db.Timestamptz(6)
-  suspension_ends_at      DateTime?                     @db.Timestamptz(6)
-  suspended_by            String?                       @db.Uuid
-  deactivated_at          DateTime?                     @db.Timestamptz(6)
-  deactivation_reason     String?                       @db.VarChar(500)
-  deactivated_by          String?                       @db.Uuid
-  restricted_listing_ids  String[]                      @default([]) @db.Uuid
-  updated_at              DateTime                      @default(now()) @db.Timestamptz(6)
-  listings                listings[]
-  notifications           notifications[]
-  orders                  orders[]
-  reviews                 reviews[]
-  user_roles              user_roles[]
-  verification_documents  verification_documents[]
-  compliance_acceptances  cook_compliance_acceptances[]
-  favourites_as_user      favourites[]                  @relation("favourites_user")
-  favourites_as_cook      favourites[]                  @relation("favourites_cook")
-  content_reports         content_reports[]
+  id                            String                            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id                       String                            @unique @db.Uuid
+  full_name                     String
+  profile_image                 String?
+  phone_number                  String?                           @db.VarChar(20)
+  onboarding_completed          Boolean                           @default(false)
+  bio                           String?
+  is_verified                   Boolean?                          @default(false)
+  created_at                    DateTime?                         @default(now()) @db.Timestamptz(6)
+  restaurant_name               String?
+  free_delivery_threshold       Decimal?                          @db.Decimal(10, 2)
+  address_country               String?
+  address_flat                  String?
+  address_property_name         String?
+  address_street                String?
+  address_locality              String?
+  address_town                  String?
+  address_postcode              String?
+  hosting_type                  String?
+  has_food_safety_license       Boolean?
+  food_safety_license_url       String?
+  verification_tier             Int                               @default(0)
+  bank_name                     String?
+  bank_account_name             String?
+  bank_account_number           String?
+  account_status                String                            @default("active") @db.VarChar(20)
+  suspension_reason             String?                           @db.VarChar(500)
+  suspended_at                  DateTime?                         @db.Timestamptz(6)
+  suspension_ends_at            DateTime?                         @db.Timestamptz(6)
+  suspended_by                  String?                           @db.Uuid
+  deactivated_at                DateTime?                         @db.Timestamptz(6)
+  deactivation_reason           String?                           @db.VarChar(500)
+  deactivated_by                String?                           @db.Uuid
+  restricted_listing_ids        String[]                          @default([]) @db.Uuid
+  store_status                  String                            @default("open") @db.VarChar(10)
+  store_busy_prep_minutes       Int                               @default(15)
+  store_paused_until            DateTime?                         @db.Timestamptz(6)
+  updated_at                    DateTime                          @default(now()) @db.Timestamptz(6)
+  listings                      listings[]
+  notifications                 notifications[]
+  orders                        orders[]
+  reviews                       reviews[]
+  user_roles                    user_roles[]
+  verification_documents        verification_documents[]
+  identity_documents            identity_verification_documents[]
+  cook_application              cook_applications?
+  admin_permissions             admin_permissions[]
+  compliance_acceptances        cook_compliance_acceptances[]
+  favourites_as_user            favourites[]                      @relation("favourites_user")
+  favourites_as_cook            favourites[]                      @relation("favourites_cook")
+  content_reports               content_reports[]
+  menu_option_groups            menu_option_groups[]
+  customer_reviews_received     customer_reviews[]                @relation("CustomerReviewsReceived")
+  customer_reviews_written      customer_reviews[]                @relation("CustomerReviewsWritten")
+  customer_location_preference  customer_location_preferences?
+  restaurant_discovery_location restaurant_discovery_locations?
+  restaurant_opening_hours      restaurant_opening_hours[]
+  restaurant_special_hours      restaurant_special_hours[]
+  selling_schedules             selling_schedules[]
 
+  @@schema("public")
+}
+
+/// Private customer-selected recommendation point. Exact coordinates never
+/// appear in public restaurant/profile payloads.
+model customer_location_preferences {
+  user_id      String    @id @db.Uuid
+  label        String?   @db.VarChar(200)
+  latitude     Decimal?  @db.Decimal(9, 6)
+  longitude    Decimal?  @db.Decimal(9, 6)
+  source       String?   @db.VarChar(20)
+  prompted_at  DateTime  @default(now()) @db.Timestamptz(6)
+  consented_at DateTime? @db.Timestamptz(6)
+  updated_at   DateTime  @default(now()) @db.Timestamptz(6)
+  profile      profiles  @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@schema("public")
+}
+
+/// Approximate discovery point chosen by the cook. The backend uses it for
+/// distance sorting but returns only a coarse distance label to customers.
+model restaurant_discovery_locations {
+  cook_profile_id String   @id @db.Uuid
+  label           String?  @db.VarChar(200)
+  latitude        Decimal  @db.Decimal(9, 6)
+  longitude       Decimal  @db.Decimal(9, 6)
+  source          String   @default("manual") @db.VarChar(20)
+  precision       String   @default("approximate") @db.VarChar(20)
+  updated_at      DateTime @default(now()) @db.Timestamptz(6)
+  profile         profiles @relation(fields: [cook_profile_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@schema("public")
+}
+
+model restaurant_opening_hours {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cook_id     String   @db.Uuid
+  iso_weekday Int
+  opens_at    DateTime @db.Time(0)
+  closes_at   DateTime @db.Time(0)
+  enabled     Boolean  @default(true)
+  created_at  DateTime @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime @default(now()) @db.Timestamptz(6)
+  profile     profiles @relation(fields: [cook_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([cook_id, iso_weekday, opens_at, closes_at], map: "restaurant_opening_hours_window_key")
+  @@index([cook_id, iso_weekday])
+  @@schema("public")
+}
+
+/// Date-specific closures or replacement opening windows. When a date has
+/// special hours, those rows supersede the cook's normal weekly schedule.
+model restaurant_special_hours {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cook_id      String    @db.Uuid
+  service_date DateTime  @db.Date
+  description  String?   @db.VarChar(120)
+  is_closed    Boolean   @default(true)
+  opens_at     DateTime? @db.Time(0)
+  closes_at    DateTime? @db.Time(0)
+  created_at   DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at   DateTime  @default(now()) @db.Timestamptz(6)
+  profile      profiles  @relation(fields: [cook_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([cook_id, service_date])
+  @@schema("public")
+}
+
+model selling_schedules {
+  id                  String                      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cook_id             String                      @db.Uuid
+  name                String                      @db.VarChar(80)
+  specific_dates      Boolean                     @default(false)
+  starts_on           DateTime?                   @db.Date
+  ends_on             DateTime?                   @db.Date
+  created_at          DateTime                    @default(now()) @db.Timestamptz(6)
+  updated_at          DateTime                    @default(now()) @db.Timestamptz(6)
+  profile             profiles                    @relation(fields: [cook_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  windows             selling_schedule_windows[]
+  listing_assignments listing_selling_schedules[]
+
+  @@unique([cook_id, name])
+  @@index([cook_id])
+  @@schema("public")
+}
+
+model selling_schedule_windows {
+  id          String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  schedule_id String            @db.Uuid
+  iso_weekday Int
+  all_day     Boolean           @default(false)
+  opens_at    DateTime?         @db.Time(0)
+  closes_at   DateTime?         @db.Time(0)
+  created_at  DateTime          @default(now()) @db.Timestamptz(6)
+  schedule    selling_schedules @relation(fields: [schedule_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([schedule_id, iso_weekday])
+  @@schema("public")
+}
+
+model listing_selling_schedules {
+  listing_id  String            @id @db.Uuid
+  schedule_id String            @db.Uuid
+  assigned_at DateTime          @default(now()) @db.Timestamptz(6)
+  listing     listings          @relation(fields: [listing_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  schedule    selling_schedules @relation(fields: [schedule_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([schedule_id])
+  @@schema("public")
+}
+
+model listing_availability_settings {
+  listing_id            String   @id @db.Uuid
+  enabled               Boolean  @default(true)
+  schedule_mode         String   @default("restaurant_hours") @db.VarChar(30)
+  max_orders_per_window Int      @default(5)
+  daily_stock_limit     Int?
+  configured_at         DateTime @default(now()) @db.Timestamptz(6)
+  updated_at            DateTime @default(now()) @db.Timestamptz(6)
+  listing               listings @relation(fields: [listing_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@schema("public")
+}
+
+model listing_availability_overrides {
+  listing_id   String   @db.Uuid
+  service_date DateTime @db.Date
+  state        String   @db.VarChar(20)
+  reason       String?  @db.VarChar(200)
+  created_by   String?  @db.Uuid
+  created_at   DateTime @default(now()) @db.Timestamptz(6)
+  updated_at   DateTime @default(now()) @db.Timestamptz(6)
+  listing      listings @relation(fields: [listing_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([listing_id, service_date])
+  @@index([service_date, state])
+  @@schema("public")
+}
+
+/// Atomic inventory counter for recurring opening-hour windows.
+model listing_daily_capacity {
+  listing_id   String   @db.Uuid
+  service_date DateTime @db.Date
+  window_start DateTime @db.Time(0)
+  orders_taken Int      @default(0)
+  updated_at   DateTime @default(now()) @db.Timestamptz(6)
+  listing      listings @relation(fields: [listing_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([listing_id, service_date, window_start])
+  @@schema("public")
+}
+
+/// Reusable modifier group owned by one cook, such as "Spice level" or
+/// "Soft drinks". Groups can be linked to multiple dishes.
+model menu_option_groups {
+  id             String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cook_id        String                  @db.Uuid
+  name           String                  @db.VarChar(100)
+  selection_type String                  @default("single") @db.VarChar(20)
+  min_select     Int                     @default(0)
+  max_select     Int                     @default(1)
+  is_active      Boolean                 @default(true)
+  archived_at    DateTime?               @db.Timestamptz(6)
+  created_at     DateTime                @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime                @default(now()) @db.Timestamptz(6)
+  profiles       profiles                @relation(fields: [cook_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  options        menu_options[]
+  listings       listing_option_groups[]
+
+  @@unique([cook_id, name], map: "menu_option_groups_cook_name_key")
+  @@index([cook_id, created_at])
+  @@schema("public")
+}
+
+model menu_options {
+  id                String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  group_id          String             @db.Uuid
+  name              String             @db.VarChar(100)
+  price_delta       Decimal            @default(0) @db.Decimal(10, 2)
+  is_available      Boolean            @default(true)
+  unavailable_until DateTime?          @db.Date
+  archived_at       DateTime?          @db.Timestamptz(6)
+  sort_order        Int                @default(0)
+  created_at        DateTime           @default(now()) @db.Timestamptz(6)
+  group             menu_option_groups @relation(fields: [group_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([group_id, name], map: "menu_options_group_name_key")
+  @@index([group_id, sort_order])
+  @@schema("public")
+}
+
+model listing_option_groups {
+  listing_id String             @db.Uuid
+  group_id   String             @db.Uuid
+  sort_order Int                @default(0)
+  listing    listings           @relation(fields: [listing_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  group      menu_option_groups @relation(fields: [group_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([listing_id, group_id])
+  @@index([group_id])
+  @@schema("public")
+}
+
+/// Private, verified-order feedback from a cook about the customer handover.
+/// It is deliberately separate from public food reviews to avoid retaliatory
+/// public ratings. It is operational feedback for the submitting cook and
+/// explicitly authorised administrators, not a customer-facing score.
+model customer_reviews {
+  id                   String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  order_id             String   @unique @db.Uuid
+  cook_id              String   @db.Uuid
+  customer_id          String   @db.Uuid
+  punctuality_rating   Int
+  communication_rating Int
+  handover_rating      Int
+  tags                 String[] @default([])
+  comment              String?  @db.VarChar(500)
+  created_at           DateTime @default(now()) @db.Timestamptz(6)
+  order                orders   @relation(fields: [order_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  cook                 profiles @relation("CustomerReviewsWritten", fields: [cook_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  customer             profiles @relation("CustomerReviewsReceived", fields: [customer_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([customer_id, created_at(sort: Desc)])
+  @@index([cook_id, created_at(sort: Desc)])
+  @@schema("public")
+}
+
+/// The account role and the cook approval state are deliberately separate.
+/// Applicants keep customer access and may use the restricted cook workspace
+/// while this record controls whether their dishes can be sold publicly.
+model cook_applications {
+  id                     String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id                String    @unique @db.Uuid
+  status                 String    @default("draft") @db.VarChar(30)
+  identity_status        String    @default("not_submitted") @db.VarChar(30)
+  compliance_status      String    @default("not_submitted") @db.VarChar(30)
+  citizenship_type       String?   @db.VarChar(30)
+  submitted_at           DateTime? @db.Timestamptz(6)
+  identity_reviewed_at   DateTime? @db.Timestamptz(6)
+  identity_reviewed_by   String?   @db.Uuid
+  compliance_reviewed_at DateTime? @db.Timestamptz(6)
+  compliance_reviewed_by String?   @db.Uuid
+  approved_at            DateTime? @db.Timestamptz(6)
+  approved_by            String?   @db.Uuid
+  rejected_at            DateTime? @db.Timestamptz(6)
+  rejected_by            String?   @db.Uuid
+  reviewer_note          String?   @db.VarChar(1000)
+  reverification_due_at  DateTime? @db.Timestamptz(6)
+  created_at             DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at             DateTime  @default(now()) @db.Timestamptz(6)
+  profiles               profiles  @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([status, submitted_at(sort: Asc)])
+  @@index([reverification_due_at])
+  @@schema("public")
+}
+
+/// Highly sensitive Malaysian identity evidence. Files live in a separate
+/// private bucket and are exposed to authorised reviewers by short-lived URL.
+model identity_verification_documents {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id       String    @db.Uuid
+  document_type String    @db.VarChar(20)
+  storage_path  String
+  status        String    @default("pending") @db.VarChar(30)
+  reviewer_note String?   @db.VarChar(1000)
+  submitted_at  DateTime  @default(now()) @db.Timestamptz(6)
+  reviewed_at   DateTime? @db.Timestamptz(6)
+  reviewed_by   String?   @db.Uuid
+  profiles      profiles  @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([user_id, submitted_at(sort: Desc)])
+  @@index([status, submitted_at(sort: Asc)])
+  @@schema("public")
+}
+
+/// Fine-grained capabilities for sensitive admin operations such as opening
+/// or deciding Malaysian identity documents.
+model admin_permissions {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id    String   @db.Uuid
+  permission String   @db.VarChar(50)
+  granted_by String?  @db.Uuid
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  profiles   profiles @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([user_id, permission])
+  @@index([permission, user_id])
   @@schema("public")
 }
 

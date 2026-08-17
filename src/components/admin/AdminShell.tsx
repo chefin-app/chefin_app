@@ -12,6 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { usePathname, useRouter } from 'expo-router';
 
 import { fetchAdminActivity } from '@/src/admin/api';
+import { showAdminFailure, showAdminSuccess } from '@/src/admin/feedback';
 import type { AdminActivityItem } from '@/src/admin/types';
 import { useAdminAuth } from '@/src/admin/AdminAuthContext';
 import { useAuth } from '@/src/services/auth-context';
@@ -21,13 +22,18 @@ type NavItem = {
   key: string;
   label: string;
   icon: React.ComponentProps<typeof Ionicons>['name'];
-  route?: '/admin/overview' | '/admin/users' | '/admin/moderation';
+  route?:
+    | '/admin/overview'
+    | '/admin/users'
+    | '/admin/cooks'
+    | '/admin/moderation'
+    | '/admin/orders';
 };
 
 const WORKSPACE_NAV_ITEMS: NavItem[] = [
   { key: 'overview', label: 'Overview', icon: 'grid-outline', route: '/admin/overview' },
   { key: 'users', label: 'User Management', icon: 'people-outline', route: '/admin/users' },
-  { key: 'cooks', label: 'Cook Management', icon: 'restaurant-outline' },
+  { key: 'cooks', label: 'Cook Management', icon: 'restaurant-outline', route: '/admin/cooks' },
   { key: 'dishes', label: 'Dish Management', icon: 'fast-food-outline' },
   {
     key: 'moderation',
@@ -35,7 +41,7 @@ const WORKSPACE_NAV_ITEMS: NavItem[] = [
     icon: 'shield-checkmark-outline',
     route: '/admin/moderation',
   },
-  { key: 'orders', label: 'Order Monitoring', icon: 'receipt-outline' },
+  { key: 'orders', label: 'Order Monitoring', icon: 'receipt-outline', route: '/admin/orders' },
   { key: 'payments', label: 'Payments', icon: 'card-outline' },
 ];
 const SETTINGS_ITEM: NavItem = { key: 'settings', label: 'Settings', icon: 'settings-outline' };
@@ -97,7 +103,16 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   };
 
   const handleLogout = async () => {
-    await signOut();
+    const { error } = await signOut();
+    if (error) {
+      showAdminFailure(
+        new Error(error),
+        'Your admin session could not be signed out.',
+        'Logout failed'
+      );
+      return;
+    }
+    showAdminSuccess('Signed out', 'You have been signed out of the admin dashboard.');
     router.replace('/admin/login');
   };
 

@@ -52,7 +52,17 @@ export default function AuthCallback() {
           // Session is now set on-device; onAuthStateChange has fired.
           // New users (OAuth included) still need the name + phone step.
           // Query Supabase directly; default to onboarding when unknown.
-          const userId = (await supabase.auth.getUser()).data.user?.id;
+          const signedInUser = (await supabase.auth.getUser()).data.user;
+          const userId = signedInUser?.id;
+          const invitedAsCook = signedInUser?.user_metadata?.invited_role === 'cook';
+          if (params.type === 'invite') {
+            router.replace(
+              invitedAsCook
+                ? '/(auth)/setup-password?returnTo=%2Fstart-restaurant'
+                : '/(auth)/setup-password'
+            );
+            return;
+          }
           let completed = false;
           if (userId) {
             const { data: profile, error } = await supabase
@@ -62,7 +72,17 @@ export default function AuthCallback() {
               .maybeSingle();
             completed = !error && profile?.onboarding_completed === true;
           }
-          router.replace(completed ? '/(user)/(tabs)/home' : '/(auth)/onboarding');
+          if (completed && invitedAsCook) {
+            router.replace('/start-restaurant');
+          } else if (completed) {
+            router.replace('/(user)/(tabs)/home');
+          } else {
+            router.replace(
+              invitedAsCook
+                ? '/(auth)/onboarding?returnTo=%2Fstart-restaurant'
+                : '/(auth)/onboarding'
+            );
+          }
         } else {
           router.replace('/(auth)/login');
         }

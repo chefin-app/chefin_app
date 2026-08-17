@@ -5,7 +5,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter, useSegments } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/src/services/auth-context';
-import { useCart } from '@/src/context/CartContext';
 import { useNotifications } from '@/src/context/NotificationsContext';
 import SearchBar from '@/src/components/filters/SearchBar';
 
@@ -20,7 +19,6 @@ interface NavBarProps {
 export default function TopNavBarHomeUser({ options }: NavBarProps) {
   const router = useRouter();
   const { session } = useAuth();
-  const { cartCount } = useCart();
   const { unreadCounts } = useNotifications();
   const user = session?.user;
   const segments = useSegments();
@@ -52,11 +50,11 @@ export default function TopNavBarHomeUser({ options }: NavBarProps) {
   };
 
   const handleNotifPress = () => {
-    router.push({ pathname: '/notifications', params: { role: 'customer' } });
+    router.push('/(user)/notifications');
   };
 
-  const handleCartPress = () => {
-    router.push('/(user)/cart'); // Navigate to cart screen
+  const handleFoodOrdersPress = () => {
+    router.push('/(user)/food-orders'); // Navigate to past food orders
   };
 
   const handleFavouritesPress = () => {
@@ -77,9 +75,13 @@ export default function TopNavBarHomeUser({ options }: NavBarProps) {
           <TouchableOpacity style={styles.iconButton} onPress={handleFavouritesPress}>
             <Ionicons name="heart-outline" size={24} color="#333" />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.iconButton} onPress={handleCartPress}>
-            <Ionicons name="cart-outline" size={24} color="#333" />
-            {user && cartCount > 0 && <View style={styles.notificationDot} />}
+          <TouchableOpacity
+            style={styles.iconButton}
+            onPress={handleFoodOrdersPress}
+            accessibilityRole="button"
+            accessibilityLabel="Past food orders"
+          >
+            <Ionicons name="receipt-outline" size={24} color="#333" />
           </TouchableOpacity>
         </View>
       );

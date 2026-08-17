@@ -92,6 +92,10 @@ const AvailabilityPicker = forwardRef<AvailabilityPickerHandle, AvailabilityPick
     const [records, setRecords] = useState<AvailabilityRecord[]>([]);
     const [selectedDate, setSelectedDate] = useState<string | null>(null);
     const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
+    const maximumOrderDate = useMemo(() => {
+      const [year, month, day] = getLocalDateKey().split('-').map(Number);
+      return new Date(Date.UTC(year, month - 1, day + 2)).toISOString().slice(0, 10);
+    }, []);
 
     // Right-edge "more slots" arrow — shown while the chip row can still
     // scroll further right, hidden once the user reaches the end.
@@ -99,7 +103,7 @@ const AvailabilityPicker = forwardRef<AvailabilityPickerHandle, AvailabilityPick
     const slotsContentWidth = useRef(0);
     const slotsContainerWidth = useRef(0);
 
-    const handleSlotsScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {};
+    const handleSlotsScroll = (_event: NativeSyntheticEvent<NativeScrollEvent>) => {};
 
     const fetchAvailability = useCallback(
       async (showLoading = true) => {
@@ -244,6 +248,7 @@ const AvailabilityPicker = forwardRef<AvailabilityPickerHandle, AvailabilityPick
           markedDates={markedDates}
           onDayPress={handleDateSelect}
           minDate={getLocalDateKey()}
+          maxDate={maximumOrderDate}
           theme={{
             selectedDayBackgroundColor: '#4CAF50',
             todayTextColor: '#4CAF50',

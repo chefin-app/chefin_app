@@ -7,11 +7,13 @@ import { NativeSyntheticEvent, TextInputKeyPressEventData } from 'react-native';
 import {
   ActivityIndicator,
   Alert,
+  Keyboard,
   SafeAreaView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   View,
 } from 'react-native';
 
@@ -203,6 +205,7 @@ export default function PhoneVerifyStep2() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
       <View style={styles.content}>
         {/* Header */}
         <View style={styles.header}>
@@ -290,6 +293,7 @@ export default function PhoneVerifyStep2() {
           </TouchableOpacity>
         </View>
       </View>
+      </TouchableWithoutFeedback>
     </SafeAreaView>
   );
 }

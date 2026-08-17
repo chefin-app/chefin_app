@@ -200,7 +200,7 @@ export default function AccountScreen() {
       subtitle: userRole === 'cook' ? 'Go to cook dashboard' : 'Start earning with Chefin',
       onPress: () => {
         if (userRole === 'cook') {
-          router.push('/(cook)/(tabs)/today');
+          router.push('/(cook)/(tabs)/orders');
           return;
         }
         if (!user) {
@@ -215,8 +215,8 @@ export default function AccountScreen() {
     {
       icon: 'notifications-outline',
       title: 'Notifications',
-      subtitle: 'Manage your notification preferences',
-      onPress: () => router.push('/notifications'), // TODO: Navigate to notifications
+      subtitle: 'View order and favourite updates',
+      onPress: () => router.push('/(user)/notifications'),
     },
     {
       icon: 'help-circle-outline',

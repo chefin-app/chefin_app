@@ -16,6 +16,9 @@ export interface Listing {
   /** Active, approved dish ids for this cook. Availability filtering uses the
    * complete set even when the current feed shows one representative dish. */
   restaurant_listing_ids?: string[];
+  /** Privacy-preserving proximity band calculated by the backend. Exact
+   * customer and home-restaurant coordinates are never included. */
+  distance_label?: string;
   profiles?: Profile;
 }
 

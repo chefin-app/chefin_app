@@ -17,6 +17,7 @@ import type { ModerationReport } from '@/src/admin/types';
 import { useAuth } from '@/src/services/auth-context';
 import AdminDialog from '@/src/components/admin/AdminDialog';
 import { AdminPanel, AdminStatusBadge } from '@/src/components/admin/AdminOverviewUI';
+import { showAdminFailure, showAdminSuccess } from '@/src/admin/feedback';
 
 const FILTERS = [
   { key: 'open', label: 'Open queue' },
@@ -136,8 +137,21 @@ export default function ModerationScreen() {
       setResolutionNote('');
       setSelected(null);
       await load();
+      showAdminSuccess(
+        nextStatus === 'reviewing'
+          ? 'Report marked for review'
+          : nextStatus === 'actioned'
+            ? 'Report actioned'
+            : 'Report dismissed',
+        nextStatus === 'reviewing'
+          ? 'The report is now assigned to the review queue.'
+          : nextStatus === 'actioned'
+            ? 'The resolution was saved to the moderation audit trail.'
+            : 'The dismissal and its reason were saved to the moderation audit trail.'
+      );
     } catch (caught: unknown) {
       setActionError(caught instanceof Error ? caught.message : 'Report update failed.');
+      showAdminFailure(caught, 'The report status could not be updated.', 'Moderation failed');
     } finally {
       setActionLoading(false);
     }
@@ -442,6 +456,7 @@ export default function ModerationScreen() {
             value={resolutionNote}
             onChangeText={setResolutionNote}
             multiline
+            submitBehavior="newline"
             placeholder="Document what was reviewed and why this outcome was selected"
             placeholderTextColor="#A1A9A4"
             style={styles.textarea}

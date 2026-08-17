@@ -29,6 +29,7 @@ export const TextArea = ({
         onChangeText={onChangeText}
         placeholderTextColor="#999"
         multiline={true}
+        submitBehavior="newline"
         textAlignVertical="top" // Ensures text starts at the top on Android
       />
     </View>

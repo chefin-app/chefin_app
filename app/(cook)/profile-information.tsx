@@ -223,6 +223,7 @@ export default function CookProfileInformationScreen() {
                 }
                 autoFocus
                 multiline={isMultiline}
+                submitBehavior={isMultiline ? 'newline' : 'blurAndSubmit'}
                 textAlignVertical={isMultiline ? 'top' : 'center'}
                 keyboardType={opts?.keyboardType ?? 'default'}
                 autoCapitalize={opts?.autoCapitalize ?? 'sentences'}

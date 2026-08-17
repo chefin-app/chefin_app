@@ -20,16 +20,22 @@ export interface AvailabilitySummary {
 }
 
 export type AvailabilitySummaryMap = Record<string, AvailabilitySummary>;
+export const AVAILABILITY_TIME_ZONE = 'Asia/Kuala_Lumpur';
+const MALAYSIA_UTC_OFFSET = '+08:00';
 
 const getRestaurantListingIds = (listing: AvailabilityListing): string[] =>
   [...new Set([listing.id, ...(listing.restaurant_listing_ids ?? [])])].filter(Boolean);
 
-/** Returns a YYYY-MM-DD key using the device's local calendar date. */
+/** Returns the Malaysian service-date key used by cooks and the backend. */
 export function getLocalDateKey(date = new Date()): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: AVAILABILITY_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts.map(part => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
 }
 
 /** Formats an availability summary as a complete, user-facing message. */
@@ -57,8 +63,9 @@ export function formatAvailabilityLabel(
     return 'Currently not available';
   }
 
+  const todayParts = getLocalDateKey(now).split('-').map(Number);
   const diffDays = Math.round(
-    (Date.UTC(year, monthIndex, day) - Date.UTC(now.getFullYear(), now.getMonth(), now.getDate())) /
+    (Date.UTC(year, monthIndex, day) - Date.UTC(todayParts[0], todayParts[1] - 1, todayParts[2])) /
       86400000
   );
   if (diffDays === 0) return 'Available today';
@@ -87,25 +94,38 @@ function hasRemainingCapacity(record: AvailabilityRecord): boolean {
   );
 }
 
-function getWindowEnd(record: AvailabilityRecord, date: string): Date {
-  const endTime = record.end_time?.trim();
+function getWindowBoundary(
+  value: string | null | undefined,
+  date: string,
+  fallback: 'start' | 'end'
+): Date {
+  const boundary = value?.trim();
 
-  if (endTime) {
-    const timeOnly = endTime.match(/^(\d{2}):(\d{2})(?::(\d{2}))?/);
+  if (boundary) {
+    const timeOnly = boundary.match(/^(\d{2}):(\d{2})(?::(\d{2}))?/);
     if (timeOnly) {
-      const [year, month, day] = date.split('-').map(Number);
       const [, hour, minute, second = '0'] = timeOnly;
-      const localEnd = new Date(year, month - 1, day, Number(hour), Number(minute), Number(second));
-      if (!Number.isNaN(localEnd.getTime())) return localEnd;
+      const malaysiaBoundary = new Date(
+        `${date}T${hour}:${minute}:${String(second).padStart(2, '0')}${MALAYSIA_UTC_OFFSET}`
+      );
+      if (!Number.isNaN(malaysiaBoundary.getTime())) return malaysiaBoundary;
     }
 
-    const timestampEnd = new Date(endTime);
-    if (!Number.isNaN(timestampEnd.getTime())) return timestampEnd;
+    const timestampBoundary = new Date(boundary);
+    if (!Number.isNaN(timestampBoundary.getTime())) return timestampBoundary;
   }
 
-  // Legacy all-day rows without an end time remain bookable until local midnight.
-  const [year, month, day] = date.split('-').map(Number);
-  return new Date(year, month - 1, day + 1);
+  if (fallback === 'start') return new Date(`${date}T00:00:00${MALAYSIA_UTC_OFFSET}`);
+  // 16:00 UTC on the service date is midnight at the end of that date in MYT.
+  return new Date(`${date}T16:00:00Z`);
+}
+
+function getWindowStart(record: AvailabilityRecord, date: string): Date {
+  return getWindowBoundary(record.start_time, date, 'start');
+}
+
+function getWindowEnd(record: AvailabilityRecord, date: string): Date {
+  return getWindowBoundary(record.end_time, date, 'end');
 }
 
 export function isAvailabilityRecordBookable(
@@ -115,7 +135,11 @@ export function isAvailabilityRecordBookable(
 ): boolean {
   const date = getAvailabilityDate(record);
   if (date === null || date < today || !hasRemainingCapacity(record)) return false;
-  return date > today || getWindowEnd(record, date).getTime() > now.getTime();
+  if (date > today) return true;
+  return (
+    getWindowStart(record, date).getTime() <= now.getTime() &&
+    getWindowEnd(record, date).getTime() > now.getTime()
+  );
 }
 
 /** Summarises whether a listing still has a bookable time window. */
@@ -125,6 +149,7 @@ export function getAvailabilitySummary(
   now = new Date()
 ): AvailabilitySummary {
   let hadExpiredWindowToday = false;
+  let hasUpcomingWindowToday = false;
 
   const bookableRecords = records
     .map(record => ({ record, date: getAvailabilityDate(record) }))
@@ -132,8 +157,12 @@ export function getAvailabilitySummary(
       if (date === null || date < today || !hasRemainingCapacity(record)) return false;
       if (date > today) return true;
 
-      const isStillOpen = isAvailabilityRecordBookable(record, today, now);
-      if (!isStillOpen) hadExpiredWindowToday = true;
+      const windowStart = getWindowStart(record, date);
+      const windowEnd = getWindowEnd(record, date);
+      const isStillOpen =
+        windowStart.getTime() <= now.getTime() && windowEnd.getTime() > now.getTime();
+      if (!isStillOpen && windowStart.getTime() > now.getTime()) hasUpcomingWindowToday = true;
+      if (!isStillOpen && windowEnd.getTime() <= now.getTime()) hadExpiredWindowToday = true;
       return isStillOpen;
     })
     .sort((a, b) => {
@@ -143,8 +172,33 @@ export function getAvailabilitySummary(
     });
 
   const nextAvailableDate = bookableRecords[0]?.date ?? undefined;
+  if (nextAvailableDate === today) return { nextAvailableDate, state: 'available' };
+  // A later opening window today is intentionally not "Available Now". Do
+  // not skip over it and claim tomorrow is the restaurant's next opening.
+  if (hasUpcomingWindowToday) return { state: 'unavailable' };
   if (nextAvailableDate) return { nextAvailableDate, state: 'available' };
-  return { state: hadExpiredWindowToday ? 'noLongerAvailable' : 'unavailable' };
+  return {
+    state: hadExpiredWindowToday && !hasUpcomingWindowToday ? 'noLongerAvailable' : 'unavailable',
+  };
+}
+
+/**
+ * Buyer-menu state keeps a dish visibly unavailable after the cook marks all
+ * of today's windows sold out, even when the recurring schedule will reset on
+ * a later day. Outside that explicit daily override, future bookable dates
+ * continue to be shown normally.
+ */
+export function getMenuAvailabilitySummary(
+  records: AvailabilityRecord[],
+  today = getLocalDateKey(),
+  now = new Date()
+): AvailabilitySummary {
+  const todayRecords = records.filter(record => getAvailabilityDate(record) === today);
+  const unavailableForToday =
+    todayRecords.length > 0 && todayRecords.every(record => !hasRemainingCapacity(record));
+  return unavailableForToday
+    ? { state: 'unavailable' }
+    : getAvailabilitySummary(records, today, now);
 }
 
 /**
@@ -199,12 +253,16 @@ function rollUpRestaurantAvailabilitySummaries(
   return rolledUpSummaries;
 }
 
-/** Builds time-aware restaurant availability from a batch of per-dish rows. */
-export function buildAvailabilitySummaries(
+function buildPerListingAvailabilitySummaries(
   listings: AvailabilityListing[],
   records: AvailabilityRecord[],
-  today = getLocalDateKey(),
-  now = new Date()
+  today: string,
+  now: Date,
+  summarize: (
+    listingRecords: AvailabilityRecord[],
+    serviceDate: string,
+    currentTime: Date
+  ) => AvailabilitySummary
 ): AvailabilitySummaryMap {
   const uniqueListingIds = [...new Set(listings.flatMap(getRestaurantListingIds).filter(Boolean))];
   const recordsByListing = new Map<string, AvailabilityRecord[]>();
@@ -217,13 +275,52 @@ export function buildAvailabilitySummaries(
 
   const listingSummaries: AvailabilitySummaryMap = {};
   for (const listingId of uniqueListingIds) {
-    listingSummaries[listingId] = getAvailabilitySummary(
-      recordsByListing.get(listingId) ?? [],
-      today,
-      now
-    );
+    listingSummaries[listingId] = summarize(recordsByListing.get(listingId) ?? [], today, now);
   }
 
+  return listingSummaries;
+}
+
+/** Builds time-aware availability for each represented dish without restaurant roll-up. */
+export function buildListingAvailabilitySummaries(
+  listings: AvailabilityListing[],
+  records: AvailabilityRecord[],
+  today = getLocalDateKey(),
+  now = new Date()
+): AvailabilitySummaryMap {
+  return buildPerListingAvailabilitySummaries(
+    listings,
+    records,
+    today,
+    now,
+    getAvailabilitySummary
+  );
+}
+
+/** Builds buyer-menu states, including explicit sold-out-for-today overrides. */
+export function buildMenuListingAvailabilitySummaries(
+  listings: AvailabilityListing[],
+  records: AvailabilityRecord[],
+  today = getLocalDateKey(),
+  now = new Date()
+): AvailabilitySummaryMap {
+  return buildPerListingAvailabilitySummaries(
+    listings,
+    records,
+    today,
+    now,
+    getMenuAvailabilitySummary
+  );
+}
+
+/** Builds time-aware restaurant availability from a batch of per-dish rows. */
+export function buildAvailabilitySummaries(
+  listings: AvailabilityListing[],
+  records: AvailabilityRecord[],
+  today = getLocalDateKey(),
+  now = new Date()
+): AvailabilitySummaryMap {
+  const listingSummaries = buildListingAvailabilitySummaries(listings, records, today, now);
   return rollUpRestaurantAvailabilitySummaries(listings, listingSummaries);
 }
 
@@ -284,22 +381,39 @@ export function buildNextAvailableDates(
 
 async function fetchAvailabilityRecords(
   listings: AvailabilityListing[],
-  today: string
+  _today: string
 ): Promise<AvailabilityRecord[]> {
   const uniqueListingIds = [...new Set(listings.flatMap(getRestaurantListingIds).filter(Boolean))];
   if (uniqueListingIds.length === 0) return [];
 
-  const { supabase } = await import('@/src/services/supabase');
-  const { data, error } = await supabase
-    .from('availability')
-    .select(
-      'listing_id, available_date, start_time, end_time, is_available, max_orders, orders_taken'
-    )
-    .in('listing_id', uniqueListingIds)
-    .gte('available_date', today);
+  const apiUrl = process.env.EXPO_PUBLIC_API_URL?.replace(/\/$/, '');
+  if (!apiUrl) throw new Error('The Chefin API URL is not configured.');
+  const chunks: string[][] = [];
+  for (let offset = 0; offset < uniqueListingIds.length; offset += 500) {
+    chunks.push(uniqueListingIds.slice(offset, offset + 500));
+  }
 
-  if (error) throw error;
-  return (data ?? []) as AvailabilityRecord[];
+  const responses = await Promise.all(
+    chunks.map(async listingIds => {
+      let response: Response;
+      try {
+        response = await fetch(`${apiUrl}/api/availability/batch`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ listingIds, days: 30 }),
+        });
+      } catch {
+        throw new Error(`Chefin could not reach the backend at ${apiUrl}.`);
+      }
+      const payload = (await response.json().catch(() => ({}))) as {
+        availability?: AvailabilityRecord[];
+        error?: string;
+      };
+      if (!response.ok) throw new Error(payload.error ?? 'Availability could not be loaded.');
+      return Array.isArray(payload.availability) ? payload.availability : [];
+    })
+  );
+  return responses.flat();
 }
 
 export async function fetchAvailabilitySummaries(

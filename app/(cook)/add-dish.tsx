@@ -45,26 +45,7 @@ const CUISINE_OPTIONS = [
 // Dietary / meal / attribute tags — cook picks up to MAX_DIETARY_TAGS.
 const DIETARY_TAG_OPTIONS = [
   'Vegetarian',
-  'Vegan',
-  'Keto',
-  'Organic',
-  'Halal',
-  'Nut-free',
-  'Gluten-free',
-  'Spicy',
-  'Fish',
-  'Shellfish',
-  'Low-carb',
-  'Dairy-free',
-  'Healthy',
-  'Comfort food',
-  'Snacks',
-  'Breakfast',
-  'Lunch',
-  'Dinner',
-  'Desserts',
-  'Drinks',
-  'Pastry',
+  'Non-pork',
 ];
 
 export default function AddDishScreen() {
@@ -130,6 +111,7 @@ export default function AddDishScreen() {
   const [description, setDescription] = useState('');
   const [ingredientsText, setIngredientsText] = useState('');
   const [cuisine, setCuisine] = useState<string | null>(null);
+  const [menuCategory, setMenuCategory] = useState('Main dishes');
   const [dietaryTags, setDietaryTags] = useState<string[]>([]);
   const [priceText, setPriceText] = useState('5');
   const [submitting, setSubmitting] = useState(false);
@@ -232,6 +214,7 @@ export default function AddDishScreen() {
         description: description.trim(),
         ingredients: ingredientsList,
         cuisine,
+        menuCategory: menuCategory.trim() || 'Uncategorised',
         dietaryTags,
         price: priceNum,
         photoUri,
@@ -277,10 +260,14 @@ export default function AddDishScreen() {
         price: priceNum,
         image_url: imageUrl,
         cuisine,
+        menu_category: menuCategory.trim() || 'Uncategorised',
         dietary_tags: dietaryTags,
         ingredients: ingredientsList,
         location: roughLocation,
-        is_active: true,
+        // Every new dish starts as a private draft/pending review. The admin
+        // approval endpoint activates it only when the cook may sell.
+        is_active: false,
+        status: 'pending',
       });
       if (insertErr) throw insertErr;
 
@@ -351,7 +338,6 @@ export default function AddDishScreen() {
                   onChangeText={text => setTitle(text.slice(0, TITLE_LIMIT))}
                   placeholder="e.g. The American Burger"
                   placeholderTextColor="#bbb"
-                  multiline
                   autoFocus
                   textAlignVertical="top"
                 />
@@ -369,7 +355,6 @@ export default function AddDishScreen() {
                   onChangeText={text => setDescription(text.slice(0, DESCRIPTION_LIMIT))}
                   placeholder="Double cheeseburger with lettuce, tomato…"
                   placeholderTextColor="#bbb"
-                  multiline
                   autoFocus
                   textAlignVertical="top"
                 />
@@ -390,7 +375,9 @@ export default function AddDishScreen() {
                   }
                   placeholderTextColor="#bbb"
                   multiline
+                  submitBehavior="newline"
                   autoFocus
+                  returnKeyType="done"
                   textAlignVertical="top"
                 />
                 <Text style={styles.counter}>
@@ -402,6 +389,19 @@ export default function AddDishScreen() {
 
             {step === 'keywords' && (
               <View>
+                <View style={styles.categoryField}>
+                  <Text style={styles.sectionLabel}>Menu category</Text>
+                  <TextInput
+                    style={styles.categoryInput}
+                    value={menuCategory}
+                    onChangeText={text => setMenuCategory(text.slice(0, 80))}
+                    placeholder="e.g. Nasi Lemak, Pasta, Drinks"
+                    placeholderTextColor="#bbb"
+                  />
+                  <Text style={styles.categoryHint}>
+                    Categories keep your menu organised for customers.
+                  </Text>
+                </View>
                 <View style={styles.sectionHeaderRow}>
                   <Text style={styles.sectionLabel}>Cuisine</Text>
                   <Text style={styles.sectionHint}>Pick 1</Text>
@@ -620,6 +620,17 @@ const styles = StyleSheet.create({
     alignItems: 'baseline',
     marginBottom: 12,
   },
+  categoryField: { gap: 8, marginBottom: 24 },
+  categoryInput: {
+    borderWidth: 1,
+    borderColor: '#D7DDD9',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 15,
+    color: '#1A1A1A',
+  },
+  categoryHint: { fontSize: 11, color: '#888', lineHeight: 16 },
   sectionLabel: {
     fontSize: 13,
     fontWeight: '700',
