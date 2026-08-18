@@ -94,8 +94,9 @@ const formatMatchLabel = (match: ListingScheduleMatch): string => {
 export default function RestaurantScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { id } = useLocalSearchParams<{ id?: string | string[] }>();
+  const { id, dish } = useLocalSearchParams<{ id?: string | string[]; dish?: string | string[] }>();
   const restaurantId = Array.isArray(id) ? id[0] : id;
+  const highlightDishId = Array.isArray(dish) ? dish[0] : dish;
   const { session } = useAuth();
   const { toggleFavourite, isFavourite } = useFavourites();
   const { addToCart, cartItems, clearCookCart } = useCart();
@@ -112,6 +113,16 @@ export default function RestaurantScreen() {
     const timer = setInterval(() => setClock(new Date()), 60_000);
     return () => clearInterval(timer);
   }, []);
+
+  // A `dish` param (from the profile page's top picks) opens that dish's
+  // order sheet once the menu has loaded, then is consumed so closing the
+  // sheet doesn't reopen it.
+  useEffect(() => {
+    if (!highlightDishId || !data) return;
+    const target = data.listings.find(listing => listing.id === highlightDishId);
+    if (target) setSelectedDish(target);
+    router.setParams({ dish: undefined });
+  }, [highlightDishId, data, router]);
 
   useEffect(() => {
     if (!restaurantId) return;
@@ -425,7 +436,15 @@ export default function RestaurantScreen() {
             </View>
           ) : null}
 
-          <View style={styles.summaryCard}>
+          <TouchableOpacity
+            style={styles.summaryCard}
+            activeOpacity={0.8}
+            onPress={() =>
+              router.push({ pathname: '/restaurant/[id]/profile', params: { id: profile.id } })
+            }
+            accessibilityRole="button"
+            accessibilityLabel="View restaurant profile, reviews and details"
+          >
             <Image
               source={
                 profile.profile_image ? { uri: profile.profile_image } : images.templateAvatar
@@ -452,7 +471,8 @@ export default function RestaurantScreen() {
                 </Text>
               </View>
             </View>
-          </View>
+            <Ionicons name="chevron-forward" size={20} color="#9AA39D" />
+          </TouchableOpacity>
         </View>
 
         <ScrollView
