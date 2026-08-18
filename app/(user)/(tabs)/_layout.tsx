@@ -5,9 +5,15 @@ import { useCallback } from 'react';
 import { useAuth } from '@/src/services/auth-context';
 import { View } from 'react-native';
 import AccountRestrictionBanner from '@/src/components/feedback/AccountRestrictionBanner';
+import ActiveOrderBanner from '@/src/components/navigation/ActiveOrderBanner';
 
 const NavBar = (props: any) => <TopNavBarHomeUser {...props} />;
-const TabBar = (props: any) => <BottomTabBarUser {...props} />;
+const TabBar = (props: any) => (
+  <>
+    <ActiveOrderBanner />
+    <BottomTabBarUser {...props} />
+  </>
+);
 
 export default function TabLayout() {
   const { user, initializing } = useAuth();
