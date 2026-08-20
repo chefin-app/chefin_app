@@ -52,6 +52,11 @@ export default function EmailLoginScreen() {
   const [emailTouched, setEmailTouched] = useState(false);
   const [passwordTouched, setPasswordTouched] = useState(false);
   const [checkingEmail, setCheckingEmail] = useState(false);
+  // Covers the WHOLE submit journey (auth call + post-auth routing queries),
+  // unlike the context's `loading`, which only spans the auth call itself.
+  // Without this the button re-enables while routing is still in flight and
+  // users press it again, firing duplicate sign-ins with no visible feedback.
+  const [submitting, setSubmitting] = useState(false);
   const passwordRef = useRef<TextInput>(null);
 
   const { signUp, signIn, resetPassword, loading } = useAuth();
@@ -106,11 +111,16 @@ export default function EmailLoginScreen() {
 
     setCheckingEmail(true);
     let nextMode: Mode = 'unknown';
+    // Time-boxed: an unreachable backend must not leave the Continue button
+    // spinning for the OS-level fetch timeout (30s+ on some devices).
+    const abort = new AbortController();
+    const abortTimer = setTimeout(() => abort.abort(), 5000);
     try {
       const res = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/auth/check-email`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: email.trim() }),
+        signal: abort.signal,
       });
       if (res.ok) {
         const { exists } = await res.json();
@@ -120,6 +130,7 @@ export default function EmailLoginScreen() {
       // Backend unreachable — fall through with mode 'unknown'; the submit
       // handler still resolves the right path via a sign-in-first fallback.
     } finally {
+      clearTimeout(abortTimer);
       setCheckingEmail(false);
     }
 
@@ -145,8 +156,9 @@ export default function EmailLoginScreen() {
         : error;
       throw new Error(friendly);
     }
-    const { data } = await supabase.auth.getUser();
-    await routeAfterAuth(data.user?.id);
+    // getSession reads locally — no extra network round-trip like getUser.
+    const { data } = await supabase.auth.getSession();
+    await routeAfterAuth(data.session?.user?.id);
   };
 
   const doSignUp = async () => {
@@ -157,8 +169,8 @@ export default function EmailLoginScreen() {
       // before bothering them with an error.
       const { error: signInError } = await signIn(email.trim(), password);
       if (!signInError) {
-        const { data } = await supabase.auth.getUser();
-        await routeAfterAuth(data.user?.id);
+        const { data } = await supabase.auth.getSession();
+        await routeAfterAuth(data.session?.user?.id);
         return;
       }
       setMode('signIn');
@@ -198,11 +210,13 @@ export default function EmailLoginScreen() {
   };
 
   const handleSubmit = async () => {
+    if (submitting) return;
     setPasswordTouched(true);
     if (!password) return;
     if (isSignUp && !passwordValidForSignUp) return;
     Keyboard.dismiss();
 
+    setSubmitting(true);
     try {
       if (mode === 'signIn') {
         await doSignIn();
@@ -223,6 +237,8 @@ export default function EmailLoginScreen() {
       }
     } catch (error: any) {
       Alert.alert('Error', error.message);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -242,7 +258,8 @@ export default function EmailLoginScreen() {
     : isSignUp
       ? 'Create Account'
       : 'Welcome Back';
-  const submitDisabled = loading || (isSignUp && passwordTouched && !passwordValidForSignUp);
+  const busy = submitting || loading;
+  const submitDisabled = busy || (isSignUp && passwordTouched && !passwordValidForSignUp);
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
@@ -390,7 +407,7 @@ export default function EmailLoginScreen() {
                     onPress={handleSubmit}
                     disabled={submitDisabled}
                   >
-                    {loading ? (
+                    {busy ? (
                       <ActivityIndicator color="#fff" />
                     ) : (
                       <Text style={styles.submitButtonText}>

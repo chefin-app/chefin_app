@@ -1,6 +1,7 @@
 // .eslintrc.js
 module.exports = {
   root: true, // This tells ESLint to stop looking for config files in parent directories
+  ignorePatterns: ['node_modules/', 'dist/', 'build/', '.expo/', 'ios/', 'android/', 'coverage/'],
   extends: [
     'eslint:recommended', // ESLint's recommended rules
     '@react-native', // Recommended rules for React Native from @react-native/eslint-config

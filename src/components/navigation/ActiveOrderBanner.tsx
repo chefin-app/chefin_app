@@ -5,45 +5,28 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { supabase } from '@/src/utils/supabaseClient';
 import { useAuth } from '@/src/services/auth-context';
-
-type OrderStatus = 'pending' | 'confirmed' | 'ready' | 'completed' | 'cancelled';
+import {
+  ACTIVE_ORDER_STATUSES,
+  formatEta,
+  ORDER_STATUS_LABEL,
+  type FulfillmentType,
+  type OrderStatus,
+} from '@/src/utils/orderStatus';
 
 interface ActiveOrderRow {
   id: string;
   status: OrderStatus | null;
-  fulfillment_type: 'pickup' | 'delivery' | null;
+  fulfillment_type: FulfillmentType | null;
   pickup_time: string | null;
   scheduled_date: string | null;
   listings: { title: string } | null;
 }
 
-const ACTIVE_STATUSES: OrderStatus[] = ['pending', 'confirmed', 'ready'];
-
-const STATUS_LABEL: Record<OrderStatus, string> = {
-  pending: 'Order placed',
-  confirmed: 'Being prepared',
-  ready: 'Ready',
-  completed: 'Completed',
-  cancelled: 'Cancelled',
-};
-
 const POLL_INTERVAL_MS = 30_000;
 
-function formatEta(fulfillmentType: 'pickup' | 'delivery' | null, pickupTime: string | null): string {
-  const verb = fulfillmentType === 'delivery' ? 'Delivery' : 'Pickup';
-  if (!pickupTime) return `${verb} time TBC`;
-
-  const target = new Date(pickupTime).getTime();
-  const now = Date.now();
-  const diffMinutes = Math.round((target - now) / 60_000);
-
-  if (diffMinutes <= 0) return `${verb} due now`;
-  if (diffMinutes < 60) return `${verb} in ${diffMinutes} min`;
-
-  const hours = Math.floor(diffMinutes / 60);
-  const minutes = diffMinutes % 60;
-  return `${verb} in ${hours}h${minutes > 0 ? ` ${minutes}m` : ''}`;
-}
+// Stop nagging 15 minutes after the scheduled pickup/delivery slot, even when
+// the cook never advanced the order past pending/confirmed/ready.
+const EXPIRY_GRACE_MS = 15 * 60_000;
 
 export default function ActiveOrderBanner() {
   const router = useRouter();
@@ -66,11 +49,15 @@ export default function ActiveOrderBanner() {
         setOrder(null);
         return;
       }
+      // Skip orders whose slot passed more than the grace period ago; orders
+      // without a slot yet (pickup_time null) stay visible.
+      const expiryCutoff = new Date(Date.now() - EXPIRY_GRACE_MS).toISOString();
       const { data, error } = await supabase
         .from('orders')
         .select('id, status, fulfillment_type, pickup_time, scheduled_date, listings(title)')
         .eq('customer_id', profile.id)
-        .in('status', ACTIVE_STATUSES)
+        .in('status', ACTIVE_ORDER_STATUSES)
+        .or(`pickup_time.is.null,pickup_time.gte.${expiryCutoff}`)
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -95,12 +82,18 @@ export default function ActiveOrderBanner() {
   }, []);
 
   if (!order || !order.status) return null;
+  // Live expiry between polls: the `now` tick re-evaluates this every 30s.
+  if (order.pickup_time && new Date(order.pickup_time).getTime() + EXPIRY_GRACE_MS < now) {
+    return null;
+  }
 
   return (
     <TouchableOpacity
       style={styles.container}
       activeOpacity={0.9}
-      onPress={() => router.push('/(user)/food-orders')}
+      onPress={() =>
+        router.push({ pathname: '/order-status/[orderId]', params: { orderId: order.id } })
+      }
     >
       <View style={styles.iconWrap}>
         <Ionicons
@@ -111,7 +104,7 @@ export default function ActiveOrderBanner() {
       </View>
       <View style={styles.copy}>
         <Text style={styles.title} numberOfLines={1}>
-          {STATUS_LABEL[order.status]} · {order.listings?.title ?? 'Your order'}
+          {ORDER_STATUS_LABEL[order.status]} · {order.listings?.title ?? 'Your order'}
         </Text>
         <Text style={styles.eta} key={now}>
           {formatEta(order.fulfillment_type, order.pickup_time)}
