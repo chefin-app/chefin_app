@@ -33,8 +33,8 @@ function passwordChecks(password: string) {
       label: `At least ${MIN_PASSWORD_LENGTH} characters`,
       ok: password.length >= MIN_PASSWORD_LENGTH,
     },
-    { label: 'Contains a letter', ok: /[a-zA-Z]/.test(password) },
-    { label: 'Contains a number', ok: /\d/.test(password) },
+    { label: 'At least one uppercase letter', ok: /[A-Z]/.test(password) },
+    { label: 'At least one number', ok: /\d/.test(password) },
   ];
 }
 
@@ -51,6 +51,7 @@ export default function EmailLoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [emailTouched, setEmailTouched] = useState(false);
   const [passwordTouched, setPasswordTouched] = useState(false);
+  const [passwordSubmitAttempted, setPasswordSubmitAttempted] = useState(false);
   const [checkingEmail, setCheckingEmail] = useState(false);
   // Covers the WHOLE submit journey (auth call + post-auth routing queries),
   // unlike the context's `loading`, which only spans the auth call itself.
@@ -138,6 +139,7 @@ export default function EmailLoginScreen() {
     setStep('password');
     setPassword('');
     setPasswordTouched(false);
+    setPasswordSubmitAttempted(false);
     setTimeout(() => passwordRef.current?.focus(), 100);
   };
 
@@ -146,6 +148,7 @@ export default function EmailLoginScreen() {
     setMode('unknown');
     setPassword('');
     setPasswordTouched(false);
+    setPasswordSubmitAttempted(false);
   };
 
   const doSignIn = async () => {
@@ -212,6 +215,7 @@ export default function EmailLoginScreen() {
   const handleSubmit = async () => {
     if (submitting) return;
     setPasswordTouched(true);
+    if (isSignUp) setPasswordSubmitAttempted(true);
     if (!password) return;
     if (isSignUp && !passwordValidForSignUp) return;
     Keyboard.dismiss();
@@ -259,7 +263,7 @@ export default function EmailLoginScreen() {
       ? 'Create Account'
       : 'Welcome Back';
   const busy = submitting || loading;
-  const submitDisabled = busy || (isSignUp && passwordTouched && !passwordValidForSignUp);
+  const showPasswordErrors = isSignUp && passwordSubmitAttempted && !passwordValidForSignUp;
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
@@ -350,7 +354,12 @@ export default function EmailLoginScreen() {
                   {/* Password Input */}
                   <View style={styles.inputContainer}>
                     <Text style={styles.inputLabel}>Password</Text>
-                    <View style={styles.passwordContainer}>
+                    <View
+                      style={[
+                        styles.passwordContainer,
+                        showPasswordErrors && styles.passwordContainerError,
+                      ]}
+                    >
                       <TextInput
                         ref={passwordRef}
                         testID="password-input"
@@ -374,17 +383,54 @@ export default function EmailLoginScreen() {
                       </TouchableOpacity>
                     </View>
 
+                    {showPasswordErrors && (
+                      <View
+                        style={styles.passwordErrorSummary}
+                        accessibilityRole="alert"
+                        accessibilityLiveRegion="assertive"
+                        testID="password-validation-error"
+                      >
+                        <Ionicons name="alert-circle" size={20} color="#B42318" />
+                        <View style={styles.passwordErrorCopy}>
+                          <Text style={styles.passwordErrorTitle}>
+                            Password requirements not met
+                          </Text>
+                          {checks
+                            .filter(check => !check.ok)
+                            .map(check => (
+                              <Text key={check.label} style={styles.passwordErrorText}>
+                                • {check.label}
+                              </Text>
+                            ))}
+                        </View>
+                      </View>
+                    )}
+
                     {/* Inline password requirements (sign-up only) */}
                     {isSignUp && (passwordTouched || password.length > 0) && (
                       <View style={styles.checksContainer}>
                         {checks.map(check => (
                           <View key={check.label} style={styles.checkRow}>
                             <Ionicons
-                              name={check.ok ? 'checkmark-circle' : 'ellipse-outline'}
+                              name={
+                                check.ok
+                                  ? 'checkmark-circle'
+                                  : passwordSubmitAttempted
+                                    ? 'close-circle'
+                                    : 'ellipse-outline'
+                              }
                               size={16}
-                              color={check.ok ? '#4CAF50' : '#999'}
+                              color={
+                                check.ok ? '#4CAF50' : passwordSubmitAttempted ? '#C62828' : '#999'
+                              }
                             />
-                            <Text style={[styles.checkText, check.ok && styles.checkTextOk]}>
+                            <Text
+                              style={[
+                                styles.checkText,
+                                check.ok && styles.checkTextOk,
+                                passwordSubmitAttempted && !check.ok && styles.checkTextError,
+                              ]}
+                            >
                               {check.label}
                             </Text>
                           </View>
@@ -403,9 +449,9 @@ export default function EmailLoginScreen() {
                   {/* Submit Button */}
                   <TouchableOpacity
                     testID="create-account-button"
-                    style={[styles.submitButton, submitDisabled && styles.submitButtonDisabled]}
+                    style={[styles.submitButton, busy && styles.submitButtonDisabled]}
                     onPress={handleSubmit}
-                    disabled={submitDisabled}
+                    disabled={busy}
                   >
                     {busy ? (
                       <ActivityIndicator color="#fff" />
@@ -530,6 +576,10 @@ const styles = StyleSheet.create({
   checkTextOk: {
     color: '#4CAF50',
   },
+  checkTextError: {
+    color: '#C62828',
+    fontWeight: '600',
+  },
   passwordContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -537,6 +587,37 @@ const styles = StyleSheet.create({
     borderColor: '#E0E0E0',
     borderRadius: 12,
     backgroundColor: '#F9F9F9',
+  },
+  passwordContainerError: {
+    borderWidth: 2,
+    borderColor: '#D92D20',
+    backgroundColor: '#FFF8F7',
+  },
+  passwordErrorSummary: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    marginTop: 10,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#D92D20',
+    borderRadius: 10,
+    backgroundColor: '#FEF3F2',
+  },
+  passwordErrorCopy: {
+    flex: 1,
+  },
+  passwordErrorTitle: {
+    color: '#B42318',
+    fontSize: 14,
+    fontWeight: '800',
+    marginBottom: 4,
+  },
+  passwordErrorText: {
+    color: '#B42318',
+    fontSize: 13,
+    fontWeight: '600',
+    lineHeight: 19,
   },
   passwordInput: {
     flex: 1,

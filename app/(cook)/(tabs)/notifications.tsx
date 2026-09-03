@@ -19,6 +19,17 @@ export default function CookNotificationsScreen() {
       router.push('/(cook)/(tabs)/orders');
       return;
     }
+    if (item.type === 'delivery_update_cook') {
+      if (typeof item.data?.order_id === 'string') {
+        router.push({
+          pathname: '/(cook)/order/[orderId]',
+          params: { orderId: item.data.order_id },
+        });
+      } else {
+        router.push('/(cook)/(tabs)/orders');
+      }
+      return;
+    }
     if (item.type === 'dish_approved' || item.type === 'dish_rejected') {
       router.push('/(cook)/(tabs)/menu');
       return;

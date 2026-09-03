@@ -5,10 +5,11 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  SafeAreaView,
   Alert,
   ActivityIndicator,
+  ScrollView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams, type Href } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/src/services/auth-context';
@@ -25,17 +26,17 @@ export default function SetupPasswordStep3() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
 
   const validatePassword = () => {
-    if (password.length < 6) {
-      Alert.alert('Weak Password', 'Password must be at least 6 characters long');
-      return false;
-    }
-    if (password !== confirmPassword) {
-      Alert.alert('Password Mismatch', 'Passwords do not match');
-      return false;
-    }
-    return true;
+    setSubmitted(true);
+    return (
+      password.length >= 6 &&
+      /[A-Z]/.test(password) &&
+      /[0-9]/.test(password) &&
+      confirmPassword.length > 0 &&
+      password === confirmPassword
+    );
   };
 
   const setupPassword = async () => {
@@ -87,6 +88,20 @@ export default function SetupPasswordStep3() {
   const hasMinLength = password.length >= 6;
   const hasUppercase = /[A-Z]/.test(password);
   const hasNumber = /[0-9]/.test(password);
+  const meetsRequirements = hasMinLength && hasUppercase && hasNumber;
+  const showPasswordError = submitted && !meetsRequirements;
+  const showConfirmError = submitted && (!confirmPassword || !isPasswordMatching);
+  const validationErrors = [
+    !hasMinLength ? 'Use at least 6 characters.' : null,
+    !hasUppercase ? 'Add at least one uppercase letter.' : null,
+    !hasNumber ? 'Add at least one number.' : null,
+    !confirmPassword
+      ? 'Confirm your password.'
+      : !isPasswordMatching
+        ? 'Make sure both passwords match.'
+        : null,
+  ].filter((message): message is string => Boolean(message));
+  const showValidationSummary = submitted && validationErrors.length > 0;
 
   const matchTextColor = isPasswordMatching ? '#4CAF50' : '#FF5252';
   const minLengthColor = hasMinLength ? '#4CAF50' : '#999';
@@ -95,7 +110,11 @@ export default function SetupPasswordStep3() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
@@ -109,10 +128,29 @@ export default function SetupPasswordStep3() {
           Your password will be used to secure your account and sign in to the app.
         </Text>
 
+        {showValidationSummary && (
+          <View
+            style={styles.validationSummary}
+            accessibilityRole="alert"
+            accessibilityLiveRegion="assertive"
+            testID="password-validation-error"
+          >
+            <Ionicons name="alert-circle" size={24} color="#B42318" />
+            <View style={styles.validationSummaryCopy}>
+              <Text style={styles.validationSummaryTitle}>Password requirements not met</Text>
+              {validationErrors.map(message => (
+                <Text key={message} style={styles.validationSummaryText}>
+                  • {message}
+                </Text>
+              ))}
+            </View>
+          </View>
+        )}
+
         {/* Password Input */}
         <View style={styles.inputContainer}>
           <Text style={styles.inputLabel}>Password</Text>
-          <View style={styles.passwordContainer}>
+          <View style={[styles.passwordContainer, showPasswordError && styles.inputError]}>
             <TextInput
               style={styles.passwordInput}
               placeholder="Enter your password"
@@ -129,6 +167,11 @@ export default function SetupPasswordStep3() {
               <Ionicons name={showPassword ? 'eye' : 'eye-off'} size={20} color="#666" />
             </TouchableOpacity>
           </View>
+          {showPasswordError && (
+            <Text style={styles.submitError} accessibilityLiveRegion="polite">
+              Your password must meet every requirement below.
+            </Text>
+          )}
 
           {/* Password Strength Indicator */}
           {passwordStrength && (
@@ -144,7 +187,7 @@ export default function SetupPasswordStep3() {
         {/* Confirm Password Input */}
         <View style={styles.inputContainer}>
           <Text style={styles.inputLabel}>Confirm Password</Text>
-          <View style={styles.passwordContainer}>
+          <View style={[styles.passwordContainer, showConfirmError && styles.inputError]}>
             <TextInput
               style={styles.passwordInput}
               placeholder="Confirm your password"
@@ -161,6 +204,13 @@ export default function SetupPasswordStep3() {
               <Ionicons name={showConfirmPassword ? 'eye' : 'eye-off'} size={20} color="#666" />
             </TouchableOpacity>
           </View>
+          {showConfirmError && (
+            <Text style={styles.submitError} accessibilityLiveRegion="polite">
+              {confirmPassword.length === 0
+                ? 'Confirm your password.'
+                : 'Passwords do not match. Try again.'}
+            </Text>
+          )}
 
           {/* Password Match Indicator */}
           {confirmPassword.length > 0 && (
@@ -178,36 +228,55 @@ export default function SetupPasswordStep3() {
         </View>
 
         {/* Password Requirements */}
-        <View style={styles.requirementsContainer}>
+        <View style={[styles.requirementsContainer, showPasswordError && styles.requirementsError]}>
           <Text style={styles.requirementsTitle}>Password must contain:</Text>
           <View style={styles.requirementItem}>
             <Ionicons
-              name={hasMinLength ? 'checkmark-circle' : 'ellipse-outline'}
-              size={16}
-              color={minLengthColor}
+              name={
+                hasMinLength ? 'checkmark-circle' : submitted ? 'close-circle' : 'ellipse-outline'
+              }
+              size={18}
+              color={submitted && !hasMinLength ? '#C62828' : minLengthColor}
             />
-            <Text style={[styles.requirementText, { color: minLengthColor }]}>
+            <Text
+              style={[
+                styles.requirementText,
+                { color: submitted && !hasMinLength ? '#C62828' : minLengthColor },
+              ]}
+            >
               At least 6 characters
             </Text>
           </View>
           <View style={styles.requirementItem}>
             <Ionicons
-              name={hasUppercase ? 'checkmark-circle' : 'ellipse-outline'}
-              size={16}
-              color={uppercaseColor}
+              name={
+                hasUppercase ? 'checkmark-circle' : submitted ? 'close-circle' : 'ellipse-outline'
+              }
+              size={18}
+              color={submitted && !hasUppercase ? '#C62828' : uppercaseColor}
             />
-            <Text style={[styles.requirementText, { color: uppercaseColor }]}>
-              One uppercase letter (recommended)
+            <Text
+              style={[
+                styles.requirementText,
+                { color: submitted && !hasUppercase ? '#C62828' : uppercaseColor },
+              ]}
+            >
+              One uppercase letter
             </Text>
           </View>
           <View style={styles.requirementItem}>
             <Ionicons
-              name={hasNumber ? 'checkmark-circle' : 'ellipse-outline'}
-              size={16}
-              color={numberColor}
+              name={hasNumber ? 'checkmark-circle' : submitted ? 'close-circle' : 'ellipse-outline'}
+              size={18}
+              color={submitted && !hasNumber ? '#C62828' : numberColor}
             />
-            <Text style={[styles.requirementText, { color: numberColor }]}>
-              One number (recommended)
+            <Text
+              style={[
+                styles.requirementText,
+                { color: submitted && !hasNumber ? '#C62828' : numberColor },
+              ]}
+            >
+              One number
             </Text>
           </View>
         </View>
@@ -219,11 +288,11 @@ export default function SetupPasswordStep3() {
         <TouchableOpacity
           style={[
             styles.createButton,
-            (isLoading || !password || !confirmPassword || !isPasswordMatching) &&
+            (isLoading || !meetsRequirements || !confirmPassword || !isPasswordMatching) &&
               styles.createButtonDisabled,
           ]}
           onPress={setupPassword}
-          disabled={isLoading || !password || !confirmPassword || !isPasswordMatching}
+          disabled={isLoading}
         >
           {isLoading ? (
             <ActivityIndicator color="#fff" />
@@ -238,7 +307,7 @@ export default function SetupPasswordStep3() {
           <Text style={styles.linkText}>Terms of Service</Text> and{' '}
           <Text style={styles.linkText}>Privacy Policy</Text>
         </Text>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -249,7 +318,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   content: {
-    flex: 1,
+    flexGrow: 1,
     paddingHorizontal: 20,
   },
   header: {
@@ -290,6 +359,43 @@ const styles = StyleSheet.create({
     borderColor: '#E0E0E0',
     borderRadius: 12,
     backgroundColor: '#F9F9F9',
+  },
+  inputError: {
+    borderColor: '#C62828',
+    backgroundColor: '#FFF8F7',
+  },
+  submitError: {
+    marginTop: 7,
+    color: '#C62828',
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: '700',
+  },
+  validationSummary: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    padding: 14,
+    marginBottom: 24,
+    borderWidth: 2,
+    borderColor: '#D92D20',
+    borderRadius: 12,
+    backgroundColor: '#FEF3F2',
+  },
+  validationSummaryCopy: {
+    flex: 1,
+  },
+  validationSummaryTitle: {
+    color: '#B42318',
+    fontSize: 15,
+    fontWeight: '800',
+    marginBottom: 5,
+  },
+  validationSummaryText: {
+    color: '#B42318',
+    fontSize: 13,
+    fontWeight: '600',
+    lineHeight: 19,
   },
   passwordInput: {
     flex: 1,
@@ -332,6 +438,11 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 32,
   },
+  requirementsError: {
+    borderWidth: 2,
+    borderColor: '#D92D20',
+    backgroundColor: '#FEF3F2',
+  },
   requirementsTitle: {
     fontSize: 14,
     fontWeight: '600',
@@ -345,7 +456,8 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   requirementText: {
-    fontSize: 12,
+    fontSize: 13,
+    fontWeight: '600',
   },
   spacer: {
     flex: 1,

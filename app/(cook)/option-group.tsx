@@ -248,6 +248,17 @@ export default function OptionGroupEditor() {
     setStep(current => Math.min(3, current + 1));
   };
 
+  const confirmExit = () => {
+    Alert.alert(
+      groupId ? 'Exit without saving?' : 'Exit option group?',
+      'If you exit now, all changes in this flow will be lost.',
+      [
+        { text: 'Keep editing', style: 'cancel' },
+        { text: 'Exit', style: 'destructive', onPress: () => router.back() },
+      ]
+    );
+  };
+
   const save = async () => {
     if (![0, 1, 2].every(validateStep) || saving) return;
     setSaving(true);
@@ -526,10 +537,12 @@ export default function OptionGroupEditor() {
       >
         <View style={styles.header}>
           <TouchableOpacity
-            onPress={() => (step === 0 ? router.back() : setStep(current => current - 1))}
+            onPress={() => (step === 0 ? confirmExit() : setStep(current => current - 1))}
             style={styles.backButton}
+            accessibilityRole="button"
+            accessibilityLabel={step === 0 ? 'Exit option group' : 'Go to previous step'}
           >
-            <Ionicons name="chevron-back" size={27} color="#202622" />
+            <Ionicons name={step === 0 ? 'close' : 'chevron-back'} size={27} color="#202622" />
           </TouchableOpacity>
           <View style={styles.headerCopy}>
             <Text style={styles.headerTitle}>

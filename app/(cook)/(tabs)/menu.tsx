@@ -439,12 +439,7 @@ export default function CookMenuScreen() {
           ]
         : status === 'today'
           ? [[`${apiUrl()}/api/availability/cook/listings/${dishId}/orders`, { available: false }]]
-          : [
-              [
-                `${apiUrl()}/api/availability/cook/listings/${dishId}/settings`,
-                { enabled: false },
-              ],
-            ];
+          : [[`${apiUrl()}/api/availability/cook/listings/${dishId}/settings`, { enabled: false }]];
     for (const [endpoint, body] of requests) {
       const response = await fetch(endpoint, {
         method: 'PATCH',
@@ -502,8 +497,7 @@ export default function CookMenuScreen() {
             }
           );
           const payload = await response.json().catch(() => ({}));
-          if (!response.ok)
-            throw new Error(payload.error ?? 'Dish schedule could not be updated.');
+          if (!response.ok) throw new Error(payload.error ?? 'Dish schedule could not be updated.');
         })
       );
       const scheduleName = scheduleId
@@ -862,117 +856,117 @@ export default function CookMenuScreen() {
               </Text>
             </View>
           )}
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.content}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={() => loadMenu(true)} />
-          }
-        >
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <View style={styles.filters}>
-              <View style={[styles.filterChip, styles.searchChip]}>
-                <Ionicons name="search" size={19} color="#4F5752" />
-                <TextInput
-                  style={styles.searchInput}
-                  value={search}
-                  onChangeText={setSearch}
-                  placeholder="Search"
-                  placeholderTextColor="#727A75"
-                  returnKeyType="done"
-                  submitBehavior="blurAndSubmit"
-                  onSubmitEditing={Keyboard.dismiss}
-                />
-              </View>
-              <TouchableOpacity style={styles.filterChip} onPress={cycleStatus}>
-                <Text style={styles.filterText}>
-                  {statusFilter === 'all' ? 'Item status' : statusFilter}
-                </Text>
-                <Ionicons name="chevron-down" size={18} color="#343A36" />
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.filterChip} onPress={() => setScheduleModal(true)}>
-                <Ionicons name="time-outline" size={18} color="#343A36" />
-                <Text style={styles.filterText}>{scheduleFilterLabel}</Text>
-                <Ionicons name="chevron-down" size={18} color="#343A36" />
-              </TouchableOpacity>
-            </View>
-          </ScrollView>
-
-          <TouchableOpacity
-            style={styles.promotionCard}
-            onPress={() => {
-              setThresholdDraft(threshold == null ? '' : String(threshold));
-              setThresholdModal(true);
-            }}
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.content}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={() => loadMenu(true)} />
+            }
           >
-            <View style={styles.promotionIcon}>
-              <Ionicons name="bicycle-outline" size={20} color="#007B55" />
-            </View>
-            <View style={styles.promotionCopy}>
-              <Text style={styles.promotionTitle}>Free-delivery offer</Text>
-              <Text style={styles.promotionText}>
-                {threshold == null
-                  ? 'Set an order threshold'
-                  : `Orders from RM ${threshold.toFixed(2)}`}
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={19} color="#59615C" />
-          </TouchableOpacity>
-
-          {categories.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Ionicons name="book-outline" size={40} color="#A5ADA8" />
-              <Text style={styles.emptyTitle}>No menu items found</Text>
-              <Text style={styles.emptyText}>Add a dish or change the current filters.</Text>
-            </View>
-          ) : (
-            categories.map(([category, rows]) => {
-              const expanded = expandedCategories.has(category);
-              return (
-                <View key={category} style={styles.categorySection}>
-                  <TouchableOpacity
-                    style={styles.categoryHeader}
-                    onPress={() =>
-                      setExpandedCategories(current => {
-                        const next = new Set(current);
-                        if (next.has(category)) next.delete(category);
-                        else next.add(category);
-                        return next;
-                      })
-                    }
-                  >
-                    <View>
-                      <Text style={styles.categoryTitle}>{category}</Text>
-                      <Text style={styles.categoryCount}>
-                        {rows.length} item{rows.length === 1 ? '' : 's'}
-                      </Text>
-                    </View>
-                    <View style={styles.expandCircle}>
-                      <Ionicons
-                        name={expanded ? 'chevron-up' : 'chevron-down'}
-                        size={22}
-                        color="#006B4F"
-                      />
-                    </View>
-                  </TouchableOpacity>
-                  {expanded && <View style={styles.dishList}>{rows.map(renderDish)}</View>}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              <View style={styles.filters}>
+                <View style={[styles.filterChip, styles.searchChip]}>
+                  <Ionicons name="search" size={19} color="#4F5752" />
+                  <TextInput
+                    style={styles.searchInput}
+                    value={search}
+                    onChangeText={setSearch}
+                    placeholder="Search"
+                    placeholderTextColor="#727A75"
+                    returnKeyType="done"
+                    submitBehavior="blurAndSubmit"
+                    onSubmitEditing={Keyboard.dismiss}
+                  />
                 </View>
-              );
-            })
-          )}
+                <TouchableOpacity style={styles.filterChip} onPress={cycleStatus}>
+                  <Text style={styles.filterText}>
+                    {statusFilter === 'all' ? 'Item status' : statusFilter}
+                  </Text>
+                  <Ionicons name="chevron-down" size={18} color="#343A36" />
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.filterChip} onPress={() => setScheduleModal(true)}>
+                  <Ionicons name="time-outline" size={18} color="#343A36" />
+                  <Text style={styles.filterText}>{scheduleFilterLabel}</Text>
+                  <Ionicons name="chevron-down" size={18} color="#343A36" />
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
 
-          <TouchableOpacity
-            style={styles.refreshButton}
-            disabled={refreshing}
-            onPress={() => loadMenu(true)}
-          >
-            {refreshing ? (
-              <ActivityIndicator color="#007B55" />
+            <TouchableOpacity
+              style={styles.promotionCard}
+              onPress={() => {
+                setThresholdDraft(threshold == null ? '' : String(threshold));
+                setThresholdModal(true);
+              }}
+            >
+              <View style={styles.promotionIcon}>
+                <Ionicons name="bicycle-outline" size={20} color="#007B55" />
+              </View>
+              <View style={styles.promotionCopy}>
+                <Text style={styles.promotionTitle}>Free-delivery offer</Text>
+                <Text style={styles.promotionText}>
+                  {threshold == null
+                    ? 'Choose how much customers must spend with you to get free delivery'
+                    : `Free delivery when customers spend RM ${threshold.toFixed(2)} or more with you`}
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={19} color="#59615C" />
+            </TouchableOpacity>
+
+            {categories.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Ionicons name="book-outline" size={40} color="#A5ADA8" />
+                <Text style={styles.emptyTitle}>No menu items found</Text>
+                <Text style={styles.emptyText}>Add a dish or change the current filters.</Text>
+              </View>
             ) : (
-              <Text style={styles.refreshText}>Refresh menu</Text>
+              categories.map(([category, rows]) => {
+                const expanded = expandedCategories.has(category);
+                return (
+                  <View key={category} style={styles.categorySection}>
+                    <TouchableOpacity
+                      style={styles.categoryHeader}
+                      onPress={() =>
+                        setExpandedCategories(current => {
+                          const next = new Set(current);
+                          if (next.has(category)) next.delete(category);
+                          else next.add(category);
+                          return next;
+                        })
+                      }
+                    >
+                      <View>
+                        <Text style={styles.categoryTitle}>{category}</Text>
+                        <Text style={styles.categoryCount}>
+                          {rows.length} item{rows.length === 1 ? '' : 's'}
+                        </Text>
+                      </View>
+                      <View style={styles.expandCircle}>
+                        <Ionicons
+                          name={expanded ? 'chevron-up' : 'chevron-down'}
+                          size={22}
+                          color="#006B4F"
+                        />
+                      </View>
+                    </TouchableOpacity>
+                    {expanded && <View style={styles.dishList}>{rows.map(renderDish)}</View>}
+                  </View>
+                );
+              })
             )}
-          </TouchableOpacity>
-        </ScrollView>
+
+            <TouchableOpacity
+              style={styles.refreshButton}
+              disabled={refreshing}
+              onPress={() => loadMenu(true)}
+            >
+              {refreshing ? (
+                <ActivityIndicator color="#007B55" />
+              ) : (
+                <Text style={styles.refreshText}>Refresh menu</Text>
+              )}
+            </TouchableOpacity>
+          </ScrollView>
           {dishSelectionMode && (
             <View style={styles.selectionBar}>
               <TouchableOpacity
@@ -1303,7 +1297,8 @@ export default function CookMenuScreen() {
                 <View style={styles.sheetHeaderCopy}>
                   <Text style={styles.sheetTitle}>Free-delivery threshold</Text>
                   <Text style={styles.sheetSubtitle}>
-                    Set the minimum order subtotal that qualifies.
+                    Enter how much a customer must spend with you to get free delivery. When they
+                    qualify, the Lalamove fee will be deducted from your payout.
                   </Text>
                 </View>
                 <TouchableOpacity onPress={() => setThresholdModal(false)}>
@@ -1545,78 +1540,81 @@ export default function CookMenuScreen() {
         onRequestClose={() => setStockDish(null)}
       >
         <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-        <View style={styles.modalBackdrop}>
-          <View style={styles.sheet}>
-            <View style={styles.sheetHeader}>
-              <View style={styles.sheetHeaderCopy}>
-                <Text style={styles.sheetTitle}>Daily stock</Text>
-                <Text style={styles.sheetSubtitle}>
-                  {stockDish?.title}. Stock resets automatically for each new business day and
-                  decreases by the number of portions ordered.
-                </Text>
+          <View style={styles.modalBackdrop}>
+            <View style={styles.sheet}>
+              <View style={styles.sheetHeader}>
+                <View style={styles.sheetHeaderCopy}>
+                  <Text style={styles.sheetTitle}>Daily stock</Text>
+                  <Text style={styles.sheetSubtitle}>
+                    {stockDish?.title}. Stock resets automatically for each new business day and
+                    decreases by the number of portions ordered.
+                  </Text>
+                </View>
+                <TouchableOpacity onPress={() => setStockDish(null)}>
+                  <Ionicons name="close" size={24} color="#242A26" />
+                </TouchableOpacity>
               </View>
-              <TouchableOpacity onPress={() => setStockDish(null)}>
-                <Ionicons name="close" size={24} color="#242A26" />
+              <TouchableOpacity
+                style={styles.stockChoice}
+                onPress={() => setStockMode('unlimited')}
+              >
+                <View style={styles.stockChoiceCopy}>
+                  <Text style={styles.stockChoiceTitle}>Unlimited daily stock</Text>
+                  <Text style={styles.stockChoiceHint}>Use the sold-out toggle when needed.</Text>
+                </View>
+                <Ionicons
+                  name={stockMode === 'unlimited' ? 'radio-button-on' : 'radio-button-off'}
+                  size={25}
+                  color={stockMode === 'unlimited' ? '#4CAF50' : '#B7BDB9'}
+                />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.stockChoice} onPress={() => setStockMode('limited')}>
+                <View style={styles.stockChoiceCopy}>
+                  <Text style={styles.stockChoiceTitle}>Set daily quantity</Text>
+                  <Text style={styles.stockChoiceHint}>
+                    The dish sells out automatically at zero.
+                  </Text>
+                </View>
+                <Ionicons
+                  name={stockMode === 'limited' ? 'radio-button-on' : 'radio-button-off'}
+                  size={25}
+                  color={stockMode === 'limited' ? '#4CAF50' : '#B7BDB9'}
+                />
+              </TouchableOpacity>
+              {stockMode === 'limited' && (
+                <View style={styles.stockInputRow}>
+                  <TextInput
+                    style={styles.stockInput}
+                    value={stockDraft}
+                    onChangeText={text => setStockDraft(text.replace(/[^0-9]/g, ''))}
+                    keyboardType="number-pad"
+                    placeholder="e.g. 15"
+                    returnKeyType="done"
+                    submitBehavior="blurAndSubmit"
+                    onSubmitEditing={Keyboard.dismiss}
+                  />
+                  <Text style={styles.stockUnit}>portions per day</Text>
+                </View>
+              )}
+              {(availability[stockDish?.id ?? '']?.portionsReservedToday ?? 0) > 0 && (
+                <Text style={styles.stockCommittedText}>
+                  {availability[stockDish?.id ?? '']?.portionsReservedToday} portions already
+                  ordered today
+                </Text>
+              )}
+              <TouchableOpacity
+                style={[styles.primaryButton, stockSaving && styles.buttonDisabled]}
+                onPress={saveStock}
+                disabled={stockSaving}
+              >
+                {stockSaving ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.primaryButtonText}>Save daily stock</Text>
+                )}
               </TouchableOpacity>
             </View>
-            <TouchableOpacity style={styles.stockChoice} onPress={() => setStockMode('unlimited')}>
-              <View style={styles.stockChoiceCopy}>
-                <Text style={styles.stockChoiceTitle}>Unlimited daily stock</Text>
-                <Text style={styles.stockChoiceHint}>Use the sold-out toggle when needed.</Text>
-              </View>
-              <Ionicons
-                name={stockMode === 'unlimited' ? 'radio-button-on' : 'radio-button-off'}
-                size={25}
-                color={stockMode === 'unlimited' ? '#4CAF50' : '#B7BDB9'}
-              />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.stockChoice} onPress={() => setStockMode('limited')}>
-              <View style={styles.stockChoiceCopy}>
-                <Text style={styles.stockChoiceTitle}>Set daily quantity</Text>
-                <Text style={styles.stockChoiceHint}>
-                  The dish sells out automatically at zero.
-                </Text>
-              </View>
-              <Ionicons
-                name={stockMode === 'limited' ? 'radio-button-on' : 'radio-button-off'}
-                size={25}
-                color={stockMode === 'limited' ? '#4CAF50' : '#B7BDB9'}
-              />
-            </TouchableOpacity>
-            {stockMode === 'limited' && (
-              <View style={styles.stockInputRow}>
-                <TextInput
-                  style={styles.stockInput}
-                  value={stockDraft}
-                  onChangeText={text => setStockDraft(text.replace(/[^0-9]/g, ''))}
-                  keyboardType="number-pad"
-                  placeholder="e.g. 15"
-                  returnKeyType="done"
-                  submitBehavior="blurAndSubmit"
-                  onSubmitEditing={Keyboard.dismiss}
-                />
-                <Text style={styles.stockUnit}>portions per day</Text>
-              </View>
-            )}
-            {(availability[stockDish?.id ?? '']?.portionsReservedToday ?? 0) > 0 && (
-              <Text style={styles.stockCommittedText}>
-                {availability[stockDish?.id ?? '']?.portionsReservedToday} portions already ordered
-                today
-              </Text>
-            )}
-            <TouchableOpacity
-              style={[styles.primaryButton, stockSaving && styles.buttonDisabled]}
-              onPress={saveStock}
-              disabled={stockSaving}
-            >
-              {stockSaving ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={styles.primaryButtonText}>Save daily stock</Text>
-              )}
-            </TouchableOpacity>
           </View>
-        </View>
         </TouchableWithoutFeedback>
       </Modal>
 

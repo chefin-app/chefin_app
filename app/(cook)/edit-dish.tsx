@@ -35,10 +35,7 @@ const CUISINE_OPTIONS = [
   'Others',
 ];
 
-const DIETARY_TAG_OPTIONS = [
-  'Vegetarian',
-  'Non-pork',
-];
+const DIETARY_TAG_OPTIONS = ['Vegetarian', 'Non-pork'];
 
 export default function EditDishScreen() {
   const router = useRouter();
@@ -702,7 +699,7 @@ const styles = StyleSheet.create({
   photo: { width: '100%', height: '100%' },
   photoPlaceholder: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   photoOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(0,0,0,0.4)',
     alignItems: 'center',
     justifyContent: 'center',

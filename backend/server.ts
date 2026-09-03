@@ -20,6 +20,7 @@ import accountRoutes from './routes/account';
 import cookApplicationRoutes from './routes/cookApplications';
 import cookMenuRoutes from './routes/cookMenu';
 import customerReviewRoutes from './routes/customerReviews';
+import deliveryRoutes from './routes/delivery';
 
 const app = express();
 const PORT = process.env.PORT || 8000;
@@ -71,6 +72,7 @@ app.use('/api/account', accountRoutes);
 app.use('/api/cook-applications', cookApplicationRoutes);
 app.use('/api/cook-menu', cookMenuRoutes);
 app.use('/api/customer-reviews', customerReviewRoutes);
+app.use('/api/delivery', deliveryRoutes);
 
 // 404 handler
 app.use('/{*any}', (req, res) => {

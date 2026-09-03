@@ -1,28 +1,53 @@
 import { Tabs, useRouter } from 'expo-router';
 import TopNavBarHomeUser from '@/src/components/navigation/TopNavBarHomeUser';
 import BottomTabBarUser from '@/src/components/navigation/BottomTabBarUser';
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import { useAuth } from '@/src/services/auth-context';
-import { View } from 'react-native';
+import { TextInput, View } from 'react-native';
 import AccountRestrictionBanner from '@/src/components/feedback/AccountRestrictionBanner';
 import ActiveOrderBanner from '@/src/components/navigation/ActiveOrderBanner';
-
-const NavBar = (props: any) => <TopNavBarHomeUser {...props} />;
-const TabBar = (props: any) => (
-  <>
-    <ActiveOrderBanner />
-    <BottomTabBarUser {...props} />
-  </>
-);
 
 export default function TabLayout() {
   const { user, initializing } = useAuth();
   const router = useRouter();
+  const searchInputRef = useRef<TextInput>(null);
 
-  const handleLoginPress = useCallback(() => {
-    console.log('Login tab pressed - navigating to auth');
-    router.push('/(auth)/login');
-  }, [router]);
+  const focusSearchInput = useCallback(() => {
+    const focus = (attempt = 0) => {
+      const input = searchInputRef.current;
+      if (!input) {
+        // The second tap can arrive while the Search header is still mounting.
+        if (attempt < 2) setTimeout(() => focus(attempt + 1), 50);
+        return;
+      }
+
+      // Android may leave the input focused after its keyboard is dismissed.
+      // Briefly resetting focus guarantees that the software keyboard reopens.
+      if (input.isFocused()) {
+        input.blur();
+        requestAnimationFrame(() => input.focus());
+      } else {
+        input.focus();
+      }
+    };
+
+    focus();
+  }, []);
+
+  const renderHeader = useCallback(
+    (props: any) => <TopNavBarHomeUser {...props} searchInputRef={searchInputRef} />,
+    []
+  );
+
+  const renderTabBar = useCallback(
+    (props: any) => (
+      <>
+        <ActiveOrderBanner />
+        <BottomTabBarUser {...props} onSearchDoubleTap={focusSearchInput} />
+      </>
+    ),
+    [focusSearchInput]
+  );
 
   if (initializing) return null;
 
@@ -32,9 +57,9 @@ export default function TabLayout() {
     <View style={{ flex: 1 }}>
       <AccountRestrictionBanner />
       <Tabs
-        tabBar={TabBar}
+        tabBar={renderTabBar}
         screenOptions={{
-          header: NavBar,
+          header: renderHeader,
         }}
       >
         <Tabs.Screen name="home" options={{ title: 'Home' }} />

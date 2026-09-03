@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   StyleSheet,
   Text,
@@ -11,114 +11,258 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCart, CartItem } from '@/src/context/CartContext';
 import { useAuth } from '@/src/services/auth-context';
-import { supabase } from '@/src/utils/supabaseClient';
 import {
   getDefaultPaymentCard,
   loadPaymentMethods,
   type SavedPaymentCard,
 } from '@/src/utils/payment-method-storage';
 import { toRequestedOptionSelections } from '@/src/utils/menuOptions';
+import {
+  DeliveryAddressModal,
+  type DeliveryAddress,
+} from '@/src/components/delivery/DeliveryAddressModal';
+import GlobalCartOverview from '@/src/components/cart/GlobalCartOverview';
+import { checkCartAvailability, type BasketAvailability } from '@/src/utils/cartAvailability';
+import { formatArrivalWindow, formatScheduledWindow } from '@/src/utils/orderStatus';
 
-const DELIVERY_FEE = 3.0;
 type FulfillmentType = 'pickup' | 'delivery';
+type DeliveryQuote = {
+  jobId: string;
+  cookId: string;
+  cookName: string;
+  subtotal: number;
+  quotedFee: number;
+  customerFee: number;
+  freeDeliveryApplied: boolean;
+  freeDeliveryThreshold: number | null;
+  expiresAt: string;
+  distanceMeters: number | null;
+  preparationReadyAt: string;
+  estimatedArrivalStart: string;
+  estimatedArrivalEnd: string;
+  estimatedTravelMinMinutes: number;
+  estimatedTravelMaxMinutes: number;
+  distanceBand: string;
+};
+
+const getPickupWindowEnd = (item: CartItem): string | undefined => {
+  if (item.pickupSlotEnd) return item.pickupSlotEnd;
+  if (!item.pickupSlotStart) return undefined;
+  const start = new Date(item.pickupSlotStart).getTime();
+  return Number.isNaN(start) ? undefined : new Date(start + 30 * 60_000).toISOString();
+};
 
 export default function CartScreen() {
+  const params = useLocalSearchParams<{ cookId?: string | string[] }>();
+  const cookId = Array.isArray(params.cookId) ? params.cookId[0] : params.cookId;
+  return cookId ? <RestaurantCartScreen cookId={cookId} /> : <GlobalCartOverview />;
+}
+
+function RestaurantCartScreen({ cookId }: { cookId: string }) {
   const router = useRouter();
   const { user, session, canMutate, accountStatus } = useAuth();
-  const { cartItems, removeFromCart, updateQuantity, clearCart, cartTotal, cartCount } = useCart();
-  const [placingOrder, setPlacingOrder] = useState(false);
-  // Pickup is the default — it's always available with no fee, unlike
-  // delivery which costs extra and depends on the cook's delivery radius.
-  const [fulfillmentType, setFulfillmentType] = useState<FulfillmentType>('pickup');
-  // cookId -> free_delivery_threshold (null = no offer)
-  const [cookThresholds, setCookThresholds] = useState<Record<string, number | null>>({});
-
-  // Fetch every unique cook's threshold whenever the cart's cook-set changes.
-  const cookIds = useMemo(
-    () => Array.from(new Set(cartItems.map(i => i.cookId).filter(Boolean))),
+  const {
+    cartItems: allCartItems,
+    removeFromCart,
+    updateQuantity,
+    clearCookCart,
+    hydrated,
+  } = useCart();
+  const cartItems = useMemo(
+    () => allCartItems.filter(item => item.cookId === cookId),
+    [allCartItems, cookId]
+  );
+  const cartTotal = useMemo(
+    () => cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0),
     [cartItems]
   );
-  const cookIdsKey = cookIds.join(',');
+  const cartCount = useMemo(
+    () => cartItems.reduce((sum, item) => sum + item.quantity, 0),
+    [cartItems]
+  );
+  const clearCart = useCallback(() => clearCookCart(cookId), [clearCookCart, cookId]);
+  const [placingOrder, setPlacingOrder] = useState(false);
+  const [fulfillmentType, setFulfillmentType] = useState<FulfillmentType>('pickup');
+  const [address, setAddress] = useState<DeliveryAddress | null>(null);
+  const [addressDefaults, setAddressDefaults] = useState<Partial<DeliveryAddress>>({});
+  const [addressOpen, setAddressOpen] = useState(false);
+  const [quotes, setQuotes] = useState<DeliveryQuote[]>([]);
+  const [quoteExpiresAt, setQuoteExpiresAt] = useState<string | null>(null);
+  const [quoting, setQuoting] = useState(false);
+  const [basketAvailability, setBasketAvailability] = useState<BasketAvailability | null>(null);
+  const cartFingerprint = useMemo(
+    () =>
+      cartItems
+        .map(item => [
+          item.lineId,
+          item.quantity,
+          item.pickupSlotStart,
+          item.pickupSlotEnd,
+          item.selectedOptions,
+        ])
+        .join('|'),
+    [cartItems]
+  );
 
   useEffect(() => {
-    if (cookIds.length === 0) {
-      setCookThresholds({});
+    setQuotes([]);
+    setQuoteExpiresAt(null);
+  }, [cartFingerprint]);
+
+  const promptForUnavailableBasket = useCallback(
+    (status: BasketAvailability) => {
+      Alert.alert(
+        status.status === 'store_closed' ? 'Restaurant unavailable' : 'Basket needs an update',
+        status.message ?? 'Some dishes are unavailable for the selected time.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Choose another time',
+            onPress: () =>
+              router.push({
+                pathname: '/restaurant/[id]',
+                params: { id: cookId, openSchedule: '1' },
+              }),
+          },
+          {
+            text: 'Another restaurant',
+            onPress: () => router.push('/(user)/(tabs)/search'),
+          },
+        ]
+      );
+    },
+    [cookId, router]
+  );
+
+  const validateBasket = useCallback(async () => {
+    if (cartItems.length === 0) return null;
+    const result = await checkCartAvailability(cartItems);
+    const status = result.find(basket => basket.cookId === cookId) ?? null;
+    setBasketAvailability(status);
+    return status;
+  }, [cartItems, cookId]);
+
+  useEffect(() => {
+    validateBasket().catch(error => {
+      console.warn('Could not refresh basket availability', error);
+      setBasketAvailability(null);
+    });
+  }, [validateBasket]);
+
+  useEffect(() => {
+    if (!quoteExpiresAt) return;
+    const remaining = new Date(quoteExpiresAt).getTime() - Date.now();
+    if (remaining <= 0) {
+      setQuotes([]);
+      setQuoteExpiresAt(null);
       return;
     }
-    let cancelled = false;
-    (async () => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, free_delivery_threshold')
-        .in('id', cookIds);
-      if (cancelled) return;
-      if (error) {
-        console.warn('Failed to load cook thresholds', error.message);
-        return;
-      }
-      const map: Record<string, number | null> = {};
-      for (const row of data ?? []) {
-        map[row.id] =
-          row.free_delivery_threshold != null ? Number(row.free_delivery_threshold) : null;
-      }
-      setCookThresholds(map);
-    })();
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cookIdsKey]);
+    const timeout = setTimeout(() => {
+      setQuotes([]);
+      setQuoteExpiresAt(null);
+    }, remaining + 100);
+    return () => clearTimeout(timeout);
+  }, [quoteExpiresAt]);
 
-  // Group cart by cook, compute per-cook subtotal + delivery fee. Pickup never
-  // charges a delivery fee, regardless of threshold.
-  const { deliveryFee, freeDeliveryNote, thresholdNotes } = useMemo(() => {
-    if (fulfillmentType === 'pickup') {
-      return {
-        deliveryFee: 0,
-        freeDeliveryNote: null as string | null,
-        thresholdNotes: [] as string[],
-      };
-    }
-    const byCook = new Map<string, { subtotal: number; cookName?: string }>();
-    for (const item of cartItems) {
-      const bucket = byCook.get(item.cookId) ?? { subtotal: 0, cookName: item.cookName };
-      bucket.subtotal += item.price * item.quantity;
-      byCook.set(item.cookId, bucket);
-    }
-    let fee = 0;
-    const freedCooks: string[] = [];
-    // Per cook with an unmet threshold: show the offer and how much more to
-    // spend to earn it — more actionable than the raw number alone.
-    const notes: string[] = [];
-    for (const [cookId, { subtotal, cookName }] of byCook) {
-      const threshold = cookThresholds[cookId];
-      if (threshold != null && subtotal >= threshold) {
-        // free
-        if (cookName) freedCooks.push(cookName);
-      } else {
-        fee += DELIVERY_FEE;
-        if (threshold != null) {
-          const remaining = threshold - subtotal;
-          notes.push(
-            `Add RM ${remaining.toFixed(2)} more for free delivery`
-          );
-        }
+  useEffect(() => {
+    if (!session?.access_token) return;
+    fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/delivery/address`, {
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    })
+      .then(response =>
+        response.ok ? response.json() : Promise.reject(new Error('Address request failed'))
+      )
+      .then(body => {
+        setAddress(body.address ?? null);
+        setAddressDefaults(body.defaults ?? {});
+      })
+      .catch(error => console.warn('Could not load saved delivery address', error));
+  }, [session?.access_token]);
+
+  const requestQuote = useCallback(
+    async (deliveryAddress: DeliveryAddress) => {
+      if (!session?.access_token) return false;
+      setQuoting(true);
+      try {
+        const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/delivery/quote`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            address: deliveryAddress,
+            items: cartItems.map(item => ({
+              listingId: item.listingId,
+              quantity: item.quantity,
+              pickupTime: item.pickupSlotStart,
+              pickupWindowEnd: getPickupWindowEnd(item),
+              selectedOptions: toRequestedOptionSelections(item.selectedOptions),
+            })),
+          }),
+        });
+        const body = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(body.error ?? 'Could not get a Lalamove quote.');
+        setQuotes(body.quotes ?? []);
+        setQuoteExpiresAt(body.expiresAt ?? null);
+        return true;
+      } catch (error: unknown) {
+        setQuotes([]);
+        setQuoteExpiresAt(null);
+        Alert.alert(
+          'Delivery quote unavailable',
+          error instanceof Error ? error.message : 'Try again or choose pickup.'
+        );
+        return false;
+      } finally {
+        setQuoting(false);
       }
+    },
+    [cartItems, session?.access_token]
+  );
+
+  const deliveryFee =
+    fulfillmentType === 'delivery' ? quotes.reduce((sum, quote) => sum + quote.customerFee, 0) : 0;
+  const quoteIsCurrent =
+    quotes.length > 0 &&
+    Boolean(quoteExpiresAt) &&
+    new Date(quoteExpiresAt!).getTime() > Date.now();
+
+  const chooseDelivery = () => {
+    setFulfillmentType('delivery');
+    if (!user) {
+      Alert.alert(
+        'Login required',
+        'Sign in to save an exact delivery address and request a Lalamove quote.'
+      );
+    } else if (!address) {
+      setAddressOpen(true);
+    } else if (!quoteIsCurrent) {
+      requestQuote(address);
     }
-    const note =
-      freedCooks.length === 0
-        ? null
-        : freedCooks.length === byCook.size
-          ? 'Free delivery applied 🎉'
-          : `Free delivery from ${freedCooks.join(', ')} 🎉`;
-    return { deliveryFee: fee, freeDeliveryNote: note, thresholdNotes: notes };
-  }, [cartItems, cookThresholds, fulfillmentType]);
+  };
 
   const handlePlaceOrder = async () => {
     if (cartItems.length === 0) return;
+
+    let latestAvailability: BasketAvailability | null;
+    try {
+      latestAvailability = await validateBasket();
+    } catch (error) {
+      console.warn('Could not validate basket before checkout', error);
+      Alert.alert(
+        'Could not check this basket',
+        'We could not confirm the latest dish availability. Please try again.'
+      );
+      return;
+    }
+    if (latestAvailability && latestAvailability.status !== 'ready') {
+      promptForUnavailableBasket(latestAvailability);
+      return;
+    }
 
     if (!user) {
       Alert.alert('Login Required', 'Please login to place your order.', [
@@ -133,6 +277,19 @@ export default function CartScreen() {
         accountStatus === 'suspended'
           ? 'Your account is currently read-only, so new orders cannot be placed.'
           : 'Account access must be verified before placing an order.'
+      );
+      return;
+    }
+    const quoteValidAtCheckout =
+      quotes.length > 0 &&
+      Boolean(quoteExpiresAt) &&
+      new Date(quoteExpiresAt!).getTime() > Date.now();
+    if (fulfillmentType === 'delivery' && (!address || !quoteValidAtCheckout)) {
+      if (!address) setAddressOpen(true);
+      else await requestQuote(address);
+      Alert.alert(
+        'Live quote required',
+        'Review the current Lalamove fee, then tap Place Order again.'
       );
       return;
     }
@@ -155,7 +312,7 @@ export default function CartScreen() {
           onPress: () =>
             router.push({
               pathname: '/(user)/payment-methods',
-              params: { returnTo: '/(user)/cart' },
+              params: { returnTo: `/(user)/cart?cookId=${encodeURIComponent(cookId)}` },
             }),
         },
       ]);
@@ -173,11 +330,13 @@ export default function CartScreen() {
         body: JSON.stringify({
           userId: user.id,
           fulfillmentType,
+          deliveryJobIds: fulfillmentType === 'delivery' ? quotes.map(quote => quote.jobId) : [],
           items: cartItems.map(item => ({
             listingId: item.listingId,
             quantity: item.quantity,
             pickupDate: item.serviceDate ?? item.selectedDate,
             pickupTime: item.pickupSlotStart,
+            pickupWindowEnd: getPickupWindowEnd(item),
             priceAtOrder: item.price,
             customerNote: item.customerNote,
             selectedOptions: toRequestedOptionSelections(item.selectedOptions),
@@ -188,7 +347,7 @@ export default function CartScreen() {
       const body = await res.json().catch(() => ({}));
 
       if (res.ok) {
-        clearCart();
+        clearCookCart(cookId);
         Alert.alert(
           'Order Placed!',
           `Payment method: ${savedCard.brand} ending in ${savedCard.last4}. No real payment was processed in this demo.`,
@@ -204,6 +363,16 @@ export default function CartScreen() {
     }
   };
 
+  if (!hydrated) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.emptyStateContainer}>
+          <ActivityIndicator size="large" color="#4CAF50" />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   if (cartItems.length === 0) {
     return (
       <SafeAreaView style={styles.container}>
@@ -211,18 +380,18 @@ export default function CartScreen() {
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
             <Ionicons name="chevron-back" size={24} color="#1A1A1A" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>My Cart</Text>
+          <Text style={styles.headerTitle}>Restaurant basket</Text>
           <View style={{ width: 40 }} />
         </View>
         <View style={styles.emptyStateContainer}>
           <Text style={styles.emptyEmoji}>🛒</Text>
-          <Text style={styles.emptyTitle}>Your cart is empty</Text>
-          <Text style={styles.emptySubtitle}>Add dishes to your cart to get started.</Text>
+          <Text style={styles.emptyTitle}>This basket is empty</Text>
+          <Text style={styles.emptySubtitle}>It may have been checked out or removed.</Text>
           <TouchableOpacity
             style={styles.startShoppingBtn}
-            onPress={() => router.replace('/(user)/(tabs)/home')}
+            onPress={() => router.replace('/(user)/cart')}
           >
-            <Text style={styles.startShoppingText}>Start Browsing</Text>
+            <Text style={styles.startShoppingText}>View all baskets</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -238,10 +407,10 @@ export default function CartScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="chevron-back" size={24} color="#1A1A1A" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>My Cart</Text>
+        <Text style={styles.headerTitle}>{cartItems[0]?.cookName || 'Order summary'}</Text>
         <TouchableOpacity
           onPress={() => {
-            Alert.alert('Clear Cart', 'Remove all items?', [
+            Alert.alert('Remove this basket?', 'Remove every item from this home restaurant?', [
               { text: 'Cancel', style: 'cancel' },
               { text: 'Clear', style: 'destructive', onPress: clearCart },
             ]);
@@ -255,6 +424,18 @@ export default function CartScreen() {
         contentContainerStyle={{ paddingBottom: 200 }}
         showsVerticalScrollIndicator={false}
       >
+        {basketAvailability && basketAvailability.status !== 'ready' ? (
+          <TouchableOpacity
+            style={styles.unavailableBasketBanner}
+            onPress={() => promptForUnavailableBasket(basketAvailability)}
+          >
+            <Ionicons name="alert-circle-outline" size={20} color="#A33A2C" />
+            <Text style={styles.unavailableBasketText}>
+              {basketAvailability.message} Tap to fix this basket.
+            </Text>
+          </TouchableOpacity>
+        ) : null}
+
         {/* Cart Item Count */}
         <Text style={styles.itemCount}>
           {cartCount} item{cartCount !== 1 ? 's' : ''} in your cart
@@ -285,17 +466,11 @@ export default function CartScreen() {
                 </View>
               ) : null}
               <Text style={styles.cartItemDate}>
-                Date & Time:{' '}
-                {new Date(item.pickupSlotStart ?? item.selectedDate).toLocaleDateString(undefined, {
-                  month: 'short',
-                  day: 'numeric',
-                  year: 'numeric',
-                })}{' '}
-                at{' '}
-                {new Date(item.pickupSlotStart ?? item.selectedDate).toLocaleTimeString(undefined, {
-                  hour: 'numeric',
-                  minute: '2-digit',
-                })}
+                Order window:{' '}
+                {formatScheduledWindow(
+                  item.pickupSlotStart ?? item.selectedDate.toISOString(),
+                  item.pickupSlotEnd ?? null
+                )}
               </Text>
               {item.customerNote ? (
                 <Text style={styles.cartItemNote} numberOfLines={2}>
@@ -362,7 +537,7 @@ export default function CartScreen() {
               styles.fulfillmentOption,
               fulfillmentType === 'delivery' && styles.fulfillmentOptionActive,
             ]}
-            onPress={() => setFulfillmentType('delivery')}
+            onPress={chooseDelivery}
           >
             <Ionicons
               name="bicycle-outline"
@@ -380,27 +555,64 @@ export default function CartScreen() {
           </TouchableOpacity>
         </View>
 
+        {fulfillmentType === 'delivery' ? (
+          <TouchableOpacity style={styles.addressCard} onPress={() => setAddressOpen(true)}>
+            <Ionicons name="location-outline" size={21} color="#216E39" />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.addressTitle}>
+                {address ? 'Deliver to' : 'Add exact delivery address'}
+              </Text>
+              {address ? (
+                <Text style={styles.addressText} numberOfLines={2}>
+                  {address.addressLine1}, {address.postcode} {address.city}
+                </Text>
+              ) : null}
+            </View>
+            <Text style={styles.addressEdit}>{address ? 'Edit' : 'Add'}</Text>
+          </TouchableOpacity>
+        ) : null}
+
         <View style={styles.summaryRow}>
           <Text style={styles.summaryLabel}>Subtotal</Text>
           <Text style={styles.summaryValue}>RM {cartTotal.toFixed(2)}</Text>
         </View>
-        {fulfillmentType === 'delivery' && (
+        {fulfillmentType === 'delivery' && quoteIsCurrent && (
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Delivery fee</Text>
+            <Text style={styles.summaryLabel}>Live Lalamove fee</Text>
             <Text style={styles.summaryValue}>
               {deliveryFee === 0 ? 'FREE' : `RM ${deliveryFee.toFixed(2)}`}
             </Text>
           </View>
         )}
-        {fulfillmentType === 'delivery' && freeDeliveryNote && (
-          <Text style={styles.freeDeliveryNote}>{freeDeliveryNote}</Text>
-        )}
-        {fulfillmentType === 'delivery' &&
-          thresholdNotes.map(note => (
-            <Text key={note} style={styles.thresholdNote}>
-              {note}
+        {fulfillmentType === 'delivery' && quoting ? (
+          <View style={styles.quoteStatus}>
+            <ActivityIndicator size="small" color="#216E39" />
+            <Text style={styles.thresholdNote}>Getting live Lalamove price…</Text>
+          </View>
+        ) : null}
+        {fulfillmentType === 'delivery' && !quoting && !quoteIsCurrent ? (
+          <TouchableOpacity
+            style={styles.quoteButton}
+            onPress={() => (address ? requestQuote(address) : setAddressOpen(true))}
+          >
+            <Text style={styles.quoteButtonText}>
+              {address ? 'Get live Lalamove quote' : 'Add address for a delivery quote'}
             </Text>
-          ))}
+          </TouchableOpacity>
+        ) : null}
+        {fulfillmentType === 'delivery' && quoteIsCurrent
+          ? quotes.map(quote => (
+              <Text
+                key={quote.jobId}
+                style={quote.freeDeliveryApplied ? styles.freeDeliveryNote : styles.thresholdNote}
+              >
+                {quote.freeDeliveryApplied
+                  ? `${quote.cookName} covers the RM ${quote.quotedFee.toFixed(2)} delivery fee — you pay RM 0`
+                  : `RM ${quote.customerFee.toFixed(2)} based on the live Lalamove route`}
+                {` · Estimated arrival ${formatArrivalWindow(quote.estimatedArrivalStart, quote.estimatedArrivalEnd)}`}
+              </Text>
+            ))
+          : null}
         <View style={[styles.summaryRow, styles.totalRow]}>
           <Text style={styles.totalLabel}>Total</Text>
           <Text style={styles.totalValue}>RM {grandTotal.toFixed(2)}</Text>
@@ -418,6 +630,17 @@ export default function CartScreen() {
           )}
         </TouchableOpacity>
       </View>
+      <DeliveryAddressModal
+        visible={addressOpen}
+        initialAddress={address}
+        defaults={addressDefaults}
+        onClose={() => setAddressOpen(false)}
+        onSave={nextAddress => {
+          setAddress(nextAddress);
+          setAddressOpen(false);
+          requestQuote(nextAddress);
+        }}
+      />
     </SafeAreaView>
   );
 }
@@ -501,6 +724,24 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     paddingHorizontal: 20,
     paddingVertical: 12,
+  },
+  unavailableBasketBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 9,
+    marginHorizontal: 16,
+    marginTop: 12,
+    borderRadius: 13,
+    backgroundColor: '#FFF0ED',
+    paddingHorizontal: 13,
+    paddingVertical: 11,
+  },
+  unavailableBasketText: {
+    flex: 1,
+    color: '#8B392F',
+    fontSize: 12,
+    fontWeight: '700',
+    lineHeight: 17,
   },
   cartCard: {
     flexDirection: 'row',
@@ -643,6 +884,30 @@ const styles = StyleSheet.create({
   fulfillmentOptionTextActive: {
     color: '#fff',
   },
+  addressCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    borderWidth: 1,
+    borderColor: '#CFE1D3',
+    backgroundColor: '#F4FAF5',
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 14,
+  },
+  addressTitle: { fontSize: 13, fontWeight: '800', color: '#214D2B' },
+  addressText: { fontSize: 12, color: '#5D6A60', marginTop: 2 },
+  addressEdit: { fontSize: 13, fontWeight: '800', color: '#216E39' },
+  quoteStatus: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
+  quoteButton: {
+    borderWidth: 1,
+    borderColor: '#4CAF50',
+    borderRadius: 12,
+    alignItems: 'center',
+    paddingVertical: 10,
+    marginBottom: 8,
+  },
+  quoteButtonText: { color: '#216E39', fontSize: 13, fontWeight: '800' },
   summaryRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',

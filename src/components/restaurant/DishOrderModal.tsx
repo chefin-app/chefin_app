@@ -299,7 +299,7 @@ const styles = StyleSheet.create({
   hero: { height: 300, backgroundColor: '#E9ECEA' },
   heroImage: { width: '100%', height: '100%' },
   heroShade: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(16, 22, 18, 0.08)',
   },
   heroButton: {

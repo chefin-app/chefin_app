@@ -372,7 +372,7 @@ export default function HomeScreen() {
             <HeadingText level={5} style={styles.promoTitle} numberOfLines={2}>
               {promoTitle}
             </HeadingText>
-            <Text style={styles.promoDescription} numberOfLines={3}>
+            <Text style={styles.promoDescription} numberOfLines={2}>
               {promoDescription}
             </Text>
             <View style={styles.promoButton}>
@@ -397,30 +397,6 @@ export default function HomeScreen() {
               </Text>
             </View>
           </View>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.locationSelector}
-          onPress={openLocationPrompt}
-          accessibilityRole="button"
-          accessibilityLabel={
-            location
-              ? `Delivery and pickup area: ${location.label}. Tap to change.`
-              : 'Set a delivery and pickup area to find nearby home restaurants'
-          }
-        >
-          <View style={styles.locationSelectorIcon}>
-            <Ionicons name="location" size={20} color="#2E7D32" />
-          </View>
-          <View style={styles.locationSelectorCopy}>
-            <Text style={styles.locationSelectorEyebrow}>DELIVERY &amp; PICKUP AREA</Text>
-            <Text style={styles.locationSelectorLabel} numberOfLines={1}>
-              {locationLoading
-                ? 'Loading your location…'
-                : location?.label || 'Choose your location'}
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color="#647067" />
         </TouchableOpacity>
 
         <CuisineFilter onCuisineSelect={handleCuisineSelect} />
@@ -719,12 +695,12 @@ const styles = StyleSheet.create({
   },
   promoBanner: {
     backgroundColor: '#E9F7EC',
-    borderRadius: 24,
-    padding: 18,
+    borderRadius: 20,
+    padding: 14,
     flexDirection: 'row',
     alignItems: 'center',
     marginVertical: 16,
-    minHeight: 190,
+    minHeight: 150,
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: '#D3ECD7',
@@ -759,7 +735,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     paddingHorizontal: 9,
     paddingVertical: 5,
-    marginBottom: 9,
+    marginBottom: 6,
   },
   promoEyebrow: {
     fontSize: 10,
@@ -775,7 +751,7 @@ const styles = StyleSheet.create({
     color: '#426447',
     fontSize: 12,
     lineHeight: 17,
-    marginBottom: 12,
+    marginBottom: 8,
   },
   promoButton: {
     flexDirection: 'row',
@@ -783,7 +759,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     backgroundColor: '#fff',
     paddingHorizontal: 12,
-    paddingVertical: 9,
+    paddingVertical: 7,
     borderRadius: 20,
     gap: 6,
   },
@@ -793,16 +769,16 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   promoVisual: {
-    width: 104,
-    height: 142,
+    width: 90,
+    height: 116,
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 1,
   },
   promoImage: {
-    width: 104,
-    height: 132,
-    borderRadius: 20,
+    width: 90,
+    height: 108,
+    borderRadius: 17,
     borderWidth: 3,
     borderColor: 'rgba(255, 255, 255, 0.85)',
   },

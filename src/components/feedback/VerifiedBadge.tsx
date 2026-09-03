@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 
 export const VERIFIED_COOK_TOOLTIP =
-  'This cook holds either a MOH Food Handler Certificate or Anti-typhoid vaccination or both';
+  'Chefin has approved at least one food-safety or food-business credential from this cook';
 
 interface VerifiedBadgeProps {
   size?: number;
@@ -154,7 +154,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   dismissLayer: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
   tooltip: {
     position: 'absolute',

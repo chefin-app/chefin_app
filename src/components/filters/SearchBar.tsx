@@ -17,6 +17,7 @@ type Props = {
   onChangeText: (text: string) => void;
   onSubmitEditing?: () => void;
   containerStyle?: StyleProp<ViewStyle>;
+  inputRef?: React.RefObject<TextInput | null>;
 };
 
 const SearchBar = ({
@@ -25,11 +26,13 @@ const SearchBar = ({
   placeholder = 'Home restaurants, dishes, locations...',
   onSubmitEditing,
   containerStyle,
+  inputRef,
 }: Props) => {
   return (
     <View style={[styles.wrapper, containerStyle]}>
       <Ionicons name="search" size={20} color="#888" style={styles.icon} />
       <TextInput
+        ref={inputRef}
         style={styles.input}
         placeholder={placeholder}
         value={value}

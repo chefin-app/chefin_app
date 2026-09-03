@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 
 interface CuisineItem {
   id: string;
   name: string;
-  icon: keyof typeof Ionicons.glyphMap;
+  icon: string;
+  color: string;
 }
 
 interface CuisineFilterProps {
@@ -13,14 +13,16 @@ interface CuisineFilterProps {
 }
 
 const cuisines: CuisineItem[] = [
-  { id: 'all', name: 'All cuisines', icon: 'restaurant' },
-  { id: 'indian', name: 'Indian', icon: 'umbrella' },
-  { id: 'chinese', name: 'Chinese', icon: 'restaurant-outline' },
-  { id: 'korean', name: 'Korean', icon: 'leaf' },
-  { id: 'thai', name: 'Thai', icon: 'flower' },
-  { id: 'italian', name: 'Italian', icon: 'pizza' },
-  { id: 'japanese', name: 'Japanese', icon: 'fish' },
-  { id: 'mexican', name: 'Mexican', icon: 'sunny' },
+  { id: 'all', name: 'All', icon: '🍽️', color: '#F4D8BE' },
+  { id: 'malaysian', name: 'Malaysian', icon: '🍛', color: '#F8D872' },
+  { id: 'chinese', name: 'Chinese', icon: '🥟', color: '#F2AAA0' },
+  { id: 'indian', name: 'Indian', icon: '🍛', color: '#F0B36B' },
+  { id: 'japanese', name: 'Japanese', icon: '🍣', color: '#B7D9C5' },
+  { id: 'korean', name: 'Korean', icon: '🍲', color: '#B7D9E8' },
+  { id: 'thai', name: 'Thai', icon: '🍜', color: '#AEE0C5' },
+  { id: 'italian', name: 'Italian', icon: '🍕', color: '#F2B47F' },
+  { id: 'western', name: 'Western', icon: '🍔', color: '#9FD8D3' },
+  { id: 'mexican', name: 'Mexican', icon: '🌮', color: '#F3CF65' },
 ];
 
 export default function CuisineFilter({ onCuisineSelect }: CuisineFilterProps) {
@@ -33,13 +35,7 @@ export default function CuisineFilter({ onCuisineSelect }: CuisineFilterProps) {
 
   return (
     <View style={styles.container}>
-      {/* Cuisine Selection */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.cuisineScrollView}
-        contentContainerStyle={styles.cuisineContent}
-      >
+      <View style={styles.cuisineGrid}>
         {cuisines.map(cuisine => (
           <TouchableOpacity
             key={cuisine.id}
@@ -52,14 +48,11 @@ export default function CuisineFilter({ onCuisineSelect }: CuisineFilterProps) {
             <View
               style={[
                 styles.cuisineIconContainer,
+                { backgroundColor: cuisine.color },
                 selectedCuisine === cuisine.id && styles.selectedCuisineIconContainer,
               ]}
             >
-              <Ionicons
-                name={cuisine.icon}
-                size={24}
-                color={selectedCuisine === cuisine.id ? '#4CAF50' : '#666'}
-              />
+              <Text style={styles.cuisineIcon}>{cuisine.icon}</Text>
             </View>
             <Text
               style={[
@@ -71,48 +64,45 @@ export default function CuisineFilter({ onCuisineSelect }: CuisineFilterProps) {
             </Text>
           </TouchableOpacity>
         ))}
-      </ScrollView>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    paddingVertical: 16,
+    paddingVertical: 10,
   },
-  cuisineScrollView: {
-    marginBottom: 16,
-  },
-  cuisineContent: {
-    paddingHorizontal: 20,
-    gap: 16,
+  cuisineGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    rowGap: 12,
   },
   cuisineItem: {
     alignItems: 'center',
-    minWidth: 70,
+    width: '20%',
   },
   selectedCuisineItem: {
-    marginBottom: 8,
+    opacity: 1,
   },
   cuisineIconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#f5f5f5',
+    width: 52,
+    height: 52,
+    borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 5,
   },
   selectedCuisineIconContainer: {
-    backgroundColor: '#e8f5e8',
-    borderWidth: 2,
-    borderColor: '#4CAF50',
+    borderWidth: 3,
+    borderColor: '#2E7D32',
   },
+  cuisineIcon: { fontSize: 29 },
   cuisineText: {
-    fontSize: 15,
-    color: '#666',
+    fontSize: 11,
+    color: '#3D463F',
     textAlign: 'center',
-    fontWeight: '500',
+    fontWeight: '600',
   },
   selectedCuisineText: {
     color: '#4CAF50',

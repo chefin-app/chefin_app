@@ -9,7 +9,8 @@ import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import { useFonts } from 'expo-font';
-import { Keyboard, TextInput } from 'react-native';
+import { NavigationBar as AndroidNavigationBar } from 'expo-navigation-bar';
+import { AppState, Keyboard, Platform, TextInput } from 'react-native';
 
 // Keep Enter consistent across the app. Individual multiline fields explicitly
 // opt back into newline behaviour.
@@ -41,6 +42,18 @@ export default function RootLayout() {
       SplashScreen.hideAsync();
     }
   }, [loaded]);
+
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    const hideSystemNavigation = () => {
+      AndroidNavigationBar.setHidden(true);
+    };
+    hideSystemNavigation();
+    const subscription = AppState.addEventListener('change', state => {
+      if (state === 'active') hideSystemNavigation();
+    });
+    return () => subscription.remove();
+  }, []);
 
   if (!loaded) return null;
 

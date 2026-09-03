@@ -186,6 +186,22 @@ router.put(
     }
 
     try {
+      const now = new Date().toISOString();
+      const { error: privateLocationError } = await supabase
+        .from('restaurant_delivery_locations')
+        .upsert(
+          {
+            cook_profile_id: req.account!.profileId,
+            label: cleanLabel(body.label),
+            latitude: Number(latitude.toFixed(6)),
+            longitude: Number(longitude.toFixed(6)),
+            source,
+            updated_at: now,
+          },
+          { onConflict: 'cook_profile_id' }
+        );
+      if (privateLocationError) throw privateLocationError;
+
       const { error } = await supabase.from('restaurant_discovery_locations').upsert(
         {
           cook_profile_id: req.account!.profileId,
@@ -196,7 +212,7 @@ router.put(
           longitude: Number(longitude.toFixed(3)),
           source,
           precision: 'approximate',
-          updated_at: new Date().toISOString(),
+          updated_at: now,
         },
         { onConflict: 'cook_profile_id' }
       );

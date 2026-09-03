@@ -1,121 +1,93 @@
-import { render, fireEvent, screen, waitFor } from '@testing-library/react-native';
-import { useAuth } from '@/src/services/auth-context';
-import EmailLoginScreen from '@/src/app/(auth)/email-login';
-import { Alert, DevMenu } from 'react-native';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { Alert } from 'react-native';
 
-// Mock `useAuth` hook and Alert
+import EmailLoginScreen from '@/app/(auth)/email-login';
+import { useAuth } from '@/src/services/auth-context';
+import { supabase } from '@/src/utils/supabaseClient';
+
+jest.mock('expo-router', () => ({
+  router: { back: jest.fn(), dismissTo: jest.fn(), replace: jest.fn() },
+  useLocalSearchParams: jest.fn(() => ({})),
+}));
+
 jest.mock('@/src/services/auth-context', () => ({
   useAuth: jest.fn(),
 }));
 
-// jest.mock('react-native', () => ({
-//   ...jest.requireActual('react-native'),
-//   Alert: { alert: jest.fn() },  // Mocking the alert function
-// })); // not working ahh
+jest.mock('@/src/utils/supabaseClient', () => ({
+  supabase: {
+    auth: { getSession: jest.fn() },
+    from: jest.fn(),
+  },
+}));
 
-describe('EmailLoginScreen', () => {
-  let signUpMock: jest.Mock;
-  let signInMock: jest.Mock;
-  let resetPasswordMock: jest.Mock;
+jest.mock('@expo/vector-icons', () => ({
+  Ionicons: () => null,
+}));
+
+describe('email account password validation', () => {
+  const signUp = jest.fn();
+  const signIn = jest.fn();
+  const resetPassword = jest.fn();
 
   beforeEach(() => {
-    signUpMock = jest.fn();
-    signInMock = jest.fn();
-    resetPasswordMock = jest.fn();
-
-    // Setup the mock return values for `useAuth`
+    jest.clearAllMocks();
     (useAuth as jest.Mock).mockReturnValue({
-      signUp: signUpMock,
-      signIn: signInMock,
-      resetPassword: resetPasswordMock,
+      signUp,
+      signIn,
+      resetPassword,
       loading: false,
     });
-  });
-
-  it('should render the EmailLoginScreen correctly', () => {
-    render(<EmailLoginScreen />);
-
-    expect(screen.getByPlaceholderText('Enter your email')).toBeTruthy();
-    expect(screen.getByPlaceholderText('Enter your password')).toBeTruthy();
-    expect(screen.getByText('Sign In')).toBeTruthy(); // Default is "Sign In" button text
-  });
-
-  it('should call signUp when the user clicks the submit button in Sign Up mode', async () => {
-    render(<EmailLoginScreen />);
-
-    fireEvent.press(screen.getByText('Sign Up')); // Switch to Sign Up mode
-
-    fireEvent.changeText(screen.getByPlaceholderText('Enter your email'), 'test@example.com'); // Fill in email and password
-    fireEvent.changeText(screen.getByPlaceholderText('Enter your password'), 'password123');
-
-    signUpMock.mockResolvedValue({ error: null }); // Mock `signUp` response
-    fireEvent.press(screen.getByTestId('create-account-button')); // Press submit button
-
-    await waitFor(() => {
-      expect(signUpMock).toHaveBeenCalledWith('test@example.com', 'password123');
+    signUp.mockResolvedValue({ error: null, userExists: false });
+    (supabase.auth.getSession as jest.Mock).mockResolvedValue({ data: { session: null } });
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: jest.fn().mockResolvedValue({ exists: false }),
     });
+    jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
   });
 
-  it('should call signIn when the user clicks the submit button in Sign In mode', async () => {
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  async function openCreatePasswordStep() {
     render(<EmailLoginScreen />);
+    fireEvent.changeText(screen.getByPlaceholderText('Enter your email'), 'new@example.com');
+    fireEvent.press(screen.getByTestId('continue-button'));
+    await screen.findByPlaceholderText('Create a password');
+  }
 
-    fireEvent.changeText(screen.getByPlaceholderText('Enter your email'), 'test@example.com');
-    fireEvent.changeText(screen.getByPlaceholderText('Enter your password'), 'password123');
+  it('shows prominent red inline errors after an invalid create-account attempt', async () => {
+    await openCreatePasswordStep();
 
-    signInMock.mockResolvedValue({ error: null });
+    expect(screen.queryByTestId('password-validation-error')).toBeNull();
+    // On a device, tapping the button blurs the focused field before onPress.
+    // The old implementation disabled the button during that blur, swallowing the tap.
+    fireEvent(screen.getByPlaceholderText('Create a password'), 'blur');
+    fireEvent.press(screen.getByTestId('create-account-button'));
 
-    fireEvent.press(screen.getByText('Sign In'));
-
-    await waitFor(() => {
-      expect(signInMock).toHaveBeenCalledWith('test@example.com', 'password123');
-    });
+    expect(screen.getByTestId('password-validation-error')).toBeTruthy();
+    expect(screen.getByText('Password requirements not met')).toBeTruthy();
+    expect(screen.getByText('• At least 8 characters')).toBeTruthy();
+    expect(screen.getByText('• At least one uppercase letter')).toBeTruthy();
+    expect(screen.getByText('• At least one number')).toBeTruthy();
+    expect(signUp).not.toHaveBeenCalled();
   });
 
-  // it('should show an error alert if email or password is missing', async () => {
-  //     render(<EmailLoginScreen />);
+  it('keeps uppercase and number mandatory and submits after all checks pass', async () => {
+    await openCreatePasswordStep();
 
-  //     fireEvent.press(screen.getByText('Sign In')); // Try to press submit without filling in fields
+    fireEvent.changeText(screen.getByPlaceholderText('Create a password'), 'password1');
+    fireEvent.press(screen.getByTestId('create-account-button'));
 
-  //     await waitFor(() => {
-  //         // expect(Alert.alert).toHaveBeenCalledWith('Error', 'Please fill in all fields');
-  //     });
-  // });
+    expect(screen.getByText('• At least one uppercase letter')).toBeTruthy();
+    expect(signUp).not.toHaveBeenCalled();
 
-  it('should call resetPassword when "Forgot Password?" is pressed', async () => {
-    render(<EmailLoginScreen />);
+    fireEvent.changeText(screen.getByPlaceholderText('Create a password'), 'Password1');
+    expect(screen.queryByTestId('password-validation-error')).toBeNull();
+    fireEvent.press(screen.getByTestId('create-account-button'));
 
-    fireEvent.changeText(screen.getByPlaceholderText('Enter your email'), 'test@example.com');
-
-    resetPasswordMock.mockResolvedValue({ error: null }); // Mock `resetPassword` response
-    fireEvent.press(screen.getByText('Forgot Password?')); // Press "Forgot Password?"
-
-    await waitFor(() => {
-      expect(resetPasswordMock).toHaveBeenCalledWith('test@example.com');
-      // expect(Alert.alert).toHaveBeenCalledWith('Password Reset', 'Check your email for password reset instructions');
-    });
+    await waitFor(() => expect(signUp).toHaveBeenCalledWith('new@example.com', 'Password1'));
   });
-
-  it('should toggle between Sign In and Sign Up modes', () => {
-    render(<EmailLoginScreen />);
-
-    expect(screen.getByText('Sign In')).toBeTruthy(); // Initially, the button text should be "Sign In"
-    fireEvent.press(screen.getByText('Sign Up')); // Switch to Sign Up mode
-
-    expect(screen.getByTestId('create-account-button')).toBeTruthy(); // Button text should change to "Create Account"
-  });
-
-  // it('should show an alert for failed signIn or signUp', async () => {
-  //     render(<EmailLoginScreen />);
-
-  //     signInMock.mockResolvedValue({ error: { message: 'Invalid credentials' } }); // Mock a failed login
-
-  //     fireEvent.changeText(screen.getByPlaceholderText('Enter your email'), 'wrong@example.com'); // Fill in email and password
-  //     fireEvent.changeText(screen.getByPlaceholderText('Enter your password'), 'wrongpassword');
-
-  //     fireEvent.press(screen.getByText('Sign In')); // Try to press the sign-in button
-
-  //     // await waitFor(() => {
-  //     //     expect(Alert.alert).toHaveBeenCalledWith('Error', 'Invalid credentials');
-  //     // });
-  // });
 });

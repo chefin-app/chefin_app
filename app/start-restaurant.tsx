@@ -80,10 +80,7 @@ type NominatimResult = {
   address?: NominatimAddress;
 };
 
-const DIETARY_TAG_OPTIONS = [
-  'Vegetarian',
-  'Non-pork',
-];
+const DIETARY_TAG_OPTIONS = ['Vegetarian', 'Non-pork'];
 
 type Step =
   | 'restaurant'
@@ -274,7 +271,7 @@ export default function StartRestaurantWizard() {
     isPdf: boolean;
   } | null>(null);
 
-  // All food/business compliance documents are required before final approval.
+  // Food/business credentials are optional and may be added later for badges.
   const [hostingType, setHostingType] = useState<'private' | 'business' | null>(null);
   const [complianceAccepted, setComplianceAccepted] = useState(false);
   const [complianceAcceptedAt, setComplianceAcceptedAt] = useState<string | null>(null);
@@ -334,11 +331,7 @@ export default function StartRestaurantWizard() {
       case 'identity':
         return citizenshipType != null && identityDocument != null;
       case 'food-safety':
-        return (
-          hostingType != null &&
-          complianceAccepted &&
-          TIER1_DOCUMENTS.every(document => Boolean(verificationDocs[document.type]))
-        );
+        return hostingType != null && complianceAccepted;
       case 'payment':
         return (
           bankName.trim().length > 0 &&
@@ -375,7 +368,7 @@ export default function StartRestaurantWizard() {
   };
 
   // ── Photo picker ─────────────────────────────────────────────────
-  const pickPhoto = async () => {
+  const choosePhotoFromLibrary = async () => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
       Alert.alert('Permission needed', 'Please allow photo library access.');
@@ -388,6 +381,28 @@ export default function StartRestaurantWizard() {
       quality: 0.8,
     });
     if (!result.canceled && result.assets[0]) setPhotoUri(result.assets[0].uri);
+  };
+
+  const takePhoto = async () => {
+    const perm = await ImagePicker.requestCameraPermissionsAsync();
+    if (!perm.granted) {
+      Alert.alert('Permission needed', 'Please allow camera access to take a dish photo.');
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.8,
+    });
+    if (!result.canceled && result.assets[0]) setPhotoUri(result.assets[0].uri);
+  };
+
+  const pickPhoto = () => {
+    Alert.alert('Add a dish photo', 'Choose where your photo comes from.', [
+      { text: 'Take photo', onPress: takePhoto },
+      { text: 'Choose from library', onPress: choosePhotoFromLibrary },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
   };
 
   // ── Verification document picker (one slot per Tier 1 doc type) ──
@@ -497,10 +512,6 @@ export default function StartRestaurantWizard() {
       Alert.alert('Identity required', 'Upload your MyKad or MyPR before submitting.');
       return;
     }
-    if (!TIER1_DOCUMENTS.every(document => verificationDocs[document.type])) {
-      Alert.alert('Documents required', 'Upload all three food compliance documents.');
-      return;
-    }
     setSubmitting(true);
     try {
       const publicRestaurantArea =
@@ -568,7 +579,7 @@ export default function StartRestaurantWizard() {
       });
       if (insertErr) throw insertErr;
 
-      // 3. Upload the mandatory food/business compliance documents.
+      // 3. Upload any optional food/business credentials the cook supplied.
       const docEntries = Object.entries(verificationDocs) as [
         VerificationDocType,
         { uri: string; mime: string; name: string; isPdf: boolean },
@@ -658,8 +669,8 @@ export default function StartRestaurantWizard() {
 
       Alert.alert(
         'Application submitted!',
-        "Welcome to your restricted cook dashboard. You can create draft dishes while identity and compliance checks are pending. Drafts won't be visible or orderable until your cook application and each dish are approved.",
-        [{ text: 'Explore dashboard', onPress: () => router.replace('/(cook)/(tabs)/orders') }]
+        "Welcome to your restricted cook dashboard. You can create draft dishes while your identity review is pending. Optional food-safety documents only add credentials; they do not block approval. Drafts won't be visible or orderable until your cook application and each dish are approved.",
+        [{ text: 'Explore dashboard', onPress: () => router.replace('/(cook)/(tabs)/menu') }]
       );
     } catch (e: any) {
       Alert.alert('Could not submit application', e.message ?? 'Unknown error');
@@ -966,10 +977,10 @@ export default function StartRestaurantWizard() {
             <View style={styles.tierCallout}>
               <Ionicons name="shield-checkmark" size={20} color="#4CAF50" />
               <View style={{ flex: 1 }}>
-                <Text style={styles.tierCalloutTitle}>Required before you can sell</Text>
+                <Text style={styles.tierCalloutTitle}>Optional food-safety credentials</Text>
                 <Text style={styles.tierCalloutBody}>
-                  Upload all three documents below. Chefin reviews the evidence for platform
-                  approval; this does not replace your legal responsibilities.
+                  You can continue without uploading anything. Submit any documents you have for
+                  review now, or add them later from your cook account to earn credential badges.
                 </Text>
               </View>
             </View>

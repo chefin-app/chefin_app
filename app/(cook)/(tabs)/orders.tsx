@@ -308,10 +308,7 @@ export default function Orders() {
       setPausedUntil(pausedUntilIso ?? null);
       setStatusSheetOpen(false);
     } catch (error: unknown) {
-      Alert.alert(
-        'Store status not saved',
-        getErrorMessage(error, 'Please try again.')
-      );
+      Alert.alert('Store status not saved', getErrorMessage(error, 'Please try again.'));
     } finally {
       setStatusSaving(false);
     }
@@ -383,17 +380,14 @@ export default function Orders() {
     if (!action || updatingId) return;
     setUpdatingId(order.id);
     try {
-      const res = await fetch(
-        `${process.env.EXPO_PUBLIC_API_URL}/api/orders/${order.id}/status`,
-        {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${session?.access_token ?? ''}`,
-          },
-          body: JSON.stringify({ status: action.next, userId: user?.id }),
-        }
-      );
+      const res = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/orders/${order.id}/status`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session?.access_token ?? ''}`,
+        },
+        body: JSON.stringify({ status: action.next, userId: user?.id }),
+      });
       if (!res.ok) {
         const body = (await res.json().catch(() => ({}))) as { error?: string };
         throw new Error(body.error || 'Failed to update order status.');
@@ -490,18 +484,26 @@ export default function Orders() {
     }
     if (!order.pickup_time) {
       return order.status === 'ready'
-        ? 'Awaiting pickup'
+        ? order.fulfillment_type === 'delivery'
+          ? 'Awaiting Lalamove pickup'
+          : 'Awaiting pickup'
         : `Prepare for ${formatDateHeading(order.scheduled_date)}`;
     }
     const remaining = countdownTo(order.pickup_time, now);
     if (order.status === 'confirmed') {
       return remaining ? `Ready in: ${remaining}` : 'Pickup time reached';
     }
+    if (order.fulfillment_type === 'delivery') {
+      return remaining ? `${remaining} until Lalamove pickup` : 'Awaiting Lalamove rider';
+    }
     return remaining ? `${remaining} till pickup` : 'Customer due for pickup';
   };
 
   const renderOrderCard = (order: OrderRow) => {
-    const action = CARD_ACTION[order.status];
+    const action =
+      order.fulfillment_type === 'delivery' && order.status === 'ready'
+        ? undefined
+        : CARD_ACTION[order.status];
     const busy = updatingId === order.id;
     const reviewed = reviewedOrderIds.has(order.id);
     return (
@@ -978,7 +980,13 @@ const styles = StyleSheet.create({
   },
   stepperButtonPlus: { backgroundColor: '#D9F2E3', borderColor: '#D9F2E3' },
   stepperButtonDisabled: { opacity: 0.4 },
-  stepperValue: { fontSize: 20, fontWeight: '700', color: '#1A1A1A', minWidth: 84, textAlign: 'center' },
+  stepperValue: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1A1A1A',
+    minWidth: 84,
+    textAlign: 'center',
+  },
   pauseChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 16 },
   pauseChip: {
     borderWidth: 1,

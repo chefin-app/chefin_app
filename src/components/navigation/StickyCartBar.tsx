@@ -1,13 +1,16 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useCart } from '@/src/context/CartContext';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const StickyCartBar = () => {
+const StickyCartBar = ({ cookId }: { cookId: string }) => {
   const router = useRouter();
-  const { cartCount, cartTotal } = useCart();
+  const { cartItems } = useCart();
+  const localItems = cartItems.filter(item => item.cookId === cookId);
+  const cartCount = localItems.reduce((sum, item) => sum + item.quantity, 0);
+  const cartTotal = localItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
   if (cartCount === 0) return null;
 
@@ -16,14 +19,14 @@ const StickyCartBar = () => {
       <TouchableOpacity
         style={styles.container}
         activeOpacity={0.9}
-        onPress={() => router.push('/cart')}
+        onPress={() => router.push({ pathname: '/(user)/cart', params: { cookId } })}
       >
         <View style={styles.content}>
           <View style={styles.leftSection}>
             <View style={styles.badge}>
               <Text style={styles.badgeText}>{cartCount}</Text>
             </View>
-            <Text style={styles.viewCartText}>View your cart</Text>
+            <Text style={styles.viewCartText}>View basket</Text>
           </View>
 
           <View style={styles.rightSection}>

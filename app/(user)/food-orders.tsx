@@ -115,10 +115,9 @@ export default function FoodOrdersScreen() {
         key={order.id}
         style={styles.orderRow}
         activeOpacity={0.75}
-        onPress={() => {
-          const cookId = order.listings?.cook_id;
-          if (cookId) router.push({ pathname: '/restaurant/[id]', params: { id: cookId } });
-        }}
+        onPress={() =>
+          router.push({ pathname: '/order-status/[orderId]', params: { orderId: order.id } })
+        }
       >
         {order.listings?.image_url ? (
           <Image source={{ uri: order.listings.image_url }} style={styles.orderImage} />
@@ -135,11 +134,10 @@ export default function FoodOrdersScreen() {
             <Text style={styles.orderPrice}>RM{Number(order.total_price).toFixed(2)}</Text>
           </View>
           <Text style={styles.orderMeta}>
-            {order.quantity}× {order.listings?.title ?? 'Dish'} · {formatOrderDate(order.created_at)}
+            {order.quantity}× {order.listings?.title ?? 'Dish'} ·{' '}
+            {formatOrderDate(order.created_at)}
           </Text>
-          {order.status === 'cancelled' ? (
-            <Text style={styles.cancelledTag}>Cancelled</Text>
-          ) : null}
+          {order.status === 'cancelled' ? <Text style={styles.cancelledTag}>Cancelled</Text> : null}
           {canReview ? (
             <TouchableOpacity
               style={styles.starsRow}

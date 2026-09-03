@@ -30,7 +30,14 @@ const FAQS: FaqItem[] = [
     category: 'Ordering',
     question: 'Can I choose pickup or delivery?',
     answer:
-      'You can choose an available fulfilment option in your cart. Delivery fees and free-delivery thresholds are calculated separately for each cook.',
+      'You can choose pickup or delivery when you open a restaurant basket. Each restaurant is checked out separately, so each delivery order has its own delivery fee and free-delivery threshold.',
+  },
+  {
+    id: 'restaurant-baskets',
+    category: 'Ordering',
+    question: 'Can I order from more than one home restaurant?',
+    answer:
+      'You can save dishes from several home restaurants in My Cart, but each restaurant has its own basket and must be checked out as a separate order.',
   },
   {
     id: 'add-card',

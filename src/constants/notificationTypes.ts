@@ -19,6 +19,8 @@ export type NotificationType =
   | 'favourite_new_dish'
   | 'favourite_new_slots'
   | 'review_request'
+  | 'delivery_update_customer'
+  | 'delivery_update_cook'
   | 'admin_message';
 
 interface NotificationTypeMeta {
@@ -52,6 +54,8 @@ export const NOTIFICATION_TYPE_META: Record<NotificationType, NotificationTypeMe
   favourite_new_dish: { icon: 'heart-outline', color: '#E91E63', background: '#FCE4EC' },
   favourite_new_slots: { icon: 'time-outline', color: '#E91E63', background: '#FCE4EC' },
   review_request: { icon: 'star-outline', color: '#B26A00', background: '#FFF3E0' },
+  delivery_update_customer: { icon: 'bicycle-outline', color: '#1976D2', background: '#E3F2FD' },
+  delivery_update_cook: { icon: 'bicycle-outline', color: '#2E7D32', background: '#E8F5E9' },
   admin_message: { icon: 'mail-outline', color: '#237A3B', background: '#E8F5E9' },
 };
 

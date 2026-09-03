@@ -93,7 +93,7 @@ const FAQS: FaqItem[] = [
     category: 'Verification',
     question: 'Which documents do I need to sell?',
     answer:
-      'Final selling approval requires three documents: FoSIM food premises registration, an MOH Food Handler Certificate (3-hour accredited course, RM50, lifetime validity), and an anti-typhoid vaccination record. Upload them under food-safety verification and our team will review each one.',
+      'Food-safety and food-business documents are optional. You can start the approval process without them, then upload FoSIM registration, an MOH Food Handler Certificate, or an anti-typhoid record later to earn public credential badges.',
   },
 ];
 

@@ -60,6 +60,7 @@ model orders {
   total_price              Decimal           @db.Decimal(10, 2)
   scheduled_date           DateTime          @db.Date
   pickup_time              DateTime?         @db.Timestamptz(6)
+  pickup_window_end        DateTime?         @db.Timestamptz(6)
   customer_note            String?           @db.VarChar(500)
   selected_options         Json              @default("[]")
   fulfillment_type         String            @default("pickup")
@@ -76,11 +77,13 @@ model orders {
   capacity_quantity        Int?
   capacity_released_at     DateTime?         @db.Timestamptz(6)
   proof_of_prep_url        String?
+  delivery_job_id          String?           @db.Uuid
   created_at               DateTime?         @default(now()) @db.Timestamptz(6)
   profiles                 profiles          @relation(fields: [customer_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   listings                 listings          @relation(fields: [listing_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   reviews                  reviews?
   customer_reviews         customer_reviews?
+  delivery_job             delivery_jobs?    @relation(fields: [delivery_job_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
 
   @@schema("public")
 }
@@ -142,10 +145,102 @@ model profiles {
   customer_reviews_written      customer_reviews[]                @relation("CustomerReviewsWritten")
   customer_location_preference  customer_location_preferences?
   restaurant_discovery_location restaurant_discovery_locations?
+  restaurant_delivery_location  restaurant_delivery_locations?
   restaurant_opening_hours      restaurant_opening_hours[]
   restaurant_special_hours      restaurant_special_hours[]
   selling_schedules             selling_schedules[]
+  customer_delivery_address     customer_delivery_addresses?
+  delivery_jobs_as_customer     delivery_jobs[]                   @relation("delivery_customer")
+  delivery_jobs_as_cook         delivery_jobs[]                   @relation("delivery_cook")
+  cook_payout_ledger            cook_payout_ledger[]
 
+  @@schema("public")
+}
+
+model customer_delivery_addresses {
+  user_id               String   @id @db.Uuid
+  recipient_name        String   @db.VarChar(120)
+  phone_number          String   @db.VarChar(20)
+  address_line_1        String   @db.VarChar(200)
+  address_line_2        String?  @db.VarChar(200)
+  locality              String?  @db.VarChar(120)
+  city                  String   @db.VarChar(120)
+  state                 String   @db.VarChar(120)
+  postcode              String   @db.VarChar(10)
+  country_code          String   @default("MY") @db.Char(2)
+  latitude              Decimal  @db.Decimal(9, 6)
+  longitude             Decimal  @db.Decimal(9, 6)
+  delivery_instructions String?  @db.VarChar(500)
+  updated_at            DateTime @default(now()) @db.Timestamptz(6)
+  profile               profiles @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@schema("public")
+}
+
+model delivery_jobs {
+  id                           String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  customer_id                  String              @db.Uuid
+  cook_id                      String              @db.Uuid
+  provider                     String              @default("lalamove") @db.VarChar(30)
+  provider_quotation_id        String              @db.VarChar(80)
+  provider_order_id            String?             @db.VarChar(80)
+  provider_status              String?             @db.VarChar(40)
+  status                       String              @default("quoted") @db.VarChar(40)
+  currency                     String              @default("MYR") @db.Char(3)
+  quoted_fee                   Decimal             @db.Decimal(10, 2)
+  customer_delivery_fee        Decimal             @db.Decimal(10, 2)
+  cook_delivery_charge         Decimal             @default(0) @db.Decimal(10, 2)
+  free_delivery_applied        Boolean             @default(false)
+  distance_meters              Int?
+  preparation_ready_at         DateTime?           @db.Timestamptz(6)
+  estimated_arrival_start      DateTime?           @db.Timestamptz(6)
+  estimated_arrival_end        DateTime?           @db.Timestamptz(6)
+  estimated_travel_min_minutes Int?
+  estimated_travel_max_minutes Int?
+  scheduled_at                 DateTime            @db.Timestamptz(6)
+  quote_expires_at             DateTime            @db.Timestamptz(6)
+  pickup_address               Json
+  dropoff_address              Json
+  provider_quote               Json                @default("{}")
+  provider_payload             Json                @default("{}")
+  provider_event_at            DateTime?           @db.Timestamptz(6)
+  driver_id                    String?             @db.VarChar(80)
+  driver_name                  String?             @db.VarChar(120)
+  driver_phone                 String?             @db.VarChar(30)
+  driver_plate_number          String?             @db.VarChar(40)
+  share_link                   String?
+  proof_of_delivery_url        String?
+  booked_at                    DateTime?           @db.Timestamptz(6)
+  picked_up_at                 DateTime?           @db.Timestamptz(6)
+  delivered_at                 DateTime?           @db.Timestamptz(6)
+  cancelled_at                 DateTime?           @db.Timestamptz(6)
+  created_at                   DateTime            @default(now()) @db.Timestamptz(6)
+  updated_at                   DateTime            @default(now()) @db.Timestamptz(6)
+  customer                     profiles            @relation("delivery_customer", fields: [customer_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  cook                         profiles            @relation("delivery_cook", fields: [cook_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  orders                       orders[]
+  payout_entry                 cook_payout_ledger?
+
+  @@index([customer_id, created_at(sort: Desc)])
+  @@index([cook_id, scheduled_at(sort: Desc)])
+  @@schema("public")
+}
+
+model cook_payout_ledger {
+  id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cook_id         String        @db.Uuid
+  delivery_job_id String        @unique @db.Uuid
+  entry_type      String        @default("delivery_fee") @db.VarChar(40)
+  amount          Decimal       @db.Decimal(10, 2)
+  currency        String        @default("MYR") @db.Char(3)
+  status          String        @default("pending") @db.VarChar(30)
+  description     String        @db.VarChar(250)
+  created_at      DateTime      @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime      @default(now()) @db.Timestamptz(6)
+  cook            profiles      @relation(fields: [cook_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  delivery_job    delivery_jobs @relation(fields: [delivery_job_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+
+  @@index([cook_id, created_at(sort: Desc)])
   @@schema("public")
 }
 
@@ -174,6 +269,20 @@ model restaurant_discovery_locations {
   longitude       Decimal  @db.Decimal(9, 6)
   source          String   @default("manual") @db.VarChar(20)
   precision       String   @default("approximate") @db.VarChar(20)
+  updated_at      DateTime @default(now()) @db.Timestamptz(6)
+  profile         profiles @relation(fields: [cook_profile_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@schema("public")
+}
+
+/// Private exact kitchen pin used only for delivery pickup. Public restaurant
+/// discovery keeps using the separately rounded discovery location.
+model restaurant_delivery_locations {
+  cook_profile_id String   @id @db.Uuid
+  label           String?  @db.VarChar(250)
+  latitude        Decimal  @db.Decimal(9, 6)
+  longitude       Decimal  @db.Decimal(9, 6)
+  source          String   @default("address_search") @db.VarChar(20)
   updated_at      DateTime @default(now()) @db.Timestamptz(6)
   profile         profiles @relation(fields: [cook_profile_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 

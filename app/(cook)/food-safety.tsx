@@ -302,8 +302,8 @@ export default function FoodSafetyScreen() {
           <View style={{ flex: 1 }}>
             <Text style={styles.tierCalloutTitle}>Get a platform Verified badge (optional)</Text>
             <Text style={styles.tierCalloutBody}>
-              Upload one or both documents below for review. This badge is not a licence or proof of
-              full regulatory compliance. You can skip the uploads and add them later.
+              Upload any credential below for review. This badge is not a licence or proof of full
+              regulatory compliance. You can skip every upload and add documents later.
             </Text>
           </View>
         </View>

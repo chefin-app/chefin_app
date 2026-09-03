@@ -9,7 +9,7 @@ export default ({ config }) => ({
       'expo-location',
       {
         locationWhenInUsePermission:
-          'Allow Chefin to use your location while the app is open to recommend nearby home restaurants.',
+          'Allow Chefin to recommend nearby home restaurants and pinpoint your delivery address for the cook and Lalamove rider.',
       },
     ],
   ],

@@ -25,6 +25,8 @@ export type NotificationType =
   | 'favourite_new_dish' // buyer: a favourited cook has a new dish live
   | 'favourite_new_slots' // buyer: a favourited cook opened new pickup times
   | 'review_request' // buyer: order completed — rate the dish
+  | 'delivery_update_customer' // buyer: Lalamove driver/progress/delivery update
+  | 'delivery_update_cook' // cook: Lalamove driver/progress/delivery update
   | 'admin_message'; // administrator support message
 
 /**
@@ -47,6 +49,8 @@ const ROLE_BY_TYPE: Record<NotificationType, 'customer' | 'cook'> = {
   favourite_new_dish: 'customer',
   favourite_new_slots: 'customer',
   review_request: 'customer',
+  delivery_update_customer: 'customer',
+  delivery_update_cook: 'cook',
   admin_message: 'customer',
 };
 
@@ -166,6 +170,47 @@ export function notifyBuyerReviewRequest(
   });
 }
 
+const deliveryMessage = (status: string): { title: string; body: string } => {
+  switch (status) {
+    case 'assigning_driver':
+      return {
+        title: 'Finding your rider',
+        body: 'Lalamove is assigning a rider for this delivery.',
+      };
+    case 'on_going':
+      return {
+        title: 'Rider assigned',
+        body: 'A Lalamove rider has been assigned. Open the order for live delivery details.',
+      };
+    case 'picked_up':
+      return {
+        title: 'Food picked up',
+        body: 'The rider has collected the food and is heading to the customer.',
+      };
+    case 'delivered':
+      return { title: 'Delivery completed', body: 'Lalamove marked the food as delivered.' };
+    default:
+      return {
+        title: 'Delivery needs attention',
+        body: 'Lalamove could not continue this delivery. Open the order for details.',
+      };
+  }
+};
+
+export function notifyBuyerDeliveryUpdate(
+  buyerUserId: string,
+  status: string,
+  deliveryJobId: string,
+  orderId?: string
+) {
+  const message = deliveryMessage(status);
+  return createNotification(buyerUserId, {
+    type: 'delivery_update_customer',
+    ...message,
+    data: { delivery_job_id: deliveryJobId, ...(orderId ? { order_id: orderId } : {}) },
+  });
+}
+
 // ── Cook notifications ──────────────────────────────────────────────
 
 export function notifyCookNewOrder(cookUserId: string, o: OrderContext) {
@@ -183,6 +228,38 @@ export function notifyCookPayoutSent(cookUserId: string, o: OrderContext) {
     title: 'Earnings on the way',
     body: `${formatRM(o.totalPrice)} for ${o.quantity}× ${o.listingTitle} will be transferred to your bank account.`,
     data: { order_id: o.orderId },
+  });
+}
+
+export function notifyCookDeliveryPayout(
+  cookUserId: string,
+  foodTotal: number,
+  deliveryDeduction: number,
+  orderIds: string[]
+) {
+  const net = Math.max(0, foodTotal - deliveryDeduction);
+  return createNotification(cookUserId, {
+    type: 'payout_sent',
+    title: 'Delivery completed · earnings updated',
+    body:
+      deliveryDeduction > 0
+        ? `${formatRM(net)} is on the way after the ${formatRM(deliveryDeduction)} Lalamove fee you covered.`
+        : `${formatRM(foodTotal)} for this delivery is on the way to your bank account.`,
+    data: { order_ids: orderIds, food_total: foodTotal, delivery_deduction: deliveryDeduction },
+  });
+}
+
+export function notifyCookDeliveryUpdate(
+  cookUserId: string,
+  status: string,
+  deliveryJobId: string,
+  orderId?: string
+) {
+  const message = deliveryMessage(status);
+  return createNotification(cookUserId, {
+    type: 'delivery_update_cook',
+    ...message,
+    data: { delivery_job_id: deliveryJobId, ...(orderId ? { order_id: orderId } : {}) },
   });
 }
 

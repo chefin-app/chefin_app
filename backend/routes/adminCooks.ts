@@ -7,11 +7,6 @@ import { supabase } from '../supabaseClient';
 
 const router = express.Router();
 const IDENTITY_BUCKET = 'cook-identity-documents';
-const REQUIRED_COMPLIANCE_DOCS = [
-  'fosim_registration',
-  'food_handler_certificate',
-  'typhoid_vaccination',
-];
 const FILTERS = new Set(['all', 'active', 'inactive', 'pending', 'reverification', 'rejected']);
 const SORTS = new Set(['newest', 'oldest', 'name_asc', 'name_desc']);
 
@@ -391,30 +386,13 @@ router.post('/:userId/application/:action', async (req: AdminRequest, res) => {
     if (action === 'approve' && application.identity_status !== 'approved') {
       return res.status(409).json({ error: 'Identity review must be approved first.' });
     }
-    if (action === 'approve') {
-      const { data: docs, error: docsError } = await supabase
-        .from('verification_documents')
-        .select('doc_type, status, submitted_at')
-        .eq('user_id', req.params.userId)
-        .in('doc_type', REQUIRED_COMPLIANCE_DOCS)
-        .order('submitted_at', { ascending: false });
-      if (docsError) throw docsError;
-      const latest = new Map<string, string>();
-      for (const doc of docs ?? [])
-        if (!latest.has(doc.doc_type)) latest.set(doc.doc_type, doc.status);
-      if (!REQUIRED_COMPLIANCE_DOCS.every(type => latest.get(type) === 'approved')) {
-        return res
-          .status(409)
-          .json({ error: 'All three food compliance documents must be approved first.' });
-      }
-    }
     const now = new Date().toISOString();
     const approved = action === 'approve';
     const { error: updateError } = await supabase
       .from('cook_applications')
       .update({
         status: approved ? 'approved' : 'rejected',
-        compliance_status: approved ? 'approved' : application.compliance_status,
+        compliance_status: application.compliance_status,
         approved_at: approved ? now : null,
         approved_by: approved ? req.admin!.userId : null,
         rejected_at: approved ? null : now,
@@ -427,7 +405,7 @@ router.post('/:userId/application/:action', async (req: AdminRequest, res) => {
     if (updateError) throw updateError;
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .update({ is_verified: approved, verification_tier: approved ? 1 : 0, updated_at: now })
+      .update({ updated_at: now })
       .eq('user_id', req.params.userId)
       .select('id')
       .single();

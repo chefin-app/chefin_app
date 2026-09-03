@@ -1,8 +1,8 @@
 /**
  * Cook verification tiers and the documents that unlock them.
  *
- * All three food/business compliance documents are required before a new cook
- * can receive final selling approval.
+ * Food/business credentials are optional. Each approved document is shown as
+ * a public achievement; none is required for cook application approval.
  */
 
 export const VERIFICATION_BUCKET = 'food-safety-licenses';
@@ -20,7 +20,7 @@ export interface VerificationDocMeta {
   subtitle: string;
 }
 
-/** Required evidence for final cook approval. */
+/** Supported optional credentials. */
 export const TIER1_DOCUMENTS: VerificationDocMeta[] = [
   {
     type: 'fosim_registration',

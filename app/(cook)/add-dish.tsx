@@ -43,10 +43,7 @@ const CUISINE_OPTIONS = [
 ];
 
 // Dietary / meal / attribute tags — cook picks up to MAX_DIETARY_TAGS.
-const DIETARY_TAG_OPTIONS = [
-  'Vegetarian',
-  'Non-pork',
-];
+const DIETARY_TAG_OPTIONS = ['Vegetarian', 'Non-pork'];
 
 export default function AddDishScreen() {
   const router = useRouter();
@@ -168,7 +165,7 @@ export default function AddDishScreen() {
     setStepIdx(stepIdx + 1);
   };
 
-  const pickPhoto = async () => {
+  const chooseFromLibrary = async () => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
       Alert.alert(
@@ -186,6 +183,28 @@ export default function AddDishScreen() {
     if (!result.canceled && result.assets[0]) {
       setPhotoUri(result.assets[0].uri);
     }
+  };
+
+  const takePhoto = async () => {
+    const perm = await ImagePicker.requestCameraPermissionsAsync();
+    if (!perm.granted) {
+      Alert.alert('Permission needed', 'Please allow camera access to take a dish photo.');
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.8,
+    });
+    if (!result.canceled && result.assets[0]) setPhotoUri(result.assets[0].uri);
+  };
+
+  const pickPhoto = () => {
+    Alert.alert('Add a dish photo', 'Choose where your photo comes from.', [
+      { text: 'Take photo', onPress: takePhoto },
+      { text: 'Choose from library', onPress: chooseFromLibrary },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
   };
 
   const toggleCuisine = (kw: string) => {

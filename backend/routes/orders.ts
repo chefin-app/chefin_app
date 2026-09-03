@@ -18,6 +18,7 @@ import {
   releaseCapacityReservation,
   releaseListingCapacityForOrder,
   reserveListingCapacity,
+  getListingAvailabilityBatch,
   type CapacityReservation,
 } from '../availabilityService';
 import {
@@ -26,6 +27,11 @@ import {
   type RequestedOptionGroup,
   type SelectedOptionSnapshot,
 } from '../menuOptionService';
+import {
+  bookQuotedDeliveryJob,
+  cancelDeliveryJob,
+  cancelDeliveryJobWhenUnused,
+} from '../deliveryService';
 
 const router = express.Router();
 
@@ -77,6 +83,7 @@ router.get('/', requireReadableAccount, async (req: AccountRequest, res) => {
 
 const FULFILLMENT_TYPES = ['pickup', 'delivery'];
 const MAX_ADVANCE_ORDER_DAYS = 2;
+const CART_STATUS_UUID_PATTERN = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
 
 const addServiceDays = (serviceDate: string, days: number): string => {
   const malaysiaMidday = new Date(`${serviceDate}T12:00:00+08:00`);
@@ -84,20 +91,161 @@ const addServiceDays = (serviceDate: string, days: number): string => {
   return getDateKeyInTimeZone(malaysiaMidday);
 };
 
+// Read-only validation for each independently saved restaurant basket in the
+// global cart. No capacity is reserved until the buyer places that basket.
+router.post('/cart-status', async (req, res) => {
+  const items = req.body?.items as
+    | Array<{
+        listingId?: unknown;
+        cookId?: unknown;
+        quantity?: unknown;
+        serviceDate?: unknown;
+        pickupTime?: unknown;
+      }>
+    | undefined;
+  if (
+    !Array.isArray(items) ||
+    items.length === 0 ||
+    items.length > 200 ||
+    items.some(
+      item =>
+        !CART_STATUS_UUID_PATTERN.test(String(item.listingId ?? '')) ||
+        !CART_STATUS_UUID_PATTERN.test(String(item.cookId ?? '')) ||
+        !Number.isInteger(item.quantity) ||
+        Number(item.quantity) < 1
+    )
+  ) {
+    return res.status(400).json({ error: 'The cart status request is invalid.' });
+  }
+
+  try {
+    const listingIds = [...new Set(items.map(item => String(item.listingId)))];
+    const cookIds = [...new Set(items.map(item => String(item.cookId)))];
+    const [{ data: listings, error: listingsError }, { data: cooks, error: cooksError }] =
+      await Promise.all([
+        supabase
+          .from('listings')
+          .select('id, cook_id, title, image_url, status, is_active')
+          .in('id', listingIds),
+        supabase
+          .from('profiles')
+          .select('id, full_name, restaurant_name, profile_image, store_status, store_paused_until')
+          .in('id', cookIds),
+      ]);
+    if (listingsError) throw listingsError;
+    if (cooksError) throw cooksError;
+
+    const listingById = new Map((listings ?? []).map(listing => [listing.id, listing]));
+    const cookById = new Map((cooks ?? []).map(cook => [cook.id, cook]));
+    const availabilityByListing = await getListingAvailabilityBatch(listingIds, 90);
+    const eligibilityByCook = new Map<string, boolean>();
+    for (const cookId of cookIds) {
+      eligibilityByCook.set(cookId, (await getCookEligibilityByProfileId(cookId)).eligibleToSell);
+    }
+
+    const baskets = cookIds.map(cookId => {
+      const cook = cookById.get(cookId);
+      const cookItems = items.filter(item => String(item.cookId) === cookId);
+      const pauseActive =
+        cook?.store_status === 'paused' &&
+        (!cook.store_paused_until || new Date(cook.store_paused_until).getTime() > Date.now());
+      const storeUnavailable = !cook || !eligibilityByCook.get(cookId) || pauseActive;
+      const itemStatuses = cookItems.map(item => {
+        const listingId = String(item.listingId);
+        const listing = listingById.get(listingId);
+        const dishName = listing?.title || 'This dish';
+        if (
+          !listing ||
+          listing.cook_id !== cookId ||
+          listing.status !== 'approved' ||
+          listing.is_active !== true
+        ) {
+          return {
+            listingId,
+            status: 'dish_unavailable',
+            reason: `${dishName} is no longer available.`,
+          };
+        }
+        if (storeUnavailable) {
+          return {
+            listingId,
+            status: 'store_closed',
+            reason: 'This home restaurant is unavailable right now.',
+          };
+        }
+        const pickupTime = String(item.pickupTime ?? '');
+        const serviceDate = normalizeServiceDate(String(item.serviceDate ?? ''));
+        const pickupMs = new Date(pickupTime).getTime();
+        if (!serviceDate || Number.isNaN(pickupMs) || pickupMs <= Date.now()) {
+          return {
+            listingId,
+            status: 'time_unavailable',
+            reason: `The selected order time for ${dishName} has passed.`,
+          };
+        }
+        const matchingRecord = availabilityByListing[listingId]?.records.find(record => {
+          const start = new Date(record.start_time).getTime();
+          const end = new Date(record.end_time).getTime();
+          return record.available_date === serviceDate && pickupMs >= start && pickupMs < end;
+        });
+        if (!matchingRecord) {
+          return {
+            listingId,
+            status: 'time_unavailable',
+            reason: `${dishName} is unavailable at the selected time.`,
+          };
+        }
+        const quantityRequested = cookItems
+          .filter(
+            other =>
+              String(other.listingId) === listingId &&
+              String(other.serviceDate ?? '') === String(item.serviceDate ?? '') &&
+              String(other.pickupTime ?? '') === String(item.pickupTime ?? '')
+          )
+          .reduce((sum, other) => sum + Number(other.quantity), 0);
+        const remaining = matchingRecord.max_orders - matchingRecord.orders_taken;
+        if (!matchingRecord.is_available || remaining < quantityRequested) {
+          return {
+            listingId,
+            status: 'out_of_stock',
+            reason: `${dishName} is sold out for the selected time.`,
+          };
+        }
+        return { listingId, status: 'ready', reason: null };
+      });
+      const firstIssue = itemStatuses.find(item => item.status !== 'ready');
+      return {
+        cookId,
+        restaurantName: cook?.restaurant_name || cook?.full_name || 'Home restaurant',
+        restaurantImage: cook?.profile_image ?? null,
+        status: firstIssue?.status ?? 'ready',
+        message: firstIssue?.reason ?? null,
+        items: itemStatuses,
+      };
+    });
+    res.json({ baskets });
+  } catch (error: unknown) {
+    console.error('Cart status check failed:', error);
+    res.status(500).json({ error: 'Cart availability could not be checked.' });
+  }
+});
+
 // POST / - Place an order from the cart
 router.post('/', requireActiveAccount, async (req: AccountRequest, res) => {
-  const { userId, items, fulfillmentType } = req.body as {
+  const { userId, items, fulfillmentType, deliveryJobIds } = req.body as {
     userId?: string;
     items: {
       listingId: string;
       quantity: number;
       pickupDate: string;
       pickupTime?: string; // ISO of the restaurant-level slot start
+      pickupWindowEnd?: string; // ISO of the restaurant-level slot end
       priceAtOrder?: number; // ignored by the server; retained for old clients
       customerNote?: string;
       selectedOptions?: RequestedOptionGroup[];
     }[];
     fulfillmentType?: string; // 'pickup' | 'delivery', applies to the whole order
+    deliveryJobIds?: string[]; // one current Lalamove quote per cook
   };
 
   if (userId && userId !== req.account!.userId) {
@@ -105,6 +253,18 @@ router.post('/', requireActiveAccount, async (req: AccountRequest, res) => {
   }
   if (!items || items.length === 0) {
     return res.status(400).json({ error: 'No items in order.' });
+  }
+  // Backward compatibility for baskets created before explicit slot ends were stored.
+  for (const item of items) {
+    if (
+      !item.pickupWindowEnd &&
+      item.pickupTime &&
+      !Number.isNaN(new Date(item.pickupTime).getTime())
+    ) {
+      item.pickupWindowEnd = new Date(
+        new Date(item.pickupTime).getTime() + 30 * 60_000
+      ).toISOString();
+    }
   }
   if (
     Array.isArray(items) &&
@@ -125,7 +285,10 @@ router.post('/', requireActiveAccount, async (req: AccountRequest, res) => {
         item.quantity < 1 ||
         !normalizeServiceDate(item.pickupDate) ||
         !item.pickupTime ||
-        Number.isNaN(new Date(item.pickupTime).getTime())
+        Number.isNaN(new Date(item.pickupTime).getTime()) ||
+        !item.pickupWindowEnd ||
+        Number.isNaN(new Date(item.pickupWindowEnd).getTime()) ||
+        new Date(item.pickupWindowEnd).getTime() <= new Date(item.pickupTime).getTime()
     )
   ) {
     return res.status(400).json({
@@ -191,6 +354,12 @@ router.post('/', requireActiveAccount, async (req: AccountRequest, res) => {
     // orders, and busy stores need pickup times at least their stated prep
     // time away.
     const cookIds = [...new Set((requestedListings ?? []).map(listing => listing.cook_id))];
+    if (cookIds.length !== 1) {
+      return res.status(400).json({
+        error:
+          'Checkout supports one home restaurant at a time. Open a restaurant basket separately.',
+      });
+    }
     const { data: cookStores, error: cookStoresError } = await supabase
       .from('profiles')
       .select('id, restaurant_name, store_status, store_busy_prep_minutes, store_paused_until')
@@ -204,8 +373,7 @@ router.post('/', requireActiveAccount, async (req: AccountRequest, res) => {
       const storeName = store.restaurant_name ?? 'This cook';
       if (
         store.store_status === 'paused' &&
-        store.store_paused_until &&
-        new Date(store.store_paused_until).getTime() > nowMs
+        (!store.store_paused_until || new Date(store.store_paused_until).getTime() > nowMs)
       ) {
         return res.status(409).json({
           error: `${storeName} has paused new orders. Please try again later.`,
@@ -236,13 +404,13 @@ router.post('/', requireActiveAccount, async (req: AccountRequest, res) => {
       validatedOptions.push(validation);
     }
 
-    // Buyers select one restaurant-wide time. Multiple restaurants can still
-    // share a cart, but every dish from the same cook must use the same slot.
+    // A checkout contains one restaurant basket and every dish in that basket
+    // must use the same restaurant-wide slot.
     const scheduleByCook = new Map<string, string>();
     for (const item of items) {
       const cookId = requestedListingById.get(item.listingId)!.cook_id;
       const serviceDate = normalizeServiceDate(item.pickupDate)!;
-      const scheduleKey = `${serviceDate}|${new Date(item.pickupTime!).toISOString()}`;
+      const scheduleKey = `${serviceDate}|${new Date(item.pickupWindowEnd!).toISOString()}`;
       const existingSchedule = scheduleByCook.get(cookId);
       if (existingSchedule && existingSchedule !== scheduleKey) {
         return res.status(400).json({
@@ -250,6 +418,57 @@ router.post('/', requireActiveAccount, async (req: AccountRequest, res) => {
         });
       }
       scheduleByCook.set(cookId, scheduleKey);
+    }
+
+    const deliveryJobByCook = new Map<
+      string,
+      { id: string; customer_delivery_fee: number | string }
+    >();
+    if ((fulfillmentType ?? 'pickup') === 'delivery') {
+      const uniqueJobIds = [...new Set(deliveryJobIds ?? [])];
+      if (uniqueJobIds.length !== cookIds.length) {
+        return res
+          .status(409)
+          .json({ error: 'Request a fresh Lalamove quote before placing this delivery order.' });
+      }
+      const { data: jobs, error: jobsError } = await supabase
+        .from('delivery_jobs')
+        .select(
+          'id, customer_id, cook_id, status, scheduled_at, quote_expires_at, customer_delivery_fee'
+        )
+        .in('id', uniqueJobIds);
+      if (jobsError) throw jobsError;
+      if ((jobs ?? []).length !== cookIds.length) {
+        return res.status(409).json({ error: 'One or more Lalamove quotes could not be found.' });
+      }
+      for (const job of jobs ?? []) {
+        if (
+          job.customer_id !== profile.id ||
+          !cookIds.includes(job.cook_id) ||
+          job.status !== 'quoted' ||
+          new Date(job.quote_expires_at).getTime() <= Date.now()
+        ) {
+          return res
+            .status(409)
+            .json({ error: 'A Lalamove quote expired or no longer matches this cart.' });
+        }
+        const schedule = scheduleByCook.get(job.cook_id)?.split('|')[1];
+        if (!schedule || new Date(job.scheduled_at).toISOString() !== schedule) {
+          return res
+            .status(409)
+            .json({ error: 'A delivery time changed. Request a fresh Lalamove quote.' });
+        }
+        if (deliveryJobByCook.has(job.cook_id)) {
+          return res
+            .status(409)
+            .json({ error: 'Only one Lalamove quote may be used for each cook.' });
+        }
+        deliveryJobByCook.set(job.cook_id, job);
+      }
+    } else if ((deliveryJobIds?.length ?? 0) > 0) {
+      return res
+        .status(400)
+        .json({ error: 'Delivery quotes cannot be attached to a pickup order.' });
     }
 
     const orderRows = items.map((item, index) => {
@@ -270,8 +489,13 @@ router.post('/', requireActiveAccount, async (req: AccountRequest, res) => {
         selected_options: validatedOptions[index].snapshot,
         scheduled_date: scheduled,
         pickup_time: item.pickupTime,
+        pickup_window_end: item.pickupWindowEnd,
         customer_note: item.customerNote?.trim() || null,
         fulfillment_type: fulfillmentType ?? 'pickup',
+        delivery_job_id:
+          (fulfillmentType ?? 'pickup') === 'delivery'
+            ? deliveryJobByCook.get(requestedListingById.get(item.listingId)!.cook_id)!.id
+            : null,
         status: 'pending',
         payment_status: 'paid', // mock-paid via locally-saved card
       };
@@ -313,8 +537,37 @@ router.post('/', requireActiveAccount, async (req: AccountRequest, res) => {
       await rollbackReservations();
       return res.status(400).json({ error: error.message });
     }
-    // The order rows now own these reservations. Do not let a later response
-    // or notification error compensate capacity for an already-committed order.
+    // Book only after the order rows exist. If any fleet booking fails, undo
+    // every row and reservation so the customer never receives a half-order.
+    if ((fulfillmentType ?? 'pickup') === 'delivery') {
+      try {
+        for (const job of deliveryJobByCook.values()) await bookQuotedDeliveryJob(job.id);
+      } catch (bookingError) {
+        for (const order of data ?? []) {
+          await releaseListingCapacityForOrder(order.id).catch(error =>
+            console.error('Delivery rollback capacity release failed:', error)
+          );
+        }
+        await supabase
+          .from('orders')
+          .delete()
+          .in(
+            'id',
+            (data ?? []).map(order => order.id)
+          );
+        await Promise.allSettled(
+          [...deliveryJobByCook.values()].map(job => cancelDeliveryJob(job.id))
+        );
+        reservations.splice(0, reservations.length);
+        return res.status(409).json({
+          error:
+            bookingError instanceof Error
+              ? `Lalamove could not be booked: ${bookingError.message}`
+              : 'Lalamove could not be booked. Request a new quote and try again.',
+        });
+      }
+    }
+    // The order rows now own these reservations.
     reservations.splice(0, reservations.length);
 
     // Notify everyone involved (best-effort — the order is already placed).
@@ -322,7 +575,12 @@ router.post('/', requireActiveAccount, async (req: AccountRequest, res) => {
     // notification per order row so they can act on it from Today.
     try {
       const createdOrders = data ?? [];
-      const total = createdOrders.reduce((sum, o) => sum + Number(o.total_price), 0);
+      const foodTotal = createdOrders.reduce((sum, o) => sum + Number(o.total_price), 0);
+      const deliveryTotal = [...deliveryJobByCook.values()].reduce(
+        (sum, job) => sum + Number(job.customer_delivery_fee),
+        0
+      );
+      const total = foodTotal + deliveryTotal;
       await notifyBuyerOrderPlaced(
         req.account!.userId,
         total,
@@ -374,7 +632,7 @@ const ORDER_STATUSES = new Set<CookOrderStatus>([
 const COOK_STATUS_TRANSITIONS: Record<CookOrderStatus, readonly CookOrderStatus[]> = {
   pending: ['confirmed', 'cancelled'],
   confirmed: ['ready', 'cancelled'],
-  ready: ['completed', 'cancelled'],
+  ready: ['completed'],
   completed: [],
   cancelled: [],
 };
@@ -415,7 +673,7 @@ router.patch('/:id/status', requireActiveAccount, async (req: AccountRequest, re
     const { data: order, error: orderErr } = await supabase
       .from('orders')
       .select(
-        'id, quantity, total_price, scheduled_date, pickup_time, customer_id, listing_id, status, completed_at, cancelled_at, cancellation_reason, listings(cook_id, title)'
+        'id, quantity, total_price, scheduled_date, pickup_time, customer_id, listing_id, fulfillment_type, delivery_job_id, status, completed_at, cancelled_at, cancellation_reason, listings(cook_id, title)'
       )
       .eq('id', id)
       .single();
@@ -440,13 +698,39 @@ router.patch('/:id/status', requireActiveAccount, async (req: AccountRequest, re
     if (currentStatus === requestedStatus) {
       if (requestedStatus === 'cancelled') {
         await releaseListingCapacityForOrder(order.id);
+        await cancelDeliveryJobWhenUnused(order.delivery_job_id).catch(deliveryError =>
+          console.error('Cancelled-order delivery reconciliation failed:', deliveryError)
+        );
       }
       return res.json({ success: true, order, unchanged: true });
+    }
+    if (currentStatus === 'ready' && requestedStatus === 'cancelled') {
+      return res.status(409).json({
+        error: 'A ready order can no longer be cancelled. Complete the pickup or delivery instead.',
+      });
     }
     if (!COOK_STATUS_TRANSITIONS[currentStatus].includes(requestedStatus)) {
       return res.status(409).json({
         error: `An order cannot move from ${currentStatus} to ${requestedStatus}. Refresh and try again.`,
       });
+    }
+    if (order.fulfillment_type === 'delivery' && requestedStatus === 'completed') {
+      return res.status(409).json({
+        error: 'Lalamove marks delivery orders complete automatically after proof of delivery.',
+      });
+    }
+    if (order.delivery_job_id && requestedStatus === 'cancelled') {
+      const { data: deliveryJob, error: deliveryJobError } = await supabase
+        .from('delivery_jobs')
+        .select('status')
+        .eq('id', order.delivery_job_id)
+        .single();
+      if (deliveryJobError) throw deliveryJobError;
+      if (deliveryJob && ['picked_up', 'delivered'].includes(deliveryJob.status)) {
+        return res.status(409).json({
+          error: 'This order cannot be cancelled after the Lalamove rider has collected it.',
+        });
+      }
     }
 
     const now = new Date().toISOString();
@@ -492,6 +776,9 @@ router.patch('/:id/status', requireActiveAccount, async (req: AccountRequest, re
         // a later retry; never reopen a cancelled order as a repair strategy.
         console.error('Cancelled-order capacity release failed:', capacityError);
       }
+      await cancelDeliveryJobWhenUnused(order.delivery_job_id).catch(deliveryError =>
+        console.error('Cancelled-order delivery reconciliation failed:', deliveryError)
+      );
     }
 
     // Notify the affected party (best-effort — the status change already
@@ -564,7 +851,9 @@ router.post('/:id/proof', requireActiveAccount, async (req: AccountRequest, res)
     return res.status(400).json({ error: 'imageBase64 is required.' });
   }
   if (!contentType || !PROOF_CONTENT_TYPES.has(contentType)) {
-    return res.status(400).json({ error: 'contentType must be image/jpeg, image/png or image/webp.' });
+    return res
+      .status(400)
+      .json({ error: 'contentType must be image/jpeg, image/png or image/webp.' });
   }
 
   let bytes: Buffer;

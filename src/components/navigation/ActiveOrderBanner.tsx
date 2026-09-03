@@ -7,7 +7,8 @@ import { supabase } from '@/src/utils/supabaseClient';
 import { useAuth } from '@/src/services/auth-context';
 import {
   ACTIVE_ORDER_STATUSES,
-  formatEta,
+  formatArrivalWindow,
+  formatPickupEta,
   ORDER_STATUS_LABEL,
   type FulfillmentType,
   type OrderStatus,
@@ -18,8 +19,13 @@ interface ActiveOrderRow {
   status: OrderStatus | null;
   fulfillment_type: FulfillmentType | null;
   pickup_time: string | null;
+  pickup_window_end: string | null;
   scheduled_date: string | null;
   listings: { title: string } | null;
+  delivery_jobs: {
+    estimated_arrival_start: string | null;
+    estimated_arrival_end: string | null;
+  } | null;
 }
 
 const POLL_INTERVAL_MS = 30_000;
@@ -49,20 +55,18 @@ export default function ActiveOrderBanner() {
         setOrder(null);
         return;
       }
-      // Skip orders whose slot passed more than the grace period ago; orders
-      // without a slot yet (pickup_time null) stay visible.
-      const expiryCutoff = new Date(Date.now() - EXPIRY_GRACE_MS).toISOString();
       const { data, error } = await supabase
         .from('orders')
-        .select('id, status, fulfillment_type, pickup_time, scheduled_date, listings(title)')
+        .select(
+          'id, status, fulfillment_type, pickup_time, pickup_window_end, scheduled_date, listings(title), delivery_jobs(estimated_arrival_start, estimated_arrival_end)'
+        )
         .eq('customer_id', profile.id)
         .in('status', ACTIVE_ORDER_STATUSES)
-        .or(`pickup_time.is.null,pickup_time.gte.${expiryCutoff}`)
         .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .limit(20);
       if (error) throw error;
-      setOrder((data ?? null) as unknown as ActiveOrderRow | null);
+      const activeOrders = (data ?? []) as unknown as ActiveOrderRow[];
+      setOrder(activeOrders.find(candidate => !isBannerExpired(candidate, Date.now())) ?? null);
     } catch (error: unknown) {
       console.error('Error fetching active order:', error);
     }
@@ -83,9 +87,18 @@ export default function ActiveOrderBanner() {
 
   if (!order || !order.status) return null;
   // Live expiry between polls: the `now` tick re-evaluates this every 30s.
-  if (order.pickup_time && new Date(order.pickup_time).getTime() + EXPIRY_GRACE_MS < now) {
-    return null;
-  }
+  if (isBannerExpired(order, now)) return null;
+
+  const arrivalWindow = formatArrivalWindow(
+    order.delivery_jobs?.estimated_arrival_start ?? null,
+    order.delivery_jobs?.estimated_arrival_end ?? null
+  );
+  const timingLabel =
+    order.fulfillment_type === 'delivery'
+      ? arrivalWindow
+        ? `Estimated arrival ${arrivalWindow}`
+        : 'Delivery time being confirmed'
+      : formatPickupEta(order.pickup_time);
 
   return (
     <TouchableOpacity
@@ -107,13 +120,23 @@ export default function ActiveOrderBanner() {
           {ORDER_STATUS_LABEL[order.status]} · {order.listings?.title ?? 'Your order'}
         </Text>
         <Text style={styles.eta} key={now}>
-          {formatEta(order.fulfillment_type, order.pickup_time)}
+          {timingLabel}
         </Text>
       </View>
       <Ionicons name="chevron-forward" size={18} color="#fff" />
     </TouchableOpacity>
   );
 }
+
+const isBannerExpired = (order: ActiveOrderRow, now: number): boolean => {
+  const target =
+    order.fulfillment_type === 'delivery'
+      ? (order.delivery_jobs?.estimated_arrival_end ?? order.pickup_window_end ?? order.pickup_time)
+      : (order.pickup_window_end ?? order.pickup_time);
+  if (!target) return false;
+  const targetMs = new Date(target).getTime();
+  return !Number.isNaN(targetMs) && targetMs + EXPIRY_GRACE_MS < now;
+};
 
 const styles = StyleSheet.create({
   container: {

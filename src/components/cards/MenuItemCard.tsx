@@ -9,10 +9,13 @@ export interface MenuItemCardProps extends Omit<Listing, 'reviews'> {
   isAvailable: boolean;
   availabilityLabel: string;
   cartQuantity?: number;
+  hasOptionGroups?: boolean;
   onPress: () => void;
+  onAddPress: () => void;
 }
 
 const MenuItemCard: React.FC<MenuItemCardProps> = ({
+  id,
   title,
   description,
   image_url,
@@ -21,99 +24,121 @@ const MenuItemCard: React.FC<MenuItemCardProps> = ({
   isAvailable,
   availabilityLabel,
   cartQuantity = 0,
+  hasOptionGroups = false,
   onPress,
+  onAddPress,
 }) => {
   const displayName = title || 'Unknown dish';
   const ratingSummary = getRatingSummary(reviews);
   const displayRating = formatRating(ratingSummary.average);
 
   return (
-    <TouchableOpacity
-      activeOpacity={0.72}
-      accessibilityRole="button"
-      accessibilityLabel={`${displayName}, RM ${price.toFixed(2)}. ${availabilityLabel}`}
-      accessibilityHint={isAvailable ? 'Opens dish details and ordering options' : undefined}
-      accessibilityState={{ disabled: !isAvailable }}
-      disabled={!isAvailable}
-      onPress={onPress}
-      style={[styles.card, !isAvailable && styles.cardUnavailable]}
-    >
-      <View style={styles.imageContainer}>
-        {image_url ? (
-          <Image
-            source={{ uri: image_url }}
-            resizeMode="cover"
-            style={[styles.image, !isAvailable && styles.imageUnavailable]}
-          />
-        ) : (
-          <View
-            style={[styles.image, styles.placeholderImage, !isAvailable && styles.imageUnavailable]}
-          >
-            <Text style={styles.placeholderText}>Chefin</Text>
-          </View>
-        )}
-      </View>
-
-      <View style={styles.content}>
-        <Text style={[styles.title, !isAvailable && styles.textUnavailable]} numberOfLines={2}>
-          {displayName}
-        </Text>
-
-        {description ? (
-          <Text
-            style={[styles.description, !isAvailable && styles.descriptionUnavailable]}
-            numberOfLines={2}
-          >
-            {description}
-          </Text>
-        ) : null}
-
-        <View style={styles.priceRatingRow}>
-          <Text style={[styles.price, !isAvailable && styles.textUnavailable]}>
-            RM {price.toFixed(2)}
-          </Text>
-          {ratingSummary.count > 0 ? (
-            <View style={[styles.ratingBadge, !isAvailable && styles.ratingBadgeUnavailable]}>
-              <Text style={[styles.ratingText, !isAvailable && styles.textUnavailable]}>
-                ★ {displayRating}
-              </Text>
+    <View style={[styles.card, !isAvailable && styles.cardUnavailable]}>
+      <TouchableOpacity
+        activeOpacity={0.72}
+        accessibilityRole="button"
+        accessibilityLabel={`${displayName}, RM ${price.toFixed(2)}. ${availabilityLabel}`}
+        accessibilityHint={isAvailable ? 'Opens dish details' : undefined}
+        accessibilityState={{ disabled: !isAvailable }}
+        disabled={!isAvailable}
+        onPress={onPress}
+        style={styles.cardContent}
+      >
+        <View style={styles.imageContainer}>
+          {image_url ? (
+            <Image
+              source={{ uri: image_url }}
+              resizeMode="cover"
+              style={[styles.image, !isAvailable && styles.imageUnavailable]}
+            />
+          ) : (
+            <View
+              style={[
+                styles.image,
+                styles.placeholderImage,
+                !isAvailable && styles.imageUnavailable,
+              ]}
+            >
+              <Text style={styles.placeholderText}>Chefin</Text>
             </View>
-          ) : null}
+          )}
         </View>
 
-        <Text
-          style={[styles.availabilityText, !isAvailable && styles.availabilityTextUnavailable]}
-          numberOfLines={1}
-        >
-          {availabilityLabel}
-        </Text>
-      </View>
+        <View style={styles.content}>
+          <Text style={[styles.title, !isAvailable && styles.textUnavailable]} numberOfLines={2}>
+            {displayName}
+          </Text>
 
-      <View style={styles.trailingControl} pointerEvents="none">
-        {isAvailable ? (
-          <View style={styles.addButton}>
-            <Text style={styles.addButtonText}>{cartQuantity > 0 ? cartQuantity : '+'}</Text>
+          {description ? (
+            <Text
+              style={[styles.description, !isAvailable && styles.descriptionUnavailable]}
+              numberOfLines={2}
+            >
+              {description}
+            </Text>
+          ) : null}
+
+          <View style={styles.priceRatingRow}>
+            <Text style={[styles.price, !isAvailable && styles.textUnavailable]}>
+              RM {price.toFixed(2)}
+            </Text>
+            {ratingSummary.count > 0 ? (
+              <View style={[styles.ratingBadge, !isAvailable && styles.ratingBadgeUnavailable]}>
+                <Text style={[styles.ratingText, !isAvailable && styles.textUnavailable]}>
+                  ★ {displayRating}
+                </Text>
+              </View>
+            ) : null}
           </View>
+
+          <Text
+            style={[styles.availabilityText, !isAvailable && styles.availabilityTextUnavailable]}
+            numberOfLines={1}
+          >
+            {availabilityLabel}
+          </Text>
+        </View>
+      </TouchableOpacity>
+
+      <View style={styles.trailingControl}>
+        {isAvailable ? (
+          <TouchableOpacity
+            testID={`menu-item-add-${id}`}
+            style={styles.addButton}
+            onPress={onAddPress}
+            accessibilityRole="button"
+            accessibilityLabel={
+              hasOptionGroups ? `Choose options for ${displayName}` : `Add ${displayName} to cart`
+            }
+            accessibilityHint={
+              hasOptionGroups ? 'Opens dish options' : 'Adds one dish directly to your cart'
+            }
+          >
+            <Text style={styles.addButtonText}>{cartQuantity > 0 ? cartQuantity : '+'}</Text>
+          </TouchableOpacity>
         ) : (
           <View style={styles.unavailableBadge}>
             <Text style={styles.unavailableBadgeText}>Unavailable</Text>
           </View>
         )}
       </View>
-    </TouchableOpacity>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   card: {
     minHeight: 126,
-    flexDirection: 'row',
-    alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: '#E8EBE9',
+  },
+  cardContent: {
+    minHeight: 126,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
   },
   cardUnavailable: {
     backgroundColor: '#F7F8F7',

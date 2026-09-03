@@ -7,12 +7,6 @@
     "icon": "",
     "scheme": "chefinapp",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
-    "splash": {
-      "image": "",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
-    },
     "ios": {
       "supportsTablet": true
     },
@@ -20,8 +14,7 @@
       "adaptiveIcon": {
         "foregroundImage": "",
         "backgroundColor": "#ffffff"
-      },
-      "edgeToEdgeEnabled": true
+      }
     },
     "web": {
       "bundler": "metro",
@@ -33,7 +26,14 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "The app accesses your photos to let you set a profile picture."
+          "photosPermission": "Allow Chefin to choose photos for your profile, dishes, and order updates.",
+          "cameraPermission": "Allow Chefin to take dish and order photos."
+        }
+      ],
+      [
+        "expo-navigation-bar",
+        {
+          "hidden": true
         }
       ]
     ],

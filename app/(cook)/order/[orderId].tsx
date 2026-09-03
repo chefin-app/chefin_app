@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Linking,
   Image,
   ScrollView,
   StyleSheet,
@@ -37,6 +38,25 @@ interface OrderDetail {
   created_at: string;
   listings: { title: string; price: number; image_url: string | null } | null;
   profiles: { full_name: string } | null;
+  delivery_jobs: {
+    status: string;
+    provider_status: string | null;
+    dropoff_address: {
+      recipientName: string;
+      phoneNumber: string;
+      addressLine1: string;
+      addressLine2?: string | null;
+      locality?: string | null;
+      city: string;
+      state: string;
+      postcode: string;
+      deliveryInstructions?: string | null;
+    };
+    driver_name: string | null;
+    driver_phone: string | null;
+    driver_plate_number: string | null;
+    share_link: string | null;
+  } | null;
 }
 
 const NEXT_ACTION: Partial<Record<OrderStatus, { next: OrderStatus; label: string }>> = {
@@ -69,7 +89,7 @@ export default function CookOrderDetail() {
       const { data, error } = await supabase
         .from('orders')
         .select(
-          'id, quantity, total_price, scheduled_date, pickup_time, customer_note, selected_options, fulfillment_type, status, proof_of_prep_url, created_at, listings(title, price, image_url), profiles(full_name)'
+          'id, quantity, total_price, scheduled_date, pickup_time, customer_note, selected_options, fulfillment_type, status, proof_of_prep_url, created_at, listings(title, price, image_url), profiles(full_name), delivery_jobs(status, provider_status, dropoff_address, driver_name, driver_phone, driver_plate_number, share_link)'
         )
         .eq('id', orderId)
         .single();
@@ -117,6 +137,7 @@ export default function CookOrderDetail() {
   };
 
   const confirmCancel = () => {
+    if (!order || (order.status !== 'pending' && order.status !== 'confirmed')) return;
     Alert.alert('Cancel this order?', 'The customer will need to be refunded outside the app.', [
       { text: 'Keep order', style: 'cancel' },
       { text: 'Cancel order', style: 'destructive', onPress: () => updateStatus('cancelled') },
@@ -146,7 +167,8 @@ export default function CookOrderDetail() {
         },
         body: JSON.stringify({
           imageBase64: asset.base64,
-          contentType: asset.mimeType && asset.mimeType !== 'image/jpg' ? asset.mimeType : 'image/jpeg',
+          contentType:
+            asset.mimeType && asset.mimeType !== 'image/jpg' ? asset.mimeType : 'image/jpeg',
         }),
       });
       const body = (await res.json().catch(() => ({}))) as { error?: string; proofUrl?: string };
@@ -178,8 +200,11 @@ export default function CookOrderDetail() {
 
   const listingPrice = Number(order.listings?.price ?? 0);
   const optionGroups = order.selected_options ?? [];
-  const action = NEXT_ACTION[order.status];
-  const isActive = order.status === 'pending' || order.status === 'confirmed' || order.status === 'ready';
+  const action =
+    order.fulfillment_type === 'delivery' && order.status === 'ready'
+      ? undefined
+      : NEXT_ACTION[order.status];
+  const canCancel = order.status === 'pending' || order.status === 'confirmed';
 
   return (
     <SafeAreaView style={styles.page}>
@@ -213,16 +238,68 @@ export default function CookOrderDetail() {
           </View>
         </View>
 
-        <TouchableOpacity
-          style={styles.proofCard}
-          onPress={uploadProof}
-          disabled={uploadingProof}
-        >
+        {order.fulfillment_type === 'delivery' && order.delivery_jobs ? (
+          <View style={styles.deliveryCard}>
+            <View style={styles.deliveryHeading}>
+              <Ionicons name="location-outline" size={21} color="#216E39" />
+              <Text style={styles.deliveryTitle}>Customer delivery address</Text>
+            </View>
+            <Text style={styles.deliveryRecipient}>
+              {order.delivery_jobs.dropoff_address.recipientName} ·{' '}
+              {order.delivery_jobs.dropoff_address.phoneNumber}
+            </Text>
+            <Text style={styles.deliveryAddress}>
+              {[
+                order.delivery_jobs.dropoff_address.addressLine1,
+                order.delivery_jobs.dropoff_address.addressLine2,
+                order.delivery_jobs.dropoff_address.locality,
+                order.delivery_jobs.dropoff_address.postcode,
+                order.delivery_jobs.dropoff_address.city,
+                order.delivery_jobs.dropoff_address.state,
+              ]
+                .filter(Boolean)
+                .join(', ')}
+            </Text>
+            {order.delivery_jobs.dropoff_address.deliveryInstructions ? (
+              <Text style={styles.deliveryInstructions}>
+                Instructions: {order.delivery_jobs.dropoff_address.deliveryInstructions}
+              </Text>
+            ) : null}
+            <View style={styles.deliveryStatusRow}>
+              <Text style={styles.deliveryStatus}>
+                Lalamove: {order.delivery_jobs.status.replace(/_/g, ' ')}
+              </Text>
+              {order.delivery_jobs.driver_name ? (
+                <Text style={styles.driverText}>
+                  {order.delivery_jobs.driver_name}
+                  {order.delivery_jobs.driver_plate_number
+                    ? ` · ${order.delivery_jobs.driver_plate_number}`
+                    : ''}
+                </Text>
+              ) : null}
+            </View>
+            {order.delivery_jobs.share_link ? (
+              <TouchableOpacity onPress={() => Linking.openURL(order.delivery_jobs!.share_link!)}>
+                <Text style={styles.trackingLink}>Open live Lalamove tracking</Text>
+              </TouchableOpacity>
+            ) : null}
+            {order.status === 'ready' ? (
+              <Text style={styles.waitingText}>
+                Lalamove will confirm completion automatically. Do not hand the order to anyone
+                except the assigned rider.
+              </Text>
+            ) : null}
+          </View>
+        ) : null}
+
+        <TouchableOpacity style={styles.proofCard} onPress={uploadProof} disabled={uploadingProof}>
           {order.proof_of_prep_url ? (
             <Image source={{ uri: order.proof_of_prep_url }} style={styles.proofThumb} />
           ) : null}
           <Text style={styles.proofText}>
-            {order.proof_of_prep_url ? 'Replace proof of preparation' : 'Upload proof of preparation'}
+            {order.proof_of_prep_url
+              ? 'Replace proof of preparation'
+              : 'Upload proof of preparation'}
           </Text>
           <View style={styles.proofIcon}>
             {uploadingProof ? (
@@ -247,9 +324,7 @@ export default function CookOrderDetail() {
             {order.quantity} <Text style={styles.itemQtyX}>x</Text>
           </Text>
           <Text style={styles.itemTitle}>{order.listings?.title ?? 'Dish'}</Text>
-          <Text style={styles.itemPrice}>
-            {(listingPrice * order.quantity).toFixed(2)}
-          </Text>
+          <Text style={styles.itemPrice}>{(listingPrice * order.quantity).toFixed(2)}</Text>
         </View>
         {optionGroups.map(group => (
           <View key={group.groupName} style={styles.optionGroup}>
@@ -296,7 +371,7 @@ export default function CookOrderDetail() {
           </TouchableOpacity>
         </View>
 
-        {isActive ? (
+        {canCancel ? (
           <TouchableOpacity style={styles.cancelButton} onPress={confirmCancel} disabled={updating}>
             <Ionicons name="close" size={20} color="#C62828" />
             <Text style={styles.cancelButtonText}>Cancel order</Text>
@@ -358,6 +433,34 @@ const styles = StyleSheet.create({
     paddingVertical: 18,
     marginBottom: 16,
   },
+  deliveryCard: {
+    borderWidth: 1,
+    borderColor: '#CFE1D3',
+    backgroundColor: '#F4FAF5',
+    borderRadius: 16,
+    padding: 15,
+    marginBottom: 16,
+  },
+  deliveryHeading: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
+  deliveryTitle: { fontSize: 16, fontWeight: '800', color: '#214D2B' },
+  deliveryRecipient: { fontSize: 14, fontWeight: '700', color: '#252A26', marginBottom: 4 },
+  deliveryAddress: { fontSize: 14, color: '#424A44', lineHeight: 20 },
+  deliveryInstructions: { fontSize: 13, color: '#6A4A18', marginTop: 8, lineHeight: 18 },
+  deliveryStatusRow: {
+    marginTop: 12,
+    paddingTop: 10,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: '#BFD4C4',
+  },
+  deliveryStatus: {
+    textTransform: 'capitalize',
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#216E39',
+  },
+  driverText: { fontSize: 12, color: '#5A655D', marginTop: 3 },
+  trackingLink: { color: '#1769AA', fontWeight: '800', marginTop: 10 },
+  waitingText: { fontSize: 12, lineHeight: 17, color: '#5A655D', marginTop: 10 },
   proofThumb: { width: 44, height: 44, borderRadius: 10, backgroundColor: '#F0F0F0' },
   proofText: { flex: 1, fontSize: 17, fontWeight: '700', color: '#1A1A1A' },
   proofIcon: {

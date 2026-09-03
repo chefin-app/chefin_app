@@ -1,5 +1,5 @@
 // this is the bottom tab bar component
-import React from 'react';
+import React, { useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import theme from '../../styles/theme';
@@ -9,6 +9,7 @@ interface BottomTabBarUserProps {
   state: any; // Contains info about the current navigation state (active route home)
   descriptors: any; // Contains options for each screen (like the 'title' option we set)
   navigation: any; // The navigation object to perform navigate actions
+  onSearchDoubleTap?: () => void;
 }
 
 // Image imports — only active images now
@@ -19,7 +20,14 @@ const icons: Record<string, string> = {
 };
 
 // its taking 3 props
-const BottomTabBarUser: React.FC<BottomTabBarUserProps> = ({ state, descriptors, navigation }) => {
+const BottomTabBarUser: React.FC<BottomTabBarUserProps> = ({
+  state,
+  descriptors,
+  navigation,
+  onSearchDoubleTap,
+}) => {
+  const lastSearchPressRef = useRef(0);
+
   return (
     // we are creating the horizontal tab bar at the bottom
     <View style={styles.container}>
@@ -44,6 +52,11 @@ const BottomTabBarUser: React.FC<BottomTabBarUserProps> = ({ state, descriptors,
 
         // when we press on the tab
         const onPress = () => {
+          const now = Date.now();
+          const isSearchDoubleTap =
+            route.name === 'search' && now - lastSearchPressRef.current <= 450;
+          lastSearchPressRef.current = route.name === 'search' ? now : 0;
+
           const event = navigation.emit({
             type: 'tabPress',
             target: route.key, // identifying the choesen tab
@@ -53,6 +66,10 @@ const BottomTabBarUser: React.FC<BottomTabBarUserProps> = ({ state, descriptors,
           if (!isFocused && !event.defaultPrevented) {
             // we navigate to that tab
             navigation.navigate({ name: route.name, merge: true });
+          }
+
+          if (isSearchDoubleTap && !event.defaultPrevented) {
+            onSearchDoubleTap?.();
           }
         };
 

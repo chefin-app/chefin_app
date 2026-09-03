@@ -581,12 +581,8 @@ export default function CookManagementScreen() {
   for (const document of details?.complianceDocuments ?? []) {
     if (!latestCompliance.has(document.doc_type)) latestCompliance.set(document.doc_type, document);
   }
-  const allComplianceApproved = REQUIRED_DOCS.every(
-    type => latestCompliance.get(type)?.status === 'approved'
-  );
   const latestIdentity = details?.identityDocuments[0];
-  const canFinalApprove =
-    details?.application?.identity_status === 'approved' && allComplianceApproved;
+  const canFinalApprove = details?.application?.identity_status === 'approved';
   const complianceReviewLocked =
     details?.application?.identity_status !== 'approved' || details?.cook.userId === admin?.userId;
 
@@ -989,7 +985,7 @@ export default function CookManagementScreen() {
               <Text style={styles.meta}>No identity document submitted.</Text>
             )}
 
-            <Text style={styles.sectionTitle}>STEP 2 · FOOD & BUSINESS COMPLIANCE</Text>
+            <Text style={styles.sectionTitle}>OPTIONAL FOOD & BUSINESS CREDENTIALS</Text>
             <View style={{ gap: 10 }}>
               {REQUIRED_DOCS.map(type => {
                 const document = latestCompliance.get(type);
@@ -1052,7 +1048,8 @@ export default function CookManagementScreen() {
               <View style={{ flex: 1 }}>
                 <Text style={styles.finalTitle}>Final platform approval</Text>
                 <Text style={styles.meta}>
-                  Enabled only after identity and all three compliance documents are approved.
+                  Enabled after identity approval. Food and business documents are optional and only
+                  control public credential badges.
                 </Text>
               </View>
               <Button

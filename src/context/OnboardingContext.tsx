@@ -26,7 +26,7 @@ export interface OnboardingVerificationDoc {
 }
 
 /** Food-safety details collected during onboarding. Documents are optional —
- *  submitting either earns the Tier 1 "Verified" badge once admin-approved. */
+ *  any approved credential earns the Tier 1 "Verified" badge. */
 export interface OnboardingFoodSafety {
   hostingType: 'private' | 'business' | null;
   documents: OnboardingVerificationDoc[];

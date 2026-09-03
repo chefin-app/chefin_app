@@ -94,12 +94,17 @@ const formatMatchLabel = (match: ListingScheduleMatch): string => {
 export default function RestaurantScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { id, dish } = useLocalSearchParams<{ id?: string | string[]; dish?: string | string[] }>();
+  const { id, dish, openSchedule } = useLocalSearchParams<{
+    id?: string | string[];
+    dish?: string | string[];
+    openSchedule?: string | string[];
+  }>();
   const restaurantId = Array.isArray(id) ? id[0] : id;
   const highlightDishId = Array.isArray(dish) ? dish[0] : dish;
+  const shouldOpenSchedule = (Array.isArray(openSchedule) ? openSchedule[0] : openSchedule) === '1';
   const { session } = useAuth();
   const { toggleFavourite, isFavourite } = useFavourites();
-  const { addToCart, cartItems, clearCookCart } = useCart();
+  const { addToCart, cartItems, clearCookCart, rescheduleCookCart } = useCart();
 
   const [data, setData] = useState<RestaurantData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -123,6 +128,12 @@ export default function RestaurantScreen() {
     if (target) setSelectedDish(target);
     router.setParams({ dish: undefined });
   }, [highlightDishId, data, router]);
+
+  useEffect(() => {
+    if (!shouldOpenSchedule || !data) return;
+    setScheduleVisible(true);
+    router.setParams({ openSchedule: undefined });
+  }, [data, router, shouldOpenSchedule]);
 
   useEffect(() => {
     if (!restaurantId) return;
@@ -270,16 +281,50 @@ export default function RestaurantScreen() {
       return;
     }
 
+    const matches = cookCartItems.map(item => ({
+      item,
+      match: getDishMatch(item.listingId, selection),
+    }));
+    const targetStart = nextStart;
+    const unavailable = matches.find(
+      ({ item, match }) =>
+        !match.available ||
+        !match.startTime ||
+        !match.endTime ||
+        !match.serviceDate ||
+        !targetStart ||
+        match.startTime !== targetStart ||
+        match.remainingSlots < item.quantity
+    );
+    if (unavailable) {
+      Alert.alert(
+        'Choose a different time',
+        `${unavailable.item.title} is not available in enough quantity at that time. Your current basket has been kept.`,
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
     Alert.alert(
-      'Change order time?',
-      'Changing the time removes this restaurant’s existing cart items so every dish stays on one schedule.',
+      'Update this basket’s time?',
+      'Every dish in this restaurant basket will move to the new time.',
       [
         { text: 'Keep current time', style: 'cancel' },
         {
-          text: 'Change time',
-          style: 'destructive',
+          text: 'Update time',
           onPress: () => {
-            clearCookCart(profile.id);
+            const firstMatch = matches[0]?.match;
+            if (targetStart && firstMatch?.serviceDate && firstMatch.endTime) {
+              rescheduleCookCart(profile.id, {
+                selectedDate: new Date(targetStart),
+                serviceDate: firstMatch.serviceDate,
+                pickupSlotStart: targetStart,
+                pickupSlotEnd: firstMatch.endTime,
+                maxQuantityByListing: Object.fromEntries(
+                  matches.map(({ item, match }) => [item.listingId, match.remainingSlots])
+                ),
+              });
+            }
             apply();
           },
         },
@@ -287,38 +332,39 @@ export default function RestaurantScreen() {
     );
   };
 
-  const addSelectedDish = ({ quantity, note, selectedOptions, unitPrice }: DishOrderAddPayload) => {
-    if (
-      !selectedDish ||
-      !selectedDishMatch?.available ||
-      !selectedDishMatch.startTime ||
-      !selectedDishMatch.serviceDate
-    ) {
+  const addDishToCart = (
+    targetDish: RestaurantDish,
+    match: ListingScheduleMatch,
+    { quantity, note, selectedOptions, unitPrice }: DishOrderAddPayload,
+    afterCommit?: () => void
+  ) => {
+    if (!match.available || !match.startTime || !match.endTime || !match.serviceDate) {
       return;
     }
 
     const commit = () => {
       addToCart({
-        listingId: selectedDish.id,
-        cookId: selectedDish.cook_id,
-        title: selectedDish.title,
+        listingId: targetDish.id,
+        cookId: targetDish.cook_id,
+        title: targetDish.title,
         price: unitPrice,
-        basePrice: selectedDish.price,
+        basePrice: targetDish.price,
         selectedOptions,
-        imageUrl: selectedDish.image_url ?? undefined,
-        cookName: profile.full_name,
+        imageUrl: targetDish.image_url ?? undefined,
+        cookName: restaurantDisplayName,
         quantity,
-        selectedDate: new Date(selectedDishMatch.startTime!),
-        serviceDate: selectedDishMatch.serviceDate,
-        pickupSlotStart: selectedDishMatch.startTime,
-        maxQuantity: selectedDishMatch.remainingSlots,
+        selectedDate: new Date(match.startTime!),
+        serviceDate: match.serviceDate,
+        pickupSlotStart: match.startTime,
+        pickupSlotEnd: match.endTime,
+        maxQuantity: match.remainingSlots,
         customerNote: note || undefined,
       });
-      setSelectedDish(null);
+      afterCommit?.();
     };
 
     const hasConflict = cookCartItems.some(
-      item => item.pickupSlotStart && item.pickupSlotStart !== selectedDishMatch.startTime
+      item => item.pickupSlotStart && item.pickupSlotStart !== match.startTime
     );
     if (!hasConflict) {
       commit();
@@ -340,6 +386,25 @@ export default function RestaurantScreen() {
         },
       ]
     );
+  };
+
+  const addSelectedDish = (payload: DishOrderAddPayload) => {
+    if (!selectedDish || !selectedDishMatch) return;
+    addDishToCart(selectedDish, selectedDishMatch, payload, () => setSelectedDish(null));
+  };
+
+  const handleDishAddPress = (dish: RestaurantDish, match: ListingScheduleMatch) => {
+    if ((dish.option_groups?.length ?? 0) > 0) {
+      setSelectedDish(dish);
+      return;
+    }
+
+    addDishToCart(dish, match, {
+      quantity: 1,
+      note: '',
+      selectedOptions: [],
+      unitPrice: dish.price,
+    });
   };
 
   const availabilityLabelFor = (dish: RestaurantDish): string => {
@@ -532,6 +597,7 @@ export default function RestaurantScreen() {
               <Text style={styles.promoTitle}>Free-delivery offer</Text>
               <Text style={styles.promoText}>
                 Spend RM {Number(profile.free_delivery_threshold).toFixed(2)} or more with this cook
+                and they will cover your delivery fee
               </Text>
             </View>
             <Ionicons name="sparkles-outline" size={20} color="#4F8E61" />
@@ -570,7 +636,9 @@ export default function RestaurantScreen() {
                     isAvailable={match.available}
                     availabilityLabel={availabilityLabelFor(dish)}
                     cartQuantity={cartQuantity}
+                    hasOptionGroups={(dish.option_groups?.length ?? 0) > 0}
                     onPress={() => setSelectedDish(dish)}
+                    onAddPress={() => handleDishAddPress(dish, match)}
                   />
                 );
               })}
@@ -587,7 +655,7 @@ export default function RestaurantScreen() {
         )}
       </ScrollView>
 
-      <StickyCartBar />
+      <StickyCartBar cookId={profile.id} />
 
       <RestaurantScheduleSheet
         visible={scheduleVisible}
@@ -662,7 +730,7 @@ const styles = StyleSheet.create({
   unavailableButtonText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
   hero: { height: 200, backgroundColor: '#DCE4DE' },
   heroImage: { width: '100%', height: '100%', resizeMode: 'cover' },
-  heroShade: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(13, 20, 16, 0.25)' },
+  heroShade: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(13, 20, 16, 0.25)' },
   heroShadeUnavailable: { backgroundColor: 'rgba(22, 28, 24, 0.5)' },
   heroCircleButton: {
     width: 46,

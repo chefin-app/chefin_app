@@ -2,7 +2,7 @@ import { Tabs, usePathname, useRouter } from 'expo-router';
 import { useAuth } from '@/src/services/auth-context';
 import TopNavBarHomeCook from '../../../src/components/navigation/TopNavBarHomeCook';
 import BottomTabBarCook from '../../../src/components/navigation/BottomTabBarCook';
-import { Text, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Alert, Text, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AccountRestrictionBanner from '@/src/components/feedback/AccountRestrictionBanner';
@@ -101,7 +101,22 @@ export default function CookTabsLayout() {
           options={{ title: 'Orders' }}
           listeners={{
             tabPress: event => {
-              if (application.restrictedToDrafts) event.preventDefault();
+              if (!application.restrictedToDrafts) return;
+              event.preventDefault();
+              Alert.alert(
+                'Orders unlock after approval',
+                'Your cook application is still being reviewed. You can build your menu now; customers and new orders will unlock once your application is approved.',
+                [
+                  {
+                    text: 'Keep building menu',
+                    onPress: () => router.navigate('/(cook)/(tabs)/menu'),
+                  },
+                  {
+                    text: 'Review application',
+                    onPress: () => router.push('/(cook)/identity-verification'),
+                  },
+                ]
+              );
             },
           }}
         />

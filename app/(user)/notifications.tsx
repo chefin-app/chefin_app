@@ -22,6 +22,10 @@ export default function BuyerNotificationsScreen() {
       router.push(`/review/${item.data.order_id}`);
       return;
     }
+    if (item.type === 'delivery_update_customer' && typeof item.data?.order_id === 'string') {
+      router.push(`/order-status/${item.data.order_id}`);
+      return;
+    }
     if (item.type === 'favourite_new_dish' && typeof item.data?.cook_profile_id === 'string') {
       router.push(`/restaurant/${item.data.cook_profile_id}`);
       return;

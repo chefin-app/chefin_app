@@ -7,6 +7,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
@@ -14,8 +15,9 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { supabase } from '@/src/utils/supabaseClient';
 import {
-  formatEta,
-  formatScheduledSlot,
+  formatPickupEta,
+  formatArrivalWindow,
+  formatScheduledWindow,
   ORDER_STATUS_LABEL,
   shortOrderCode,
   type FulfillmentType,
@@ -27,6 +29,7 @@ interface OrderStatusRow {
   quantity: number;
   total_price: number;
   pickup_time: string | null;
+  pickup_window_end: string | null;
   customer_note: string | null;
   selected_options: Array<{
     groupName: string;
@@ -45,6 +48,18 @@ interface OrderStatusRow {
     profiles: { restaurant_name: string | null; full_name: string } | null;
   } | null;
   reviews: { id: string } | null;
+  delivery_jobs: {
+    status: string;
+    provider_status: string | null;
+    driver_name: string | null;
+    driver_phone: string | null;
+    driver_plate_number: string | null;
+    share_link: string | null;
+    proof_of_delivery_url: string | null;
+    preparation_ready_at: string | null;
+    estimated_arrival_start: string | null;
+    estimated_arrival_end: string | null;
+  } | null;
 }
 
 const POLL_INTERVAL_MS = 15_000;
@@ -81,7 +96,7 @@ export default function OrderStatusScreen() {
       const { data, error } = await supabase
         .from('orders')
         .select(
-          'id, quantity, total_price, pickup_time, customer_note, selected_options, fulfillment_type, status, cancelled_by, cancellation_reason, proof_of_prep_url, created_at, listings(title, image_url, cook_id, profiles(restaurant_name, full_name)), reviews(id)'
+          'id, quantity, total_price, pickup_time, pickup_window_end, customer_note, selected_options, fulfillment_type, status, cancelled_by, cancellation_reason, proof_of_prep_url, created_at, listings(title, image_url, cook_id, profiles(restaurant_name, full_name)), reviews(id), delivery_jobs(status, provider_status, driver_name, driver_phone, driver_plate_number, share_link, proof_of_delivery_url, preparation_ready_at, estimated_arrival_start, estimated_arrival_end)'
         )
         .eq('id', orderId)
         .single();
@@ -183,11 +198,33 @@ export default function OrderStatusScreen() {
                     ? isPickup
                       ? 'Order collected'
                       : 'Order delivered'
-                    : formatEta(order.fulfillment_type, order.pickup_time)}
+                    : isPickup
+                      ? formatPickupEta(order.pickup_time)
+                      : formatArrivalWindow(
+                            order.delivery_jobs?.estimated_arrival_start ?? null,
+                            order.delivery_jobs?.estimated_arrival_end ?? null
+                          )
+                        ? `Estimated arrival ${formatArrivalWindow(
+                            order.delivery_jobs?.estimated_arrival_start ?? null,
+                            order.delivery_jobs?.estimated_arrival_end ?? null
+                          )}`
+                        : 'Delivery time being confirmed'}
                 </Text>
-                {!isCompleted && formatScheduledSlot(order.pickup_time) ? (
+                {!isCompleted &&
+                isPickup &&
+                formatScheduledWindow(order.pickup_time, order.pickup_window_end) ? (
                   <Text style={styles.heroSubtitle}>
-                    Scheduled for {formatScheduledSlot(order.pickup_time)}
+                    Pickup window{' '}
+                    {formatScheduledWindow(order.pickup_time, order.pickup_window_end)}
+                  </Text>
+                ) : !isCompleted && !isPickup && order.delivery_jobs?.preparation_ready_at ? (
+                  <Text style={styles.heroSubtitle}>
+                    Food expected ready by{' '}
+                    {new Date(order.delivery_jobs.preparation_ready_at).toLocaleTimeString([], {
+                      hour: 'numeric',
+                      minute: '2-digit',
+                      hour12: true,
+                    })}
                   </Text>
                 ) : null}
               </View>
@@ -227,7 +264,11 @@ export default function OrderStatusScreen() {
                         {stepLabel(step.status)}
                       </Text>
                       {isCurrent ? (
-                        <Text style={styles.stepDescription}>{STEP_DESCRIPTION[step.status]}</Text>
+                        <Text style={styles.stepDescription}>
+                          {!isPickup && step.status === 'ready'
+                            ? 'Your food is ready and Lalamove is handling the delivery.'
+                            : STEP_DESCRIPTION[step.status]}
+                        </Text>
                       ) : null}
                     </View>
                   </View>
@@ -235,6 +276,42 @@ export default function OrderStatusScreen() {
               })}
             </View>
           )}
+
+          {!isPickup && order.delivery_jobs && !isCancelled ? (
+            <View style={styles.deliveryCard}>
+              <View style={styles.deliveryHeader}>
+                <Ionicons name="bicycle-outline" size={22} color="#1769AA" />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.deliveryTitle}>Lalamove delivery</Text>
+                  <Text style={styles.deliveryStatus}>
+                    {order.delivery_jobs.status.replace(/_/g, ' ')}
+                  </Text>
+                </View>
+              </View>
+              {order.delivery_jobs.driver_name ? (
+                <Text style={styles.driverDetails}>
+                  Rider: {order.delivery_jobs.driver_name}
+                  {order.delivery_jobs.driver_plate_number
+                    ? ` · ${order.delivery_jobs.driver_plate_number}`
+                    : ''}
+                  {order.delivery_jobs.driver_phone ? ` · ${order.delivery_jobs.driver_phone}` : ''}
+                </Text>
+              ) : (
+                <Text style={styles.driverDetails}>
+                  Rider details will appear once Lalamove assigns someone.
+                </Text>
+              )}
+              {order.delivery_jobs.share_link ? (
+                <TouchableOpacity
+                  style={styles.trackButton}
+                  onPress={() => Linking.openURL(order.delivery_jobs!.share_link!)}
+                >
+                  <Text style={styles.trackButtonText}>Track delivery live</Text>
+                  <Ionicons name="open-outline" size={16} color="#1769AA" />
+                </TouchableOpacity>
+              ) : null}
+            </View>
+          ) : null}
 
           {/* Proof of preparation */}
           {order.proof_of_prep_url && !isCancelled ? (
@@ -341,6 +418,29 @@ const styles = StyleSheet.create({
   heroCancelledBody: { fontSize: 13, color: '#8C4A45', marginTop: 3, lineHeight: 18 },
 
   timeline: { marginBottom: 28 },
+  deliveryCard: {
+    borderWidth: 1,
+    borderColor: '#C9DDF2',
+    backgroundColor: '#F2F7FC',
+    borderRadius: 16,
+    padding: 15,
+    marginBottom: 24,
+  },
+  deliveryHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  deliveryTitle: { fontSize: 16, fontWeight: '800', color: '#164B78' },
+  deliveryStatus: { fontSize: 13, color: '#426580', textTransform: 'capitalize', marginTop: 2 },
+  driverDetails: { fontSize: 13, lineHeight: 19, color: '#475C6D', marginTop: 10 },
+  trackButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 7,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: '#BDD3E7',
+    paddingTop: 12,
+    marginTop: 12,
+  },
+  trackButtonText: { color: '#1769AA', fontWeight: '800' },
   stepRow: { flexDirection: 'row', gap: 14 },
   stepRail: { alignItems: 'center', width: 32 },
   stepDot: {

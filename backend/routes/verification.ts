@@ -120,8 +120,8 @@ router.get('/document/:documentId/file', requireAdmin, async (req: AdminRequest,
 
 // POST /review - Approve or reject a submitted document.
 // Body: { document_id, decision: 'approved' | 'rejected', reviewer_note? }
-// Document decisions feed the application-level compliance stage. The public
-// Verified badge is granted only by final cook approval, never by one file.
+// Document decisions feed an optional credential stage. At least one approved
+// credential earns the public badge; cook selling approval is independent.
 router.post('/review', requireAdmin, async (req: AdminRequest, res) => {
   const { document_id, decision, reviewer_note } = req.body as {
     document_id?: string;
@@ -209,16 +209,15 @@ router.post('/review', requireAdmin, async (req: AdminRequest, res) => {
       for (const item of latestDocuments ?? []) {
         if (!latestByType.has(item.doc_type)) latestByType.set(item.doc_type, item.status);
       }
-      const allApproved = REQUIRED_COMPLIANCE_DOC_TYPES.every(
-        type => latestByType.get(type) === 'approved'
-      );
-      complianceStatus = allApproved
-        ? 'approved'
-        : decision === 'more_info_requested'
-          ? 'more_info_requested'
-          : decision === 'rejected'
-            ? 'rejected'
-            : 'pending';
+      const statuses = [...latestByType.values()];
+      const anyApproved = statuses.includes('approved');
+      complianceStatus = statuses.includes('more_info_requested')
+        ? 'more_info_requested'
+        : statuses.includes('pending')
+          ? 'pending'
+          : anyApproved
+            ? 'approved'
+            : 'rejected';
       const { error: applicationUpdateError } = await supabase
         .from('cook_applications')
         .update({
@@ -233,6 +232,16 @@ router.post('/review', requireAdmin, async (req: AdminRequest, res) => {
         })
         .eq('user_id', doc.user_id);
       if (applicationUpdateError) throw applicationUpdateError;
+
+      const { error: profileUpdateError } = await supabase
+        .from('profiles')
+        .update({
+          is_verified: anyApproved,
+          verification_tier: anyApproved ? 1 : 0,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('user_id', doc.user_id);
+      if (profileUpdateError) throw profileUpdateError;
     }
 
     // Tell the cook the outcome (best-effort — the review already landed).
