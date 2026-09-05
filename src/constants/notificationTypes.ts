@@ -16,6 +16,8 @@ export type NotificationType =
   | 'verification_more_info'
   | 'dish_approved'
   | 'dish_rejected'
+  | 'dish_unpublished'
+  | 'dish_review_reopened'
   | 'favourite_new_dish'
   | 'favourite_new_slots'
   | 'review_request'
@@ -51,6 +53,8 @@ export const NOTIFICATION_TYPE_META: Record<NotificationType, NotificationTypeMe
   },
   dish_approved: { icon: 'checkmark-done-outline', color: '#2E7D32', background: '#E8F5E9' },
   dish_rejected: { icon: 'alert-circle-outline', color: '#C62828', background: '#FFEBEE' },
+  dish_unpublished: { icon: 'eye-off-outline', color: '#C62828', background: '#FFEBEE' },
+  dish_review_reopened: { icon: 'refresh-outline', color: '#9A6700', background: '#FFF3E0' },
   favourite_new_dish: { icon: 'heart-outline', color: '#E91E63', background: '#FCE4EC' },
   favourite_new_slots: { icon: 'time-outline', color: '#E91E63', background: '#FCE4EC' },
   review_request: { icon: 'star-outline', color: '#B26A00', background: '#FFF3E0' },

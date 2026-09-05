@@ -57,6 +57,7 @@ interface RestaurantDish
   created_at?: string;
   image_url?: string | null;
   location?: string | null;
+  ingredients?: string[] | null;
   reviews?: RatedReview[];
   option_groups?: MenuOptionGroup[];
   availability?: RestaurantAvailabilityPayload;
@@ -747,6 +748,7 @@ export default function RestaurantScreen() {
                 title: selectedDish.title,
                 price: selectedDish.price,
                 description: selectedDish.description,
+                ingredients: selectedDish.ingredients,
                 imageUrl: selectedDish.image_url,
                 optionGroups: selectedDish.option_groups ?? [],
               }

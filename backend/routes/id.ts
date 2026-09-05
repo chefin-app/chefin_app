@@ -231,6 +231,7 @@ router.get('/:id', async (req, res) => {
     cook_id,
     title,
     description,
+    ingredients,
     price,
     image_url,
     cuisine,

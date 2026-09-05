@@ -30,6 +30,7 @@ export interface DishOrderItem {
   title: string;
   price: number;
   description?: string | null;
+  ingredients?: string[] | null;
   imageUrl?: string | null;
   optionGroups?: MenuOptionGroup[];
 }
@@ -80,6 +81,13 @@ export default function DishOrderModal({
   }, [safeMaximum]);
 
   const optionGroups = useMemo(() => dish?.optionGroups ?? [], [dish?.optionGroups]);
+  const ingredients = useMemo(
+    () =>
+      (dish?.ingredients ?? [])
+        .map(ingredient => ingredient.trim())
+        .filter(ingredient => ingredient.length > 0),
+    [dish?.ingredients]
+  );
   const selectedOptions = useMemo(
     () => getSelectedOptions(optionGroups, selectedOptionIds),
     [optionGroups, selectedOptionIds]
@@ -157,6 +165,25 @@ export default function DishOrderModal({
                 <Text style={styles.price}>RM {dish.price.toFixed(2)}</Text>
               </View>
               {dish.description ? <Text style={styles.description}>{dish.description}</Text> : null}
+
+              {ingredients.length > 0 ? (
+                <View style={styles.ingredientsSection}>
+                  <Text style={styles.ingredientsTitle}>Ingredients</Text>
+                  <View style={styles.ingredientsList}>
+                    {ingredients.map((ingredient, index) => (
+                      <View
+                        key={`${ingredient}-${index}`}
+                        style={styles.ingredientRow}
+                        accessible
+                        accessibilityLabel={ingredient}
+                      >
+                        <View style={styles.ingredientBullet} />
+                        <Text style={styles.ingredientText}>{ingredient}</Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              ) : null}
 
               <View
                 style={styles.scheduleSummary}
@@ -340,6 +367,30 @@ const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 23,
     color: '#69726C',
+  },
+  ingredientsSection: { marginTop: 20 },
+  ingredientsTitle: {
+    marginBottom: 10,
+    fontFamily: 'mon-sb',
+    fontSize: 15,
+    color: '#303A34',
+  },
+  ingredientsList: { gap: 7 },
+  ingredientRow: { flexDirection: 'row', alignItems: 'flex-start' },
+  ingredientBullet: {
+    width: 5,
+    height: 5,
+    marginTop: 8,
+    marginRight: 10,
+    borderRadius: 3,
+    backgroundColor: '#35A853',
+  },
+  ingredientText: {
+    flex: 1,
+    fontFamily: 'mon',
+    fontSize: 14,
+    lineHeight: 21,
+    color: '#5E6962',
   },
   scheduleSummary: {
     flexDirection: 'row',

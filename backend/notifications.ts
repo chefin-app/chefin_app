@@ -22,6 +22,8 @@ export type NotificationType =
   | 'verification_more_info' // cook: admin needs another document/detail
   | 'dish_approved' // cook: admin approved a dish, it's now live
   | 'dish_rejected' // cook: admin rejected a dish
+  | 'dish_unpublished' // cook: admin removed an approved dish from discovery
+  | 'dish_review_reopened' // cook: admin restored a rejected dish to review
   | 'favourite_new_dish' // buyer: a favourited cook has a new dish live
   | 'favourite_new_slots' // buyer: a favourited cook opened new pickup times
   | 'review_request' // buyer: order completed — rate the dish
@@ -46,6 +48,8 @@ const ROLE_BY_TYPE: Record<NotificationType, 'customer' | 'cook'> = {
   verification_more_info: 'cook',
   dish_approved: 'cook',
   dish_rejected: 'cook',
+  dish_unpublished: 'cook',
+  dish_review_reopened: 'cook',
   favourite_new_dish: 'customer',
   favourite_new_slots: 'customer',
   review_request: 'customer',
@@ -299,19 +303,49 @@ export function notifyCookDishReviewed(
   cookUserId: string,
   dishTitle: string,
   approved: boolean,
-  note?: string | null
+  note?: string | null,
+  listingId?: string
 ) {
   if (approved) {
     return createNotification(cookUserId, {
       type: 'dish_approved',
       title: 'Your dish is live',
       body: `${dishTitle} was approved and is now visible to customers.`,
+      data: listingId ? { listing_id: listingId, route: '/(cook)/(tabs)/menu' } : undefined,
     });
   }
   return createNotification(cookUserId, {
     type: 'dish_rejected',
     title: 'Dish not approved',
-    body: `${dishTitle} couldn't be approved${note ? `: ${note}` : '.'} Update the listing and it will be reviewed again.`,
+    body: `${dishTitle} couldn't be approved due to${note ? `: ${note}` : '.'}. Update the listing and it will be reviewed again.`,
+    data: listingId ? { listing_id: listingId, route: '/(cook)/edit-dish' } : undefined,
+  });
+}
+
+export function notifyCookDishUnpublished(cookUserId: string, dishTitle: string, reason: string) {
+  return createNotification(cookUserId, {
+    type: 'dish_unpublished',
+    title: 'Dish unpublished',
+    body: `${dishTitle} was removed from customer discovery by an administrator: ${reason}`,
+    data: { route: '/(cook)/(tabs)/menu' },
+  });
+}
+
+export function notifyCookDishRepublished(cookUserId: string, dishTitle: string) {
+  return createNotification(cookUserId, {
+    type: 'dish_approved',
+    title: 'Dish republished',
+    body: `${dishTitle} is visible to customers again.`,
+    data: { route: '/(cook)/(tabs)/menu' },
+  });
+}
+
+export function notifyCookDishReviewReopened(cookUserId: string, dishTitle: string) {
+  return createNotification(cookUserId, {
+    type: 'dish_review_reopened',
+    title: 'Dish review reopened',
+    body: `${dishTitle} was restored to pending review. It will remain unpublished until approved.`,
+    data: { route: '/(cook)/(tabs)/menu' },
   });
 }
 

@@ -30,7 +30,19 @@ export default function CookNotificationsScreen() {
       }
       return;
     }
-    if (item.type === 'dish_approved' || item.type === 'dish_rejected') {
+    if (item.type === 'dish_rejected' && typeof item.data?.listing_id === 'string') {
+      router.push({
+        pathname: '/(cook)/edit-dish',
+        params: { id: item.data.listing_id },
+      });
+      return;
+    }
+    if (
+      item.type === 'dish_approved' ||
+      item.type === 'dish_rejected' ||
+      item.type === 'dish_unpublished' ||
+      item.type === 'dish_review_reopened'
+    ) {
       router.push('/(cook)/(tabs)/menu');
       return;
     }

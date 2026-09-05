@@ -38,7 +38,7 @@ const CUISINE_OPTIONS = [
   'Korean',
   'Western',
   'Thai',
-  'Mexican',
+  'Middle Eastern',
   'Others',
 ];
 

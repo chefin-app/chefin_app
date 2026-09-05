@@ -3,6 +3,7 @@ import type { User } from '@supabase/supabase-js';
 import type { AdminRequest } from '../middleware/requireAdmin';
 import { normalizeExpiredSuspension, restoreRestrictedListings } from '../accountAccess';
 import { writeAdminAudit } from '../adminAudit';
+import { getAdminDateBounds } from '../adminDateFilter';
 import { sendAdminEmail } from '../email';
 import { supabase } from '../supabaseClient';
 
@@ -166,6 +167,7 @@ router.get('/', async (req, res) => {
       .trim()
       .toLowerCase();
     const dateRange = String(req.query.dateRange ?? 'all');
+    const exactDateBounds = getAdminDateBounds(req.query.date);
     const page = Math.max(1, Number(req.query.page) || 1);
     const pageSize = Math.min(500, Math.max(10, Number(req.query.pageSize) || 25));
 
@@ -258,7 +260,12 @@ router.get('/', async (req, res) => {
 
     const cutoffDays =
       dateRange === 'today' ? 1 : dateRange === '7d' ? 7 : dateRange === '30d' ? 30 : 0;
-    if (cutoffDays > 0) {
+    if (exactDateBounds) {
+      rows = rows.filter(row => {
+        const joinedAt = new Date(row.joinedAt).getTime();
+        return joinedAt >= exactDateBounds.start && joinedAt < exactDateBounds.end;
+      });
+    } else if (cutoffDays > 0) {
       const cutoff = Date.now() - cutoffDays * 86400000;
       rows = rows.filter(row => new Date(row.joinedAt).getTime() >= cutoff);
     }

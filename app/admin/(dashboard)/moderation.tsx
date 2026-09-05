@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useLocalSearchParams } from 'expo-router';
 
 import { fetchModerationReports, updateModerationReport } from '@/src/admin/api';
 import type { ModerationReport } from '@/src/admin/types';
@@ -80,6 +81,7 @@ function SmallButton({
 }
 
 export default function ModerationScreen() {
+  const { reportId: linkedReportId } = useLocalSearchParams<{ reportId?: string }>();
   const { width } = useWindowDimensions();
   const { session } = useAuth();
   const tableMode = width >= 920;
@@ -95,6 +97,7 @@ export default function ModerationScreen() {
   const [resolutionNote, setResolutionNote] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const openedDeepLink = useRef<string | null>(null);
 
   useEffect(() => {
     const timeout = setTimeout(() => setSearch(searchInput.trim()), 350);
@@ -119,6 +122,14 @@ export default function ModerationScreen() {
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    if (!linkedReportId || openedDeepLink.current === linkedReportId) return;
+    const linkedReport = reports.find(report => report.id === linkedReportId);
+    if (!linkedReport) return;
+    openedDeepLink.current = linkedReportId;
+    setSelected(linkedReport);
+  }, [linkedReportId, reports]);
 
   const updateStatus = async (
     report: ModerationReport,

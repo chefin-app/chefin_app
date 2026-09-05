@@ -51,7 +51,7 @@ const CUISINE_OPTIONS = [
   'Korean',
   'Western',
   'Thai',
-  'Mexican',
+  'Middle Eastern',
   'Others',
 ];
 // Nominatim (OpenStreetMap) autocomplete — free, no API key, strict 1 req/s

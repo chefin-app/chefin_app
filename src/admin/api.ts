@@ -12,6 +12,12 @@ import type {
   CookManagementResponse,
   CookManagementSort,
   ManagedCookDetails,
+  DishManagementAction,
+  DishManagementDateRange,
+  DishManagementFilter,
+  DishManagementResponse,
+  DishManagementSort,
+  ManagedDishDetails,
 } from './types';
 
 export class AdminApiError extends Error {
@@ -77,6 +83,7 @@ export const fetchManagedUsers = (
     filter: UserManagementFilter;
     sort: UserManagementSort;
     dateRange: string;
+    exactDate?: string | null;
     page: number;
     pageSize: number;
   }
@@ -89,6 +96,7 @@ export const fetchManagedUsers = (
     page: String(options.page),
     pageSize: String(options.pageSize),
   });
+  if (options.exactDate) params.set('date', options.exactDate);
   return adminRequest(`/users?${params.toString()}`, accessToken);
 };
 
@@ -247,3 +255,44 @@ export const hideCookListings = (accessToken: string, userId: string) =>
   adminRequest<{ success: true }>(`/cooks/${userId}/hide-listings`, accessToken, {
     method: 'POST',
   });
+
+export const fetchManagedDishes = (
+  accessToken: string,
+  options: {
+    search: string;
+    filter: DishManagementFilter;
+    sort: DishManagementSort;
+    dateRange: DishManagementDateRange;
+    exactDate?: string | null;
+    page: number;
+    pageSize: number;
+  }
+): Promise<DishManagementResponse> => {
+  const params = new URLSearchParams({
+    search: options.search,
+    filter: options.filter,
+    sort: options.sort,
+    dateRange: options.dateRange,
+    page: String(options.page),
+    pageSize: String(options.pageSize),
+  });
+  if (options.exactDate) params.set('date', options.exactDate);
+  return adminRequest(`/dishes?${params.toString()}`, accessToken);
+};
+
+export const fetchManagedDishDetails = (
+  accessToken: string,
+  dishId: string
+): Promise<ManagedDishDetails> => adminRequest(`/dishes/${dishId}`, accessToken);
+
+export const runManagedDishAction = (
+  accessToken: string,
+  dishId: string,
+  action: DishManagementAction,
+  reason?: string
+) =>
+  adminRequest<{ success: true; listing: { id: string; status: string; is_active: boolean } }>(
+    `/dishes/${dishId}/action`,
+    accessToken,
+    { method: 'POST', body: { action, reason } }
+  );

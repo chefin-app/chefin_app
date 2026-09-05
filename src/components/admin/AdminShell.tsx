@@ -26,6 +26,7 @@ type NavItem = {
     | '/admin/overview'
     | '/admin/users'
     | '/admin/cooks'
+    | '/admin/dishes'
     | '/admin/moderation'
     | '/admin/orders';
 };
@@ -33,8 +34,13 @@ type NavItem = {
 const WORKSPACE_NAV_ITEMS: NavItem[] = [
   { key: 'overview', label: 'Overview', icon: 'grid-outline', route: '/admin/overview' },
   { key: 'users', label: 'User Management', icon: 'people-outline', route: '/admin/users' },
+  {
+    key: 'dishes',
+    label: 'Dish Management',
+    icon: 'fast-food-outline',
+    route: '/admin/dishes',
+  },
   { key: 'cooks', label: 'Cook Management', icon: 'restaurant-outline', route: '/admin/cooks' },
-  { key: 'dishes', label: 'Dish Management', icon: 'fast-food-outline' },
   {
     key: 'moderation',
     label: 'Moderation',
@@ -95,6 +101,12 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
     () => activity.filter(item => item.unread && !readIds.has(item.id)).length,
     [activity, readIds]
   );
+
+  const openNotification = (item: AdminActivityItem) => {
+    setReadIds(current => new Set(current).add(item.id));
+    setNotificationsOpen(false);
+    router.push({ pathname: item.deepLink.pathname, params: item.deepLink.params });
+  };
 
   const selectNav = (item: NavItem) => {
     setMobileMenuOpen(false);
@@ -235,7 +247,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
                 readIds={readIds}
                 loading={activityLoading}
                 width={Math.min(410, width - 24)}
-                onMarkRead={id => setReadIds(current => new Set(current).add(id))}
+                onPress={openNotification}
                 onMarkAllRead={() => setReadIds(new Set(activity.map(item => item.id)))}
               />
             </View>

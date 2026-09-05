@@ -1,3 +1,5 @@
+import type { MenuOptionGroup } from '@/src/types/menuOptions';
+
 export type AdminAccessStatus =
   | 'checking'
   | 'authenticated'
@@ -22,6 +24,11 @@ export interface AdminActivityItem {
   imageUrl?: string | null;
   createdAt: string;
   unread: boolean;
+  deepLink:
+    | { pathname: '/admin/moderation'; params: { reportId: string } }
+    | { pathname: '/admin/cooks'; params: { userId: string; documentId?: string } }
+    | { pathname: '/admin/orders'; params: { orderId: string } }
+    | { pathname: '/admin/users'; params: { userId: string } };
 }
 
 export interface AdminOverviewData {
@@ -279,4 +286,127 @@ export interface ManagedCookDetails {
     reviewed_at: string | null;
   }>;
   canReviewIdentity: boolean;
+}
+
+export type DishManagementStatus = 'active' | 'inactive' | 'pending' | 'rejected';
+export type DishManagementFilter = DishManagementStatus | 'all' | 'flagged';
+export type DishManagementSort =
+  | 'newest'
+  | 'oldest'
+  | 'title_asc'
+  | 'title_desc'
+  | 'price_asc'
+  | 'price_desc'
+  | 'orders_desc'
+  | 'rating_desc';
+export type DishManagementDateRange = 'all' | 'today' | '7d' | '30d' | '90d';
+export type DishManagementAction =
+  | 'approve'
+  | 'reject'
+  | 'unpublish'
+  | 'republish'
+  | 'clear_rejection';
+
+export interface ManagedDish {
+  id: string;
+  displayId: string;
+  cookId: string;
+  cookUserId: string;
+  title: string;
+  cookName: string;
+  restaurantName: string | null;
+  cuisine: string | null;
+  price: number;
+  imageUrl: string | null;
+  reviewStatus: string;
+  isActive: boolean;
+  status: DishManagementStatus;
+  createdAt: string;
+  totalOrders: number;
+  averageRating: number | null;
+  ratingCount: number;
+  openReportCount: number;
+}
+
+export interface DishManagementResponse {
+  stats: {
+    totalDishes: number;
+    activeDishes: number;
+    inactiveDishes: number;
+    pendingReview: number;
+    flaggedDishes: number;
+    averagePrice: number;
+  };
+  dishes: ManagedDish[];
+  pagination: { page: number; pageSize: number; total: number; totalPages: number };
+}
+
+export interface ManagedDishDetails {
+  dish: ManagedDish & {
+    description: string | null;
+    dietaryTags: string[];
+    ingredients: string[];
+    menuCategory: string;
+    cookAddress: string;
+    freeDeliveryThreshold: number | null;
+    portionsSold: number;
+  };
+  optionGroups: MenuOptionGroup[];
+  availability: {
+    settings: {
+      enabled: boolean;
+      scheduleMode: string;
+      maxOrdersPerWindow: number;
+      dailyStockLimit: number | null;
+    } | null;
+    openingHours: Array<{
+      id: string;
+      isoWeekday: number;
+      opensAt: string;
+      closesAt: string;
+      enabled: boolean;
+    }>;
+    sellingSchedule: {
+      id: string;
+      name: string;
+      specificDates: boolean;
+      startsOn: string | null;
+      endsOn: string | null;
+      windows: Array<{
+        id: string;
+        isoWeekday: number;
+        allDay: boolean;
+        opensAt: string | null;
+        closesAt: string | null;
+      }>;
+      listingIds: string[];
+    } | null;
+  };
+  reviews: Array<{
+    id: string;
+    rating: number;
+    comment: string | null;
+    createdAt: string | null;
+    customerName: string;
+    customerImageUrl: string | null;
+  }>;
+  reports: Array<{
+    id: string;
+    reporter_id: string;
+    target_label: string;
+    reason: string;
+    details: string | null;
+    status: string;
+    created_at: string;
+    reviewed_by: string | null;
+    resolved_at: string | null;
+    resolution_note: string | null;
+  }>;
+  reviewHistory: Array<{
+    id: string;
+    action: string;
+    details: Record<string, unknown>;
+    createdAt: string;
+    actorName: string;
+  }>;
 }

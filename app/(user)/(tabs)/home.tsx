@@ -1,4 +1,4 @@
-import React, { useCallback, useState, useEffect, useMemo } from 'react';
+import React, { useCallback, useState, useEffect, useMemo, useRef } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
 import {
   StyleSheet,
@@ -34,7 +34,7 @@ import { getListingsRatingSummary, getRatingSummary } from '@/src/utils/ratings'
 import { fetchCooks, fetchNearestCooks } from '@/src/utils/fetchCooks';
 import { useCustomerLocation } from '@/src/context/CustomerLocationContext';
 import { useAuth } from '@/src/services/auth-context';
-import { listingMatchesDietaryPreferences } from '@/src/utils/dietary';
+import { filterDiscoveryListings } from '@/src/utils/discoveryFilters';
 
 interface ListingWithProfile extends Listing {
   profiles: Profile;
@@ -62,6 +62,7 @@ export default function HomeScreen() {
   const [nearestChefins, setNearestChefins] = useState<ListingWithProfile[]>([]);
   const [nearestLoading, setNearestLoading] = useState(false);
   const [nearestError, setNearestError] = useState<string | null>(null);
+  const nearestRequestId = useRef(0);
   const [locationPromptVisible, setLocationPromptVisible] = useState(false);
   const [autoPromptedUserId, setAutoPromptedUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -89,11 +90,24 @@ export default function HomeScreen() {
   );
 
   const nearestRestaurants = useMemo(() => {
-    const matchingCookIds = new Set(filteredChefins.map(listing => listing.cook_id));
-    return uniqueByCook(
-      nearestChefins.filter(listing => matchingCookIds.has(listing.cook_id))
-    ).slice(0, 10);
-  }, [filteredChefins, nearestChefins]);
+    const filteredNearest = filterDiscoveryListings(nearestChefins, {
+      cuisine: selectedCuisine,
+      certified: Boolean(activeFilters.certified),
+      availableNow: Boolean(activeFilters.availableNow),
+      dietary: selectedDietary,
+      availabilitySummaries,
+      today,
+    });
+    return uniqueByCook(filteredNearest).slice(0, 10);
+  }, [
+    activeFilters.availableNow,
+    activeFilters.certified,
+    availabilitySummaries,
+    nearestChefins,
+    selectedCuisine,
+    selectedDietary,
+    today,
+  ]);
 
   const featuredAvailableToday = useMemo(
     () =>
@@ -129,35 +143,16 @@ export default function HomeScreen() {
   };
 
   useEffect(() => {
-    let result = [...popularChefins];
-
-    // 1. Cuisine Filter
-    if (selectedCuisine !== 'all') {
-      result = result.filter(
-        chefin => chefin.cuisine?.toLowerCase() === selectedCuisine.toLowerCase()
-      );
-    }
-
-    // 2. Certified Filter (Must be verified)
-    if (activeFilters.certified) {
-      result = result.filter(chefin => chefin.profiles?.is_verified);
-    }
-
-    // 3. Dietary declarations are dish-level. Filtering the dish rows before
-    // de-duplicating cooks means a restaurant appears if it has at least one
-    // customer-visible dish that satisfies every selected preference.
-    if (selectedDietary.length > 0) {
-      result = result.filter(chefin => listingMatchesDietaryPreferences(chefin, selectedDietary));
-    }
-
-    // 4. Available Now — earliest valid slot is today and still has capacity.
-    if (activeFilters.availableNow) {
-      result = result.filter(chefin =>
-        isSummaryAvailableNow(chefin.cook_id, availabilitySummaries, today)
-      );
-    }
-
-    setFilteredChefins(result);
+    setFilteredChefins(
+      filterDiscoveryListings(popularChefins, {
+        cuisine: selectedCuisine,
+        certified: Boolean(activeFilters.certified),
+        availableNow: Boolean(activeFilters.availableNow),
+        dietary: selectedDietary,
+        availabilitySummaries,
+        today,
+      })
+    );
   }, [
     popularChefins,
     selectedCuisine,
@@ -195,6 +190,7 @@ export default function HomeScreen() {
   );
 
   const fetchNearest = useCallback(async () => {
+    const requestId = ++nearestRequestId.current;
     if (!location) {
       setNearestChefins([]);
       setNearestError(null);
@@ -208,17 +204,20 @@ export default function HomeScreen() {
         latitude: location.latitude,
         longitude: location.longitude,
         limit: 20,
+        cuisine: selectedCuisine === 'all' ? undefined : selectedCuisine,
       })) as ListingWithProfile[];
-      setNearestChefins(nearby);
+      if (requestId === nearestRequestId.current) setNearestChefins(nearby);
     } catch (caught) {
-      setNearestChefins([]);
-      setNearestError(
-        caught instanceof Error ? caught.message : 'Nearby home restaurants are unavailable.'
-      );
+      if (requestId === nearestRequestId.current) {
+        setNearestChefins([]);
+        setNearestError(
+          caught instanceof Error ? caught.message : 'Nearby home restaurants are unavailable.'
+        );
+      }
     } finally {
-      setNearestLoading(false);
+      if (requestId === nearestRequestId.current) setNearestLoading(false);
     }
-  }, [location]);
+  }, [location, selectedCuisine]);
 
   useFocusEffect(
     useCallback(() => {

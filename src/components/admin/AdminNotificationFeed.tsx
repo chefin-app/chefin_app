@@ -43,7 +43,7 @@ interface AdminNotificationFeedProps {
   readIds: Set<string>;
   loading: boolean;
   width: number;
-  onMarkRead: (id: string) => void;
+  onPress: (item: AdminActivityItem) => void;
   onMarkAllRead: () => void;
 }
 
@@ -52,7 +52,7 @@ export default function AdminNotificationFeed({
   readIds,
   loading,
   width,
-  onMarkRead,
+  onPress,
   onMarkAllRead,
 }: AdminNotificationFeedProps) {
   const hasUnread = items.some(item => item.unread && !readIds.has(item.id));
@@ -104,8 +104,10 @@ export default function AdminNotificationFeed({
               <TouchableOpacity
                 key={item.id}
                 style={[styles.row, unread && { backgroundColor: meta.background }]}
-                onPress={() => onMarkRead(item.id)}
+                onPress={() => onPress(item)}
                 activeOpacity={0.75}
+                accessibilityRole="link"
+                accessibilityHint="Opens the related admin record"
               >
                 {item.imageUrl ? (
                   <Image source={{ uri: item.imageUrl }} style={styles.avatar} />
@@ -126,7 +128,10 @@ export default function AdminNotificationFeed({
                   </Text>
                   <Text style={styles.rowTime}>{timeAgo(item.createdAt)}</Text>
                 </View>
-                {unread && <View style={styles.unreadDot} />}
+                <View style={styles.rowTrailing}>
+                  {unread && <View style={styles.unreadDot} />}
+                  <Ionicons name="chevron-forward" size={16} color="#8E9891" />
+                </View>
               </TouchableOpacity>
             );
           })}
@@ -201,5 +206,6 @@ const styles = StyleSheet.create({
   rowTitleUnread: { fontFamily: 'mon-sb', color: '#1F2923' },
   rowText: { fontFamily: 'mon', fontSize: 10, color: '#707A73', marginTop: 2 },
   rowTime: { fontFamily: 'mon', fontSize: 10, color: '#9AA29D', marginTop: 5 },
+  rowTrailing: { minHeight: 40, alignItems: 'center', justifyContent: 'space-between' },
   unreadDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#3BA7F2', marginTop: 5 },
 });

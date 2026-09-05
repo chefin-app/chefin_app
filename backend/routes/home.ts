@@ -65,6 +65,10 @@ router.post('/nearest-chefin-listings', async (req, res) => {
 
   const requestedLimit = Number(body.limit ?? 20);
   const requestedRadius = Number(body.radiusKm ?? 25);
+  const requestedCuisine =
+    typeof body.cuisine === 'string' && body.cuisine.trim().toLowerCase() !== 'all'
+      ? body.cuisine.trim().toLowerCase()
+      : null;
   const limit = Number.isFinite(requestedLimit)
     ? Math.min(50, Math.max(1, Math.round(requestedLimit)))
     : 20;
@@ -125,7 +129,15 @@ router.post('/nearest-chefin-listings', async (req, res) => {
     });
     // A dish with no recurring schedule (or valid legacy slot) must not leak
     // back into discovery simply because its restaurant happens to be nearby.
-    const availableRows = await filterListingsWithFutureAvailability(accountEligibleRows);
+    const cuisineEligibleRows = requestedCuisine
+      ? accountEligibleRows.filter(
+          row =>
+            String(row.cuisine ?? '')
+              .trim()
+              .toLowerCase() === requestedCuisine
+        )
+      : accountEligibleRows;
+    const availableRows = await filterListingsWithFutureAvailability(cuisineEligibleRows);
     const pausedCookIds = await getPausedCookProfileIds(availableRows.map(row => row.cook_id));
     const eligibleRows = availableRows.filter(row => !pausedCookIds.has(row.cook_id));
     const cooksWithListings = new Set(eligibleRows.map(row => row.cook_id));

@@ -5,7 +5,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { AdminPanel } from '@/src/components/admin/AdminOverviewUI';
 
 export default function OrderMonitoringPlaceholder() {
-  const { cookId } = useLocalSearchParams<{ cookId?: string }>();
+  const { cookId, orderId } = useLocalSearchParams<{ cookId?: string; orderId?: string }>();
   return (
     <View style={styles.page}>
       <Text style={styles.eyebrow}>ADMIN DASHBOARD</Text>
@@ -16,11 +16,15 @@ export default function OrderMonitoringPlaceholder() {
       </Text>
       <AdminPanel style={styles.panel}>
         <Ionicons name="receipt-outline" size={36} color="#4CAF50" />
-        <Text style={styles.panelTitle}>Cook filter carried forward</Text>
+        <Text style={styles.panelTitle}>
+          {orderId ? 'Order selected' : 'Cook filter carried forward'}
+        </Text>
         <Text style={styles.panelBody}>
-          {cookId
-            ? `Selected cook: ${cookId}`
-            : 'Open this page from a cook record to carry its user ID into the future order filters.'}
+          {orderId
+            ? `Selected order: ${orderId}`
+            : cookId
+              ? `Selected cook: ${cookId}`
+              : 'Open this page from a cook record to carry its user ID into the future order filters.'}
         </Text>
       </AdminPanel>
     </View>

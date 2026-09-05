@@ -22,7 +22,7 @@ const cuisines: CuisineItem[] = [
   { id: 'thai', name: 'Thai', icon: '🍜', color: '#AEE0C5' },
   { id: 'italian', name: 'Italian', icon: '🍕', color: '#F2B47F' },
   { id: 'western', name: 'Western', icon: '🍔', color: '#9FD8D3' },
-  { id: 'mexican', name: 'Mexican', icon: '🌮', color: '#F3CF65' },
+  { id: 'middle eastern', name: 'Middle Eastern', icon: '🫓', color: '#F3CF65' },
 ];
 
 export default function CuisineFilter({ onCuisineSelect }: CuisineFilterProps) {

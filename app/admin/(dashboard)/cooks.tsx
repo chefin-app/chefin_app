@@ -14,7 +14,7 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
   fetchIdentityDocumentFile,
   fetchManagedCookDetails,
@@ -39,6 +39,7 @@ import { useAdminAuth } from '@/src/admin/AdminAuthContext';
 import { useAuth } from '@/src/services/auth-context';
 import AdminDialog from '@/src/components/admin/AdminDialog';
 import { AdminPanel, AdminStatusBadge } from '@/src/components/admin/AdminOverviewUI';
+import AdminSelect from '@/src/components/admin/AdminSelect';
 import { showAdminFailure, showAdminSuccess } from '@/src/admin/feedback';
 
 const FILTERS: Array<{ key: CookManagementFilter; label: string }> = [
@@ -120,6 +121,10 @@ function Button({
 }
 
 export default function CookManagementScreen() {
+  const { userId: linkedUserId, documentId: linkedDocumentId } = useLocalSearchParams<{
+    userId?: string;
+    documentId?: string;
+  }>();
   const { width } = useWindowDimensions();
   const router = useRouter();
   const { session } = useAuth();
@@ -135,6 +140,7 @@ export default function CookManagementScreen() {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const requestId = useRef(0);
+  const openedDeepLink = useRef<string | null>(null);
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [details, setDetails] = useState<ManagedCookDetails | null>(null);
@@ -215,6 +221,14 @@ export default function CookManagementScreen() {
     },
     [session?.access_token]
   );
+
+  useEffect(() => {
+    if (!linkedUserId) return;
+    const key = `${linkedUserId}:${linkedDocumentId ?? ''}`;
+    if (openedDeepLink.current === key) return;
+    openedDeepLink.current = key;
+    loadDetails(linkedUserId);
+  }, [linkedDocumentId, linkedUserId, loadDetails]);
 
   const refreshDetails = async () => {
     await loadCooks(true);
@@ -670,18 +684,15 @@ export default function CookManagementScreen() {
               placeholderTextColor="#9AA29D"
             />
           </View>
-          <TouchableOpacity
-            style={styles.sortButton}
-            onPress={() => {
-              const index = SORTS.findIndex(option => option.key === sort);
-              setSort(SORTS[(index + 1) % SORTS.length].key);
+          <AdminSelect
+            label="Sort by"
+            value={sort}
+            options={SORTS}
+            onChange={nextSort => {
+              setPage(1);
+              setSort(nextSort);
             }}
-          >
-            <Text style={styles.sortText}>
-              Sort: {SORTS.find(option => option.key === sort)?.label}
-            </Text>
-            <Ionicons name="chevron-down" size={15} color="#667085" />
-          </TouchableOpacity>
+          />
           <TouchableOpacity style={styles.refresh} onPress={() => loadCooks(true)}>
             {refreshing ? (
               <ActivityIndicator color="#4CAF50" />
@@ -933,7 +944,12 @@ export default function CookManagementScreen() {
                 </Text>
               </View>
             ) : latestIdentity ? (
-              <View style={styles.documentRow}>
+              <View
+                style={[
+                  styles.documentRow,
+                  linkedDocumentId === latestIdentity.id && styles.documentRowHighlighted,
+                ]}
+              >
                 <View style={{ flex: 1 }}>
                   <Text style={styles.documentTitle}>{humanize(latestIdentity.document_type)}</Text>
                   <Text style={styles.meta}>
@@ -990,7 +1006,13 @@ export default function CookManagementScreen() {
               {REQUIRED_DOCS.map(type => {
                 const document = latestCompliance.get(type);
                 return (
-                  <View key={type} style={styles.documentRow}>
+                  <View
+                    key={type}
+                    style={[
+                      styles.documentRow,
+                      linkedDocumentId === document?.id && styles.documentRowHighlighted,
+                    ]}
+                  >
                     <View style={{ flex: 1 }}>
                       <Text style={styles.documentTitle}>{humanize(type)}</Text>
                       <Text style={styles.meta}>
@@ -1297,17 +1319,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 13,
   },
   searchInput: { flex: 1, paddingVertical: 11, fontSize: 13, color: '#26322B' },
-  sortButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    borderWidth: 1,
-    borderColor: '#E0E6E2',
-    borderRadius: 10,
-    paddingHorizontal: 13,
-    paddingVertical: 11,
-  },
-  sortText: { fontSize: 12, color: '#5F6963' },
   refresh: {
     width: 40,
     height: 40,
@@ -1417,6 +1428,14 @@ const styles = StyleSheet.create({
     borderColor: '#E4E9E6',
     borderRadius: 12,
     padding: 13,
+  },
+  documentRowHighlighted: {
+    borderColor: '#4CAF50',
+    backgroundColor: '#EFFAF2',
+    shadowColor: '#237A3B',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
   },
   documentTitle: { fontSize: 13, color: '#28332C', fontWeight: '700' },
   permissionBox: {

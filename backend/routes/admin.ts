@@ -5,6 +5,7 @@ import { supabase } from '../supabaseClient';
 import adminUsersRoutes from './adminUsers';
 import adminModerationRoutes from './adminModeration';
 import adminCooksRoutes from './adminCooks';
+import adminDishesRoutes from './adminDishes';
 
 const router = express.Router();
 
@@ -115,6 +116,7 @@ router.use(requireAdmin);
 router.use('/users', adminUsersRoutes);
 router.use('/moderation', adminModerationRoutes);
 router.use('/cooks', adminCooksRoutes);
+router.use('/dishes', adminDishesRoutes);
 
 router.get('/session', (req: AdminRequest, res) => {
   res.json({ admin: req.admin });
@@ -331,7 +333,7 @@ router.get('/activity', async (_req, res) => {
         .limit(5),
       supabase
         .from('verification_documents')
-        .select('id, submitted_at, profiles(full_name, profile_image)')
+        .select('id, user_id, submitted_at, profiles(full_name, profile_image)')
         .eq('status', 'pending')
         .order('submitted_at', { ascending: false })
         .limit(5),
@@ -342,7 +344,7 @@ router.get('/activity', async (_req, res) => {
         .limit(4),
       supabase
         .from('profiles')
-        .select('id, full_name, profile_image, restaurant_name, created_at')
+        .select('id, user_id, full_name, profile_image, restaurant_name, created_at')
         .order('created_at', { ascending: false })
         .limit(5),
     ]);
@@ -362,6 +364,7 @@ router.get('/activity', async (_req, res) => {
       body: String(report.reason).replace(/_/g, ' '),
       createdAt: report.created_at,
       unread: true,
+      deepLink: { pathname: '/admin/moderation' as const, params: { reportId: report.id } },
     }));
     const documentActivity = (documentsResult.data ?? []).map(document => {
       const profile = relation(
@@ -377,6 +380,10 @@ router.get('/activity', async (_req, res) => {
         imageUrl: profile?.profile_image ?? null,
         createdAt: document.submitted_at,
         unread: true,
+        deepLink: {
+          pathname: '/admin/cooks' as const,
+          params: { userId: document.user_id, documentId: document.id },
+        },
       };
     });
     const orderActivity = (ordersResult.data ?? []).map(order => {
@@ -390,6 +397,7 @@ router.get('/activity', async (_req, res) => {
         body: listing?.title ?? 'Order placed',
         createdAt: order.created_at,
         unread: false,
+        deepLink: { pathname: '/admin/orders' as const, params: { orderId: order.id } },
       };
     });
     const profileActivity = (profilesResult.data ?? []).map(profile => ({
@@ -402,6 +410,9 @@ router.get('/activity', async (_req, res) => {
       imageUrl: profile.profile_image,
       createdAt: profile.created_at,
       unread: false,
+      deepLink: profile.restaurant_name
+        ? { pathname: '/admin/cooks' as const, params: { userId: profile.user_id } }
+        : { pathname: '/admin/users' as const, params: { userId: profile.user_id } },
     }));
 
     const activity = [...reportActivity, ...documentActivity, ...orderActivity, ...profileActivity]

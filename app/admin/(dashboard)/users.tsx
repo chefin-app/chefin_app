@@ -14,6 +14,7 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useLocalSearchParams } from 'expo-router';
 
 import {
   fetchManagedUserDetails,
@@ -34,7 +35,9 @@ import type {
 import { useAdminAuth } from '@/src/admin/AdminAuthContext';
 import { useAuth } from '@/src/services/auth-context';
 import AdminDialog from '@/src/components/admin/AdminDialog';
+import AdminDateFilter from '@/src/components/admin/AdminDateFilter';
 import { AdminPanel, AdminStatusBadge } from '@/src/components/admin/AdminOverviewUI';
+import AdminSelect from '@/src/components/admin/AdminSelect';
 import { showAdminFailure, showAdminSuccess } from '@/src/admin/feedback';
 
 type ActionMode = 'invite' | 'edit' | 'suspend' | 'deactivate' | 'message' | 'verification' | null;
@@ -195,6 +198,7 @@ function ActionButton({
 }
 
 export default function UserManagementScreen() {
+  const { userId: linkedUserId } = useLocalSearchParams<{ userId?: string }>();
   const { width } = useWindowDimensions();
   const { session } = useAuth();
   const { admin } = useAdminAuth();
@@ -208,8 +212,10 @@ export default function UserManagementScreen() {
   const [filter, setFilter] = useState<UserManagementFilter>('all');
   const [sort, setSort] = useState<UserManagementSort>('newest');
   const [dateRange, setDateRange] = useState('all');
+  const [exactDate, setExactDate] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const requestId = useRef(0);
+  const openedDeepLink = useRef<string | null>(null);
 
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [details, setDetails] = useState<ManagedUserDetails | null>(null);
@@ -256,6 +262,7 @@ export default function UserManagementScreen() {
           filter,
           sort,
           dateRange,
+          exactDate,
           page,
           pageSize: 25,
         });
@@ -271,7 +278,7 @@ export default function UserManagementScreen() {
         }
       }
     },
-    [dateRange, filter, page, search, session?.access_token, sort]
+    [dateRange, exactDate, filter, page, search, session?.access_token, sort]
   );
 
   useEffect(() => {
@@ -295,6 +302,12 @@ export default function UserManagementScreen() {
     },
     [session?.access_token]
   );
+
+  useEffect(() => {
+    if (!linkedUserId || openedDeepLink.current === linkedUserId) return;
+    openedDeepLink.current = linkedUserId;
+    loadDetails(linkedUserId);
+  }, [linkedUserId, loadDetails]);
 
   const closeDetails = () => {
     setSelectedUserId(null);
@@ -535,6 +548,7 @@ export default function UserManagementScreen() {
         filter,
         sort,
         dateRange,
+        exactDate,
         page: 1,
         pageSize: 500,
       });
@@ -583,19 +597,6 @@ export default function UserManagementScreen() {
     }
   };
 
-  const cycleSort = () => {
-    const index = SORTS.findIndex(option => option.key === sort);
-    setPage(1);
-    setSort(SORTS[(index + 1) % SORTS.length].key);
-  };
-  const cycleDate = () => {
-    const index = DATE_RANGES.findIndex(option => option.key === dateRange);
-    setPage(1);
-    setDateRange(DATE_RANGES[(index + 1) % DATE_RANGES.length].key);
-  };
-
-  const sortLabel = SORTS.find(option => option.key === sort)?.label ?? 'Newest';
-  const dateLabel = DATE_RANGES.find(option => option.key === dateRange)?.label ?? 'All dates';
   const stats = response?.stats;
   const selectedListUser = useMemo(
     () => response?.users.find(user => user.userId === selectedUserId) ?? null,
@@ -718,14 +719,25 @@ export default function UserManagementScreen() {
               </TouchableOpacity>
             ) : null}
           </View>
-          <TouchableOpacity style={styles.selectButton} onPress={cycleSort}>
-            <Text style={styles.selectButtonText}>Sort: {sortLabel}</Text>
-            <Ionicons name="chevron-down" size={15} color="#7D8680" />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.selectButton} onPress={cycleDate}>
-            <Text style={styles.selectButtonText}>{dateLabel}</Text>
-            <Ionicons name="calendar-outline" size={15} color="#7D8680" />
-          </TouchableOpacity>
+          <AdminSelect
+            label="Sort by"
+            value={sort}
+            options={SORTS}
+            onChange={nextSort => {
+              setPage(1);
+              setSort(nextSort);
+            }}
+          />
+          <AdminDateFilter
+            range={dateRange}
+            exactDate={exactDate}
+            rangeOptions={DATE_RANGES}
+            onChange={selection => {
+              setPage(1);
+              setDateRange(selection.range);
+              setExactDate(selection.exactDate);
+            }}
+          />
           <TouchableOpacity
             style={styles.refreshButton}
             onPress={() => loadUsers(true)}
@@ -1398,20 +1410,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   searchInput: { flex: 1, fontFamily: 'mon', fontSize: 10, color: '#303C35' },
-  selectButton: {
-    minWidth: 135,
-    height: 42,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 9,
-    paddingHorizontal: 13,
-    borderWidth: 1,
-    borderColor: '#DDE3DF',
-    borderRadius: 11,
-    backgroundColor: '#FFFFFF',
-  },
-  selectButtonText: { fontFamily: 'mon-sb', fontSize: 9, color: '#69736D' },
   refreshButton: {
     width: 42,
     height: 42,

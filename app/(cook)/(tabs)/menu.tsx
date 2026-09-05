@@ -755,9 +755,12 @@ export default function CookMenuScreen() {
           <Text
             style={[
               styles.dishState,
-              (!dishAvailability.enabled || dishAvailability.state === 'sold_out') &&
+              dish.status === 'pending' && styles.dishStatePending,
+              dish.status === 'rejected' && styles.dishStateRejected,
+              dish.status === 'approved' &&
+                (!dishAvailability.enabled || dishAvailability.state === 'sold_out') &&
                 styles.dishStateSoldOut,
-              !dishAvailability.configured && styles.dishStateWarning,
+              dish.status === 'approved' && !dishAvailability.configured && styles.dishStateWarning,
             ]}
           >
             {dish.status !== 'approved'
@@ -1806,6 +1809,8 @@ const styles = StyleSheet.create({
   dishTitle: { fontSize: 15, fontWeight: '800', color: '#202522' },
   dishPrice: { fontSize: 14, color: '#4F5752', marginTop: 4 },
   dishState: { fontSize: 10, color: '#4CAF50', marginTop: 4, fontWeight: '600' },
+  dishStatePending: { color: '#B26A00' },
+  dishStateRejected: { color: '#C62828' },
   dishStateSoldOut: { color: '#B42318' },
   dishStateWarning: { color: '#9A6700' },
   stockChip: {

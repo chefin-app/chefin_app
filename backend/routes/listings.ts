@@ -207,7 +207,13 @@ router.patch('/:id/status', requireAdmin, async (req, res) => {
     try {
       const cook = (listing as any).profiles;
       if (cook?.user_id) {
-        await notifyCookDishReviewed(cook.user_id, listing.title, status === 'approved', note);
+        await notifyCookDishReviewed(
+          cook.user_id,
+          listing.title,
+          status === 'approved',
+          note,
+          listing.id
+        );
       }
       // Only announce to favouriters the first time the dish goes live, not
       // on re-approvals after edits.
