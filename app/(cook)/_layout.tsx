@@ -85,7 +85,9 @@ export default function CookLayout() {
       <Stack.Screen name="option-group" />
       <Stack.Screen name="edit-dish" />
       <Stack.Screen name="review-customer/[orderId]" />
+      <Stack.Screen name="customer-reviews/[orderId]" />
       <Stack.Screen name="order/[orderId]" />
+      <Stack.Screen name="application-status" />
       <Stack.Screen
         name="food-safety"
         options={{ presentation: 'modal', animation: 'slide_from_bottom' }}

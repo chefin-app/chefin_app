@@ -9,9 +9,11 @@ export interface MenuItemCardProps extends Omit<Listing, 'reviews'> {
   isAvailable: boolean;
   availabilityLabel: string;
   cartQuantity?: number;
+  maxQuantity?: number;
   hasOptionGroups?: boolean;
   onPress: () => void;
   onAddPress: () => void;
+  onDecreasePress: () => void;
 }
 
 const MenuItemCard: React.FC<MenuItemCardProps> = ({
@@ -24,13 +26,17 @@ const MenuItemCard: React.FC<MenuItemCardProps> = ({
   isAvailable,
   availabilityLabel,
   cartQuantity = 0,
+  maxQuantity,
   hasOptionGroups = false,
   onPress,
   onAddPress,
+  onDecreasePress,
 }) => {
   const displayName = title || 'Unknown dish';
   const ratingSummary = getRatingSummary(reviews);
   const displayRating = formatRating(ratingSummary.average);
+  const showQuantityStepper = !hasOptionGroups && cartQuantity > 0;
+  const increaseDisabled = maxQuantity != null && cartQuantity >= Math.max(0, maxQuantity);
 
   return (
     <View style={[styles.card, !isAvailable && styles.cardUnavailable]}>
@@ -64,7 +70,7 @@ const MenuItemCard: React.FC<MenuItemCardProps> = ({
           )}
         </View>
 
-        <View style={styles.content}>
+        <View style={[styles.content, showQuantityStepper && styles.contentWithStepper]}>
           <Text style={[styles.title, !isAvailable && styles.textUnavailable]} numberOfLines={2}>
             {displayName}
           </Text>
@@ -102,20 +108,71 @@ const MenuItemCard: React.FC<MenuItemCardProps> = ({
 
       <View style={styles.trailingControl}>
         {isAvailable ? (
-          <TouchableOpacity
-            testID={`menu-item-add-${id}`}
-            style={styles.addButton}
-            onPress={onAddPress}
-            accessibilityRole="button"
-            accessibilityLabel={
-              hasOptionGroups ? `Choose options for ${displayName}` : `Add ${displayName} to cart`
-            }
-            accessibilityHint={
-              hasOptionGroups ? 'Opens dish options' : 'Adds one dish directly to your cart'
-            }
-          >
-            <Text style={styles.addButtonText}>{cartQuantity > 0 ? cartQuantity : '+'}</Text>
-          </TouchableOpacity>
+          showQuantityStepper ? (
+            <View
+              testID={`menu-item-quantity-${id}`}
+              style={styles.quantityStepper}
+              accessibilityLabel={`${displayName} quantity ${cartQuantity}`}
+            >
+              <TouchableOpacity
+                testID={`menu-item-decrease-${id}`}
+                style={styles.quantityButton}
+                hitSlop={{ top: 7, right: 2, bottom: 7, left: 2 }}
+                onPress={onDecreasePress}
+                accessibilityRole="button"
+                accessibilityLabel={`Remove one ${displayName} from cart`}
+                accessibilityHint={
+                  cartQuantity === 1 ? 'Removes the dish from your cart' : undefined
+                }
+              >
+                <Text style={styles.quantityButtonText}>−</Text>
+              </TouchableOpacity>
+              <Text
+                testID={`menu-item-quantity-value-${id}`}
+                style={styles.quantityValue}
+                accessibilityLabel={`Quantity ${cartQuantity}`}
+              >
+                {cartQuantity}
+              </Text>
+              <TouchableOpacity
+                testID={`menu-item-increase-${id}`}
+                style={styles.quantityButton}
+                hitSlop={{ top: 7, right: 2, bottom: 7, left: 2 }}
+                onPress={onAddPress}
+                disabled={increaseDisabled}
+                accessibilityRole="button"
+                accessibilityLabel={`Add one more ${displayName} to cart`}
+                accessibilityHint={
+                  increaseDisabled ? 'Maximum available quantity reached' : undefined
+                }
+                accessibilityState={{ disabled: increaseDisabled }}
+              >
+                <Text
+                  style={[
+                    styles.quantityButtonText,
+                    increaseDisabled && styles.quantityButtonTextDisabled,
+                  ]}
+                >
+                  +
+                </Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <TouchableOpacity
+              testID={`menu-item-add-${id}`}
+              style={styles.addButton}
+              onPress={onAddPress}
+              accessibilityRole="button"
+              accessibilityLabel={
+                hasOptionGroups ? `Choose options for ${displayName}` : `Add ${displayName} to cart`
+              }
+              accessibilityHint={
+                hasOptionGroups ? 'Opens dish options' : 'Adds one dish directly to your cart'
+              }
+            >
+              <Text style={styles.addButtonText}>+</Text>
+            </TouchableOpacity>
+          )
         ) : (
           <View style={styles.unavailableBadge}>
             <Text style={styles.unavailableBadgeText}>Unavailable</Text>
@@ -173,6 +230,9 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch',
     justifyContent: 'center',
     paddingRight: 48,
+  },
+  contentWithStepper: {
+    paddingRight: 82,
   },
   title: {
     color: '#171A18',
@@ -251,6 +311,42 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '700',
     lineHeight: 28,
+  },
+  quantityStepper: {
+    height: 30,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: '#168A49',
+    borderRadius: 15,
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#163D27',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    elevation: 1,
+  },
+  quantityButton: {
+    width: 27,
+    height: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  quantityButtonText: {
+    color: '#278C43',
+    fontSize: 19,
+    fontWeight: '600',
+    lineHeight: 22,
+  },
+  quantityButtonTextDisabled: {
+    color: '#AEB6B0',
+  },
+  quantityValue: {
+    minWidth: 20,
+    color: '#171A18',
+    fontSize: 14,
+    fontWeight: '700',
+    textAlign: 'center',
   },
   unavailableBadge: {
     borderRadius: 10,

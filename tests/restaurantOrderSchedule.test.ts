@@ -1,11 +1,85 @@
 import {
   buildRestaurantScheduleDays,
   formatOrderSelectionLabel,
+  getClosedRestaurantOrderCopy,
   getListingScheduleMatch,
+  isRestaurantWithinOrderingWindow,
 } from '@/src/utils/restaurantOrderSchedule';
 
 describe('restaurant order scheduling', () => {
   const now = new Date('2026-08-09T02:10:00.000Z'); // 10:10 AM in Malaysia
+
+  it('builds day-aware closed copy for the next bookable time today', () => {
+    const days = buildRestaurantScheduleDays(
+      [
+        {
+          listing_id: 'lunch',
+          available_date: '2026-08-09',
+          start_time: '12:00:00',
+          end_time: '14:00:00',
+          is_available: true,
+          max_orders: 5,
+          orders_taken: 0,
+        },
+      ],
+      now
+    );
+
+    expect(getClosedRestaurantOrderCopy(days, now)).toEqual({
+      bannerDetail: 'Order for today, 12:00 PM or later',
+      promptDetail: 'today at 12:00 PM',
+    });
+  });
+
+  it('uses tomorrow after the final service window has closed', () => {
+    const afterClosing = new Date('2026-08-09T12:30:00.000Z'); // 8:30 PM in Malaysia
+    const records = [
+      {
+        listing_id: 'dinner',
+        available_date: '2026-08-09',
+        start_time: '17:00:00',
+        end_time: '20:00:00',
+        is_available: true,
+        max_orders: 5,
+        orders_taken: 0,
+      },
+      {
+        listing_id: 'breakfast',
+        available_date: '2026-08-10',
+        start_time: '09:00:00',
+        end_time: '11:00:00',
+        is_available: true,
+        max_orders: 5,
+        orders_taken: 0,
+      },
+    ];
+    const days = buildRestaurantScheduleDays(records, afterClosing);
+
+    expect(isRestaurantWithinOrderingWindow(records, afterClosing)).toBe(false);
+    expect(getClosedRestaurantOrderCopy(days, afterClosing)).toEqual({
+      bannerDetail: 'Order for tomorrow, 9:00 AM or later',
+      promptDetail: 'tomorrow at 9:00 AM',
+    });
+  });
+
+  it('does not call an open but sold-out restaurant closed', () => {
+    expect(
+      isRestaurantWithinOrderingWindow(
+        [
+          {
+            listing_id: 'sold-out',
+            available_date: '2026-08-09',
+            start_time: '10:00:00',
+            end_time: '12:00:00',
+            is_available: false,
+            max_orders: 3,
+            orders_taken: 3,
+          },
+        ],
+        now
+      )
+    ).toBe(true);
+  });
 
   it('builds a deduplicated restaurant-wide slot union for today plus two days', () => {
     const days = buildRestaurantScheduleDays(

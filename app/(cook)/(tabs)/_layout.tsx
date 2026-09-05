@@ -19,6 +19,7 @@ export default function CookTabsLayout() {
   const pathname = usePathname();
   const application = useCookApplication();
   const reverificationRequired = application.status === 'reverification_required';
+  const applicationRejected = application.status === 'rejected';
   const showApplicationBanner =
     !application.loading && (application.restrictedToDrafts || reverificationRequired);
 
@@ -53,7 +54,11 @@ export default function CookTabsLayout() {
             </View>
             <View style={styles.applicationContent}>
               <Text style={styles.applicationTitle}>
-                {reverificationRequired ? 'Reverification required' : 'Cook review in progress'}
+                {reverificationRequired
+                  ? 'Reverification required'
+                  : applicationRejected
+                    ? 'Application needs changes'
+                    : 'Cook review in progress'}
               </Text>
               <Text style={styles.applicationBody}>
                 {reverificationRequired
@@ -62,29 +67,48 @@ export default function CookTabsLayout() {
                         ? new Date(application.reverificationDueAt).toLocaleDateString('en-MY')
                         : 'the deadline'
                     } to keep selling.`
-                  : 'You can create and edit draft dishes. Discovery, availability and new orders unlock after final approval.'}
+                  : applicationRejected
+                    ? 'Review the decision, update your application, and submit it again when ready.'
+                    : 'You can create and edit draft dishes. Discovery, availability and new orders unlock after final approval.'}
               </Text>
               <View style={styles.applicationActions}>
-                <TouchableOpacity
-                  accessibilityRole="button"
-                  accessibilityLabel="Review identity verification"
-                  activeOpacity={0.7}
-                  style={styles.applicationAction}
-                  onPress={() => router.push('/(cook)/identity-verification')}
-                >
-                  <Text style={styles.applicationLink}>Identity</Text>
-                  <Ionicons name="chevron-forward" size={14} color="#237A3B" />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  accessibilityRole="button"
-                  accessibilityLabel="Review food safety documents"
-                  activeOpacity={0.7}
-                  style={styles.applicationAction}
-                  onPress={() => router.push('/(cook)/food-safety')}
-                >
-                  <Text style={styles.applicationLink}>Food documents</Text>
-                  <Ionicons name="chevron-forward" size={14} color="#237A3B" />
-                </TouchableOpacity>
+                {reverificationRequired ? (
+                  <>
+                    <TouchableOpacity
+                      accessibilityRole="button"
+                      accessibilityLabel="Review identity verification"
+                      activeOpacity={0.7}
+                      style={styles.applicationAction}
+                      onPress={() => router.push('/(cook)/identity-verification')}
+                    >
+                      <Text style={styles.applicationLink}>Identity</Text>
+                      <Ionicons name="chevron-forward" size={14} color="#237A3B" />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      accessibilityRole="button"
+                      accessibilityLabel="Review food safety documents"
+                      activeOpacity={0.7}
+                      style={styles.applicationAction}
+                      onPress={() => router.push('/(cook)/food-safety')}
+                    >
+                      <Text style={styles.applicationLink}>Food documents</Text>
+                      <Ionicons name="chevron-forward" size={14} color="#237A3B" />
+                    </TouchableOpacity>
+                  </>
+                ) : (
+                  <TouchableOpacity
+                    accessibilityRole="button"
+                    accessibilityLabel="View application status"
+                    activeOpacity={0.7}
+                    style={styles.applicationAction}
+                    onPress={() => router.push('/(cook)/application-status')}
+                  >
+                    <Text style={styles.applicationLink}>
+                      {applicationRejected ? 'Review decision' : 'View status'}
+                    </Text>
+                    <Ionicons name="chevron-forward" size={14} color="#237A3B" />
+                  </TouchableOpacity>
+                )}
               </View>
             </View>
           </View>
@@ -104,16 +128,20 @@ export default function CookTabsLayout() {
               if (!application.restrictedToDrafts) return;
               event.preventDefault();
               Alert.alert(
-                'Orders unlock after approval',
-                'Your cook application is still being reviewed. You can build your menu now; customers and new orders will unlock once your application is approved.',
+                applicationRejected
+                  ? 'Application changes required'
+                  : 'Orders unlock after approval',
+                applicationRejected
+                  ? 'Your application was not approved. Review the decision and resubmit it before accepting orders.'
+                  : 'Your cook application is still being reviewed. You can build your menu now; customers and new orders will unlock once your application is approved.',
                 [
                   {
                     text: 'Keep building menu',
                     onPress: () => router.navigate('/(cook)/(tabs)/menu'),
                   },
                   {
-                    text: 'Review application',
-                    onPress: () => router.push('/(cook)/identity-verification'),
+                    text: applicationRejected ? 'Review decision' : 'View status',
+                    onPress: () => router.push('/(cook)/application-status'),
                   },
                 ]
               );

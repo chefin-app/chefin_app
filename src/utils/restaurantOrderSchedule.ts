@@ -37,6 +37,11 @@ export interface ListingScheduleMatch {
   remainingSlots: number;
 }
 
+export interface ClosedRestaurantOrderCopy {
+  bannerDetail: string;
+  promptDetail: string;
+}
+
 const MALAYSIA_UTC_OFFSET = '+08:00';
 const MINUTE_MS = 60_000;
 const DAY_MS = 24 * 60 * MINUTE_MS;
@@ -156,6 +161,61 @@ function getLongDateLabel(serviceDate: string): string {
   const day = parts.find(part => part.type === 'day')?.value;
   const month = parts.find(part => part.type === 'month')?.value;
   return weekday && day && month ? `${weekday}, ${day} ${month}` : serviceDate;
+}
+
+function formatSingleTime(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return new Intl.DateTimeFormat('en-MY', {
+    timeZone: AVAILABILITY_TIME_ZONE,
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  })
+    .format(date)
+    .replace(/\b(am|pm)\b/i, period => period.toUpperCase());
+}
+
+/**
+ * Whether the restaurant's configured service window is open right now.
+ * Capacity is deliberately ignored so a sold-out open restaurant is not
+ * incorrectly described as closed.
+ */
+export function isRestaurantWithinOrderingWindow(
+  records: AvailabilityRecord[],
+  now = new Date()
+): boolean {
+  const today = getLocalDateKey(now);
+  return records.some(record => {
+    const serviceDate = getServiceDate(record.available_date);
+    if (serviceDate !== today) return false;
+    const start = parseBoundary(record.start_time, serviceDate, 'start');
+    const end = parseBoundary(record.end_time, serviceDate, 'end');
+    return start.getTime() <= now.getTime() && now.getTime() < end.getTime();
+  });
+}
+
+/** Builds day-aware closed-state copy from the earliest actually bookable slot. */
+export function getClosedRestaurantOrderCopy(
+  days: RestaurantScheduleDay[],
+  now = new Date()
+): ClosedRestaurantOrderCopy | null {
+  const nextDay = days.find(day => day.slots.length > 0);
+  const nextSlot = nextDay?.slots[0];
+  if (!nextDay || !nextSlot) return null;
+
+  const time = formatSingleTime(nextSlot.startTime);
+  if (!time) return null;
+  const tomorrow = addServiceDays(getLocalDateKey(now), 1);
+  const dayLabel = nextDay.isToday
+    ? 'today'
+    : nextDay.serviceDate === tomorrow
+      ? 'tomorrow'
+      : getLongDateLabel(nextDay.serviceDate);
+  return {
+    bannerDetail: `Order for ${dayLabel}, ${time} or later`,
+    promptDetail: `${dayLabel} at ${time}`,
+  };
 }
 
 /**

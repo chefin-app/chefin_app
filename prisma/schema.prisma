@@ -458,10 +458,10 @@ model listing_option_groups {
   @@schema("public")
 }
 
-/// Private, verified-order feedback from a cook about the customer handover.
-/// It is deliberately separate from public food reviews to avoid retaliatory
-/// public ratings. It is operational feedback for the submitting cook and
-/// explicitly authorised administrators, not a customer-facing score.
+/// Verified pickup-order feedback from a cook about the customer handover.
+/// Buyers see only their aggregate score. Cooks considering an order may also
+/// see the aggregate, review count, and recent written reviews through an
+/// authenticated, order-gated backend endpoint.
 model customer_reviews {
   id                   String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   order_id             String   @unique @db.Uuid

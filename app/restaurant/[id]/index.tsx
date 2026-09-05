@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Alert,
   Image,
@@ -37,7 +37,9 @@ import { formatRating, getListingsRatingSummary, type RatedReview } from '@/src/
 import {
   buildRestaurantScheduleDays,
   formatOrderSelectionLabel,
+  getClosedRestaurantOrderCopy,
   getListingScheduleMatch,
+  isRestaurantWithinOrderingWindow,
   type ListingScheduleMatch,
   type RestaurantOrderSelection,
 } from '@/src/utils/restaurantOrderSchedule';
@@ -79,6 +81,7 @@ interface RestaurantData {
 }
 
 const ASAP_SELECTION: RestaurantOrderSelection = { mode: 'asap' };
+const UNAVAILABLE_BANNER_COLOR = '#8A6100';
 
 const formatMatchLabel = (match: ListingScheduleMatch): string => {
   if (!match.available || !match.startTime || !match.endTime) return 'Order time unavailable';
@@ -104,7 +107,7 @@ export default function RestaurantScreen() {
   const shouldOpenSchedule = (Array.isArray(openSchedule) ? openSchedule[0] : openSchedule) === '1';
   const { session } = useAuth();
   const { toggleFavourite, isFavourite } = useFavourites();
-  const { addToCart, cartItems, clearCookCart, rescheduleCookCart } = useCart();
+  const { addToCart, cartItems, clearCookCart, rescheduleCookCart, updateQuantity } = useCart();
 
   const [data, setData] = useState<RestaurantData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -113,6 +116,7 @@ export default function RestaurantScreen() {
   const [orderSelection, setOrderSelection] = useState<RestaurantOrderSelection>(ASAP_SELECTION);
   const [scheduleVisible, setScheduleVisible] = useState(false);
   const [selectedDish, setSelectedDish] = useState<RestaurantDish | null>(null);
+  const promptedClosedKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
     const timer = setInterval(() => setClock(new Date()), 60_000);
@@ -177,6 +181,31 @@ export default function RestaurantScreen() {
     };
   }, [restaurantId]);
 
+  useEffect(() => {
+    if (!data || data.storeStatus === 'paused' || shouldOpenSchedule) return;
+    const records = data.listings.flatMap(listing => listing.availability?.records ?? []);
+    if (isRestaurantWithinOrderingWindow(records, clock)) return;
+
+    const days = buildRestaurantScheduleDays(records, clock, 2, 30);
+    const copy = getClosedRestaurantOrderCopy(days, clock);
+    if (!copy) return;
+    const promptKey = `${data.profile.id}:${copy.promptDetail}`;
+    if (promptedClosedKeyRef.current === promptKey) return;
+    promptedClosedKeyRef.current = promptKey;
+
+    const timeout = setTimeout(() => {
+      Alert.alert(
+        'This restaurant is closed',
+        `The next available order time is ${copy.promptDetail}. Select Order for later to choose a time.`,
+        [
+          { text: 'Not now', style: 'cancel' },
+          { text: 'Order for later', onPress: () => setScheduleVisible(true) },
+        ]
+      );
+    }, 150);
+    return () => clearTimeout(timeout);
+  }, [clock, data, shouldOpenSchedule]);
+
   if (loading) {
     return (
       <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
@@ -217,6 +246,11 @@ export default function RestaurantScreen() {
   );
   const scheduleDays = buildRestaurantScheduleDays(availabilityRecords, clock, 2, 30);
   const asapAvailable = listings.some(dish => getDishMatch(dish.id, ASAP_SELECTION).available);
+  const restaurantOpenNow = isRestaurantWithinOrderingWindow(availabilityRecords, clock);
+  const closedOrderCopy =
+    orderSelection.mode === 'asap' && !restaurantOpenNow
+      ? getClosedRestaurantOrderCopy(scheduleDays, clock)
+      : null;
   const allDishesUnavailable =
     listings.length > 0 && listings.every(dish => !getDishMatch(dish.id).available);
   const selectedDishMatch = selectedDish ? getDishMatch(selectedDish.id) : null;
@@ -248,6 +282,18 @@ export default function RestaurantScreen() {
       title: restaurantDisplayName,
       message: `Check out ${restaurantDisplayName} by ${profile.full_name} on Chefin.`,
     }).catch(() => undefined);
+
+  const promptOrderForLater = () => {
+    if (!closedOrderCopy) return;
+    Alert.alert(
+      'This restaurant is closed',
+      `The next available order time is ${closedOrderCopy.promptDetail}. Select Order for later to choose a time.`,
+      [
+        { text: 'Not now', style: 'cancel' },
+        { text: 'Order for later', onPress: () => setScheduleVisible(true) },
+      ]
+    );
+  };
 
   const handleReportRestaurant = () => {
     router.push({
@@ -467,7 +513,10 @@ export default function RestaurantScreen() {
         <View style={styles.summaryStack}>
           {storeStatus === 'busy' ? (
             <View
-              style={[styles.busyBanner, allDishesUnavailable && styles.bannerStacked]}
+              style={[
+                styles.busyBanner,
+                (closedOrderCopy || allDishesUnavailable) && styles.bannerStacked,
+              ]}
               accessibilityRole="alert"
             >
               <View style={styles.busyBannerIcon}>
@@ -481,7 +530,7 @@ export default function RestaurantScreen() {
           {storeStatus === 'paused' ? (
             <View style={styles.unavailableBanner} accessibilityRole="alert">
               <View style={styles.unavailableBannerIcon}>
-                <Ionicons name="pause-circle-outline" size={19} color="#D94E36" />
+                <Ionicons name="pause-circle-outline" size={19} color={UNAVAILABLE_BANNER_COLOR} />
               </View>
               <Text style={styles.unavailableBannerText}>
                 <Text style={styles.unavailableBannerTitle}>Taking a short break</Text>
@@ -489,10 +538,27 @@ export default function RestaurantScreen() {
               </Text>
             </View>
           ) : null}
-          {allDishesUnavailable && storeStatus !== 'paused' ? (
+          {closedOrderCopy && storeStatus !== 'paused' ? (
+            <TouchableOpacity
+              style={styles.unavailableBanner}
+              accessibilityRole="button"
+              accessibilityLabel={`Restaurant closed. ${closedOrderCopy.bannerDetail}. Select an order time.`}
+              activeOpacity={0.82}
+              onPress={promptOrderForLater}
+            >
+              <View style={styles.unavailableBannerIcon}>
+                <Ionicons name="storefront-outline" size={19} color={UNAVAILABLE_BANNER_COLOR} />
+              </View>
+              <Text style={styles.unavailableBannerText}>
+                <Text style={styles.unavailableBannerTitle}>Closed</Text>
+                {` · ${closedOrderCopy.bannerDetail}`}
+              </Text>
+              <Ionicons name="chevron-forward" size={18} color={UNAVAILABLE_BANNER_COLOR} />
+            </TouchableOpacity>
+          ) : allDishesUnavailable && storeStatus !== 'paused' ? (
             <View style={styles.unavailableBanner} accessibilityRole="alert">
               <View style={styles.unavailableBannerIcon}>
-                <Ionicons name="storefront-outline" size={19} color="#D94E36" />
+                <Ionicons name="storefront-outline" size={19} color={UNAVAILABLE_BANNER_COLOR} />
               </View>
               <Text style={styles.unavailableBannerText}>
                 <Text style={styles.unavailableBannerTitle}>Unavailable for now</Text>
@@ -623,8 +689,10 @@ export default function RestaurantScreen() {
             <View style={styles.menuCard}>
               {listings.map(dish => {
                 const match = getDishMatch(dish.id);
-                const cartQuantity =
-                  cartItems.find(item => item.listingId === dish.id)?.quantity ?? 0;
+                const cartItem = cartItems.find(
+                  item => item.cookId === profile.id && item.listingId === dish.id
+                );
+                const cartQuantity = cartItem?.quantity ?? 0;
                 return (
                   <MenuItemCard
                     key={dish.id}
@@ -636,9 +704,13 @@ export default function RestaurantScreen() {
                     isAvailable={match.available}
                     availabilityLabel={availabilityLabelFor(dish)}
                     cartQuantity={cartQuantity}
+                    maxQuantity={match.remainingSlots}
                     hasOptionGroups={(dish.option_groups?.length ?? 0) > 0}
                     onPress={() => setSelectedDish(dish)}
                     onAddPress={() => handleDishAddPress(dish, match)}
+                    onDecreasePress={() => {
+                      if (cartItem) updateQuantity(cartItem.lineId, cartItem.quantity - 1);
+                    }}
                   />
                 );
               })}
@@ -766,7 +838,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: -19,
     borderRadius: 18,
-    backgroundColor: '#FFF1EF',
+    backgroundColor: '#FFF4CC',
     paddingHorizontal: 15,
     paddingVertical: 11,
     shadowColor: '#000000',
@@ -783,8 +855,8 @@ const styles = StyleSheet.create({
     marginRight: 10,
     borderRadius: 18,
   },
-  unavailableBannerText: { flex: 1, color: '#68413A', fontSize: 13, lineHeight: 19 },
-  unavailableBannerTitle: { color: '#8F2E20', fontWeight: '800' },
+  unavailableBannerText: { flex: 1, color: '#6B5314', fontSize: 13, lineHeight: 19 },
+  unavailableBannerTitle: { color: '#6F4E00', fontWeight: '800' },
   busyBanner: {
     minHeight: 58,
     flexDirection: 'row',

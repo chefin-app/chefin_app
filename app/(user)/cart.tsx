@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   StyleSheet,
   Text,
@@ -27,26 +27,16 @@ import {
 import GlobalCartOverview from '@/src/components/cart/GlobalCartOverview';
 import { checkCartAvailability, type BasketAvailability } from '@/src/utils/cartAvailability';
 import { formatArrivalWindow, formatScheduledWindow } from '@/src/utils/orderStatus';
+import {
+  loadCheckoutDraft,
+  removeCheckoutDraft,
+  saveCheckoutDraft,
+  type CheckoutDeliveryQuote,
+  type CheckoutFulfillmentType,
+} from '@/src/utils/checkout-state';
 
-type FulfillmentType = 'pickup' | 'delivery';
-type DeliveryQuote = {
-  jobId: string;
-  cookId: string;
-  cookName: string;
-  subtotal: number;
-  quotedFee: number;
-  customerFee: number;
-  freeDeliveryApplied: boolean;
-  freeDeliveryThreshold: number | null;
-  expiresAt: string;
-  distanceMeters: number | null;
-  preparationReadyAt: string;
-  estimatedArrivalStart: string;
-  estimatedArrivalEnd: string;
-  estimatedTravelMinMinutes: number;
-  estimatedTravelMaxMinutes: number;
-  distanceBand: string;
-};
+type FulfillmentType = CheckoutFulfillmentType;
+type DeliveryQuote = CheckoutDeliveryQuote;
 
 const getPickupWindowEnd = (item: CartItem): string | undefined => {
   if (item.pickupSlotEnd) return item.pickupSlotEnd;
@@ -91,6 +81,7 @@ function RestaurantCartScreen({ cookId }: { cookId: string }) {
   const [addressOpen, setAddressOpen] = useState(false);
   const [quotes, setQuotes] = useState<DeliveryQuote[]>([]);
   const [quoteExpiresAt, setQuoteExpiresAt] = useState<string | null>(null);
+  const [checkoutDraftLoaded, setCheckoutDraftLoaded] = useState(false);
   const [quoting, setQuoting] = useState(false);
   const [basketAvailability, setBasketAvailability] = useState<BasketAvailability | null>(null);
   const cartFingerprint = useMemo(
@@ -107,10 +98,39 @@ function RestaurantCartScreen({ cookId }: { cookId: string }) {
     [cartItems]
   );
 
+  const previousCartFingerprint = useRef(cartFingerprint);
+
   useEffect(() => {
+    if (previousCartFingerprint.current === cartFingerprint) return;
+    previousCartFingerprint.current = cartFingerprint;
     setQuotes([]);
     setQuoteExpiresAt(null);
   }, [cartFingerprint]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    if (!user?.id) {
+      setCheckoutDraftLoaded(true);
+      return;
+    }
+    let cancelled = false;
+    loadCheckoutDraft(user.id, cookId, cartFingerprint)
+      .then(draft => {
+        if (cancelled || !draft) return;
+        setFulfillmentType(draft.fulfillmentType);
+        setAddress(draft.address);
+        setAddressDefaults(draft.addressDefaults);
+        setQuotes(draft.quotes);
+        setQuoteExpiresAt(draft.quoteExpiresAt);
+      })
+      .catch(error => console.warn('Could not restore checkout state', error))
+      .finally(() => {
+        if (!cancelled) setCheckoutDraftLoaded(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [cartFingerprint, cookId, hydrated, user?.id]);
 
   const promptForUnavailableBasket = useCallback(
     (status: BasketAvailability) => {
@@ -168,7 +188,7 @@ function RestaurantCartScreen({ cookId }: { cookId: string }) {
   }, [quoteExpiresAt]);
 
   useEffect(() => {
-    if (!session?.access_token) return;
+    if (!session?.access_token || !checkoutDraftLoaded) return;
     fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/delivery/address`, {
       headers: { Authorization: `Bearer ${session.access_token}` },
     })
@@ -176,11 +196,13 @@ function RestaurantCartScreen({ cookId }: { cookId: string }) {
         response.ok ? response.json() : Promise.reject(new Error('Address request failed'))
       )
       .then(body => {
-        setAddress(body.address ?? null);
-        setAddressDefaults(body.defaults ?? {});
+        setAddress(current => current ?? body.address ?? null);
+        setAddressDefaults(current =>
+          Object.keys(current).length > 0 ? current : (body.defaults ?? {})
+        );
       })
       .catch(error => console.warn('Could not load saved delivery address', error));
-  }, [session?.access_token]);
+  }, [checkoutDraftLoaded, session?.access_token]);
 
   const requestQuote = useCallback(
     async (deliveryAddress: DeliveryAddress) => {
@@ -309,11 +331,24 @@ function RestaurantCartScreen({ cookId }: { cookId: string }) {
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Add card',
-          onPress: () =>
+          onPress: async () => {
+            try {
+              await saveCheckoutDraft(user.id, cookId, {
+                cartFingerprint,
+                fulfillmentType,
+                address,
+                addressDefaults,
+                quotes,
+                quoteExpiresAt,
+              });
+            } catch (error) {
+              console.warn('Could not preserve checkout state', error);
+            }
             router.push({
               pathname: '/(user)/payment-methods',
               params: { returnTo: `/(user)/cart?cookId=${encodeURIComponent(cookId)}` },
-            }),
+            });
+          },
         },
       ]);
       return;
@@ -347,6 +382,9 @@ function RestaurantCartScreen({ cookId }: { cookId: string }) {
       const body = await res.json().catch(() => ({}));
 
       if (res.ok) {
+        await removeCheckoutDraft(user.id, cookId).catch(error =>
+          console.warn('Could not clear checkout state', error)
+        );
         clearCookCart(cookId);
         Alert.alert(
           'Order Placed!',
@@ -363,7 +401,7 @@ function RestaurantCartScreen({ cookId }: { cookId: string }) {
     }
   };
 
-  if (!hydrated) {
+  if (!hydrated || !checkoutDraftLoaded) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.emptyStateContainer}>

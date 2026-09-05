@@ -18,6 +18,8 @@ import * as ImagePicker from 'expo-image-picker';
 
 import { supabase } from '@/src/utils/supabaseClient';
 import { useAuth } from '@/src/services/auth-context';
+import PickupCoordinationCard from '@/src/components/orders/PickupCoordinationCard';
+import BuyerRatingCard from '@/src/components/reviews/BuyerRatingCard';
 
 type OrderStatus = 'pending' | 'confirmed' | 'ready' | 'completed' | 'cancelled';
 
@@ -238,6 +240,10 @@ export default function CookOrderDetail() {
           </View>
         </View>
 
+        {order.status === 'pending' ? (
+          <BuyerRatingCard orderId={order.id} accessToken={session?.access_token} />
+        ) : null}
+
         {order.fulfillment_type === 'delivery' && order.delivery_jobs ? (
           <View style={styles.deliveryCard}>
             <View style={styles.deliveryHeading}>
@@ -290,6 +296,20 @@ export default function CookOrderDetail() {
               </Text>
             ) : null}
           </View>
+        ) : null}
+
+        {order.fulfillment_type === 'pickup' &&
+        (order.status === 'confirmed' || order.status === 'ready') ? (
+          <PickupCoordinationCard
+            orderId={order.id}
+            accessToken={session?.access_token}
+            senderRole="cook"
+            orderSummary={{
+              quantity: order.quantity,
+              dishTitle: order.listings?.title ?? 'Dish',
+              selectedOptions: order.selected_options ?? [],
+            }}
+          />
         ) : null}
 
         <TouchableOpacity style={styles.proofCard} onPress={uploadProof} disabled={uploadingProof}>

@@ -13,7 +13,7 @@ import {
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
@@ -28,6 +28,7 @@ import {
 } from '@/src/utils/foodCompliance';
 import {
   geocodeRestaurantAddress,
+  RestaurantLocationError,
   saveRestaurantDiscoveryLocation,
   type RestaurantDiscoveryLocationDraft,
 } from '@/src/utils/restaurantLocation';
@@ -160,6 +161,8 @@ const STEP_HEADINGS: Record<Step, { title: string; subtitle: string }> = {
 // ── Component ───────────────────────────────────────────────────────
 export default function StartRestaurantWizard() {
   const router = useRouter();
+  const { resubmit } = useLocalSearchParams<{ resubmit?: string }>();
+  const isResubmission = resubmit === '1';
   const { user, session } = useAuth();
 
   const [stepIdx, setStepIdx] = useState(0);
@@ -167,6 +170,8 @@ export default function StartRestaurantWizard() {
   const isLast = stepIdx === STEPS.length - 1;
 
   const [submitting, setSubmitting] = useState(false);
+  const [loadingExistingApplication, setLoadingExistingApplication] = useState(isResubmission);
+  const [resubmitListingId, setResubmitListingId] = useState<string | null>(null);
 
   // Restaurant step
   const [restaurantName, setRestaurantName] = useState('');
@@ -201,7 +206,10 @@ export default function StartRestaurantWizard() {
   const [addrSearching, setAddrSearching] = useState(false);
   const [restaurantDiscoveryLocation, setRestaurantDiscoveryLocation] =
     useState<RestaurantDiscoveryLocationDraft | null>(null);
+  const [addressLocationError, setAddressLocationError] = useState<string | null>(null);
   const addrAbortRef = useRef<AbortController | null>(null);
+  const addressSearchRef = useRef<TextInput>(null);
+  const scrollRef = useRef<ScrollView>(null);
 
   useEffect(() => {
     const q = addrSearchQuery.trim();
@@ -249,6 +257,7 @@ export default function StartRestaurantWizard() {
     }));
     setAddrSearchQuery('');
     setAddrSuggestions([]);
+    setAddressLocationError(null);
     const latitude = Number(s.lat);
     const longitude = Number(s.lon);
     if (Number.isFinite(latitude) && Number.isFinite(longitude)) {
@@ -295,6 +304,100 @@ export default function StartRestaurantWizard() {
         console.warn('Could not load food compliance acceptance', error.message);
       });
   }, [user]);
+
+  useEffect(() => {
+    if (!isResubmission || !user) {
+      setLoadingExistingApplication(false);
+      return;
+    }
+    if (!session?.access_token) return;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const [{ data: profile, error: profileError }, applicationResponse] = await Promise.all([
+          supabase
+            .from('profiles')
+            .select(
+              'id, restaurant_name, address_country, address_flat, address_property_name, address_street, address_locality, address_town, address_postcode, hosting_type, bank_name, bank_account_name, bank_account_number'
+            )
+            .eq('user_id', user.id)
+            .single(),
+          fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/cook-applications/status`, {
+            headers: { Authorization: `Bearer ${session.access_token}` },
+          }),
+        ]);
+        if (profileError) throw profileError;
+        const applicationPayload = (await applicationResponse.json().catch(() => ({}))) as {
+          application?: { status?: string; citizenship_type?: string } | null;
+          error?: string;
+        };
+        if (!applicationResponse.ok) {
+          throw new Error(applicationPayload.error ?? 'Could not load your application status.');
+        }
+        const application = applicationPayload.application;
+        if (application?.status !== 'rejected') {
+          throw new Error('Only a rejected application can be edited and resubmitted.');
+        }
+
+        const { data: listing, error: listingError } = await supabase
+          .from('listings')
+          .select('id, title, description, ingredients, cuisine, dietary_tags, price, image_url')
+          .eq('cook_id', profile.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (listingError) throw listingError;
+        if (cancelled) return;
+
+        setRestaurantName(profile.restaurant_name ?? '');
+        setAddr({
+          country: profile.address_country ?? 'Malaysia',
+          flat: profile.address_flat ?? '',
+          property_name: profile.address_property_name ?? '',
+          street: profile.address_street ?? '',
+          locality: profile.address_locality ?? '',
+          town: profile.address_town ?? '',
+          postcode: profile.address_postcode ?? '',
+        });
+        setHostingType(profile.hosting_type === 'business' ? 'business' : 'private');
+        setBankName(profile.bank_name ?? '');
+        setBankAccountName(profile.bank_account_name ?? '');
+        setBankAccountNumber(profile.bank_account_number ?? '');
+        setCitizenshipType(
+          application.citizenship_type === 'permanent_resident'
+            ? 'permanent_resident'
+            : 'malaysian_citizen'
+        );
+        if (listing) {
+          setResubmitListingId(listing.id);
+          setTitle(listing.title ?? '');
+          setDescription(listing.description ?? '');
+          setIngredientsText(
+            Array.isArray(listing.ingredients)
+              ? listing.ingredients.join('\n')
+              : String(listing.ingredients ?? '')
+          );
+          setCuisine(listing.cuisine ?? null);
+          setDietaryTags(Array.isArray(listing.dietary_tags) ? listing.dietary_tags : []);
+          setPriceText(String(listing.price ?? 5));
+          setPhotoUri(listing.image_url ?? null);
+        }
+      } catch (error: any) {
+        Alert.alert(
+          'Application unavailable',
+          error.message ?? 'Could not load your application.',
+          [{ text: 'Back', onPress: () => router.back() }]
+        );
+      } finally {
+        if (!cancelled) setLoadingExistingApplication(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isResubmission, router, session?.access_token, user]);
 
   // Payment step — payout bank account, not a card. Earnings from completed
   // orders are transferred here.
@@ -547,24 +650,28 @@ export default function StartRestaurantWizard() {
       if (identityUploadError) throw identityUploadError;
 
       // 1. Upload dish photo
-      let dishImageUrl: string | null = null;
+      let dishImageUrl: string | null = photoUri?.startsWith('http') ? photoUri : null;
       if (photoUri) {
-        const ext = (photoUri.split('.').pop() || 'jpg').toLowerCase();
-        const contentType = `image/${ext === 'jpg' ? 'jpeg' : ext}`;
-        const path = `${profile.id}/${Date.now()}.${ext}`;
-        const response = await fetch(photoUri);
-        const arrayBuffer = await response.arrayBuffer();
-        const { error: uploadErr } = await supabase.storage
-          .from(DISH_IMAGES_BUCKET)
-          .upload(path, arrayBuffer, { contentType, upsert: false });
-        if (uploadErr) throw uploadErr;
-        const { data: pub } = supabase.storage.from(DISH_IMAGES_BUCKET).getPublicUrl(path);
-        dishImageUrl = pub.publicUrl;
+        if (photoUri.startsWith('http')) {
+          dishImageUrl = photoUri;
+        } else {
+          const ext = (photoUri.split('.').pop() || 'jpg').toLowerCase();
+          const contentType = `image/${ext === 'jpg' ? 'jpeg' : ext}`;
+          const path = `${profile.id}/${Date.now()}.${ext}`;
+          const response = await fetch(photoUri);
+          const arrayBuffer = await response.arrayBuffer();
+          const { error: uploadErr } = await supabase.storage
+            .from(DISH_IMAGES_BUCKET)
+            .upload(path, arrayBuffer, { contentType, upsert: false });
+          if (uploadErr) throw uploadErr;
+          const { data: pub } = supabase.storage.from(DISH_IMAGES_BUCKET).getPublicUrl(path);
+          dishImageUrl = pub.publicUrl;
+        }
       }
 
       // 2. Insert an inactive draft. It remains private until both the cook
       // application and the dish itself have been approved.
-      const { error: insertErr } = await supabase.from('listings').insert({
+      const listingPayload = {
         cook_id: profile.id,
         title: title.trim(),
         description: description.trim(),
@@ -576,8 +683,11 @@ export default function StartRestaurantWizard() {
         location: addr.locality.trim() || null,
         is_active: false,
         status: 'pending',
-      });
-      if (insertErr) throw insertErr;
+      };
+      const { error: listingError } = resubmitListingId
+        ? await supabase.from('listings').update(listingPayload).eq('id', resubmitListingId)
+        : await supabase.from('listings').insert(listingPayload);
+      if (listingError) throw listingError;
 
       // 3. Upload any optional food/business credentials the cook supplied.
       const docEntries = Object.entries(verificationDocs) as [
@@ -673,6 +783,15 @@ export default function StartRestaurantWizard() {
         [{ text: 'Explore dashboard', onPress: () => router.replace('/(cook)/(tabs)/menu') }]
       );
     } catch (e: any) {
+      if (e instanceof RestaurantLocationError || e?.name === 'RestaurantLocationError') {
+        setAddressLocationError(e.message);
+        setStepIdx(STEPS.indexOf('address'));
+        setTimeout(() => {
+          scrollRef.current?.scrollTo({ y: 0, animated: true });
+          addressSearchRef.current?.focus();
+        }, 250);
+        return;
+      }
       Alert.alert('Could not submit application', e.message ?? 'Unknown error');
     } finally {
       setSubmitting(false);
@@ -880,12 +999,16 @@ export default function StartRestaurantWizard() {
         return (
           <View style={{ gap: 12 }}>
             {/* Autocomplete search (OpenStreetMap / Nominatim) */}
-            <View style={styles.searchWrap}>
+            <View style={[styles.searchWrap, addressLocationError && styles.searchWrapError]}>
               <Ionicons name="search" size={18} color="#888" />
               <TextInput
+                ref={addressSearchRef}
                 style={styles.searchInput}
                 value={addrSearchQuery}
-                onChangeText={setAddrSearchQuery}
+                onChangeText={text => {
+                  setAddrSearchQuery(text);
+                  setAddressLocationError(null);
+                }}
                 placeholder="Search for your address"
                 placeholderTextColor="#bbb"
                 autoCorrect={false}
@@ -898,6 +1021,12 @@ export default function StartRestaurantWizard() {
                 </TouchableOpacity>
               )}
             </View>
+            {addressLocationError && (
+              <View style={styles.locationErrorRow}>
+                <Ionicons name="alert-circle" size={18} color="#C62828" />
+                <Text style={styles.locationErrorText}>{addressLocationError}</Text>
+              </View>
+            )}
 
             {addrSuggestions.length > 0 && (
               <View style={styles.suggestionList}>
@@ -941,6 +1070,7 @@ export default function StartRestaurantWizard() {
                       setAddr(prev => ({ ...prev, [key]: text }));
                       if (['street', 'locality', 'postcode', 'town', 'country'].includes(key)) {
                         setRestaurantDiscoveryLocation(null);
+                        setAddressLocationError(null);
                       }
                     }}
                     placeholder={required ? '' : '(optional)'}
@@ -1160,6 +1290,15 @@ export default function StartRestaurantWizard() {
         : 'Agree & continue'
       : 'Next';
 
+  if (loadingExistingApplication) {
+    return (
+      <SafeAreaView style={[styles.container, styles.loadingContainer]}>
+        <ActivityIndicator size="large" color="#4CAF50" />
+        <Text style={styles.loadingText}>Loading your application…</Text>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <KeyboardAvoidingView
@@ -1173,6 +1312,7 @@ export default function StartRestaurantWizard() {
         </View>
 
         <ScrollView
+          ref={scrollRef}
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
@@ -1359,7 +1499,10 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     gap: 8,
   },
+  searchWrapError: { borderWidth: 2, borderColor: '#C62828', backgroundColor: '#FFF5F5' },
   searchInput: { flex: 1, fontSize: 15, color: '#1A1A1A' },
+  locationErrorRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 7 },
+  locationErrorText: { flex: 1, color: '#C62828', fontSize: 13, lineHeight: 18, fontWeight: '700' },
   suggestionList: {
     borderWidth: 1,
     borderColor: '#E0E0E0',
@@ -1398,6 +1541,8 @@ const styles = StyleSheet.create({
   },
   fieldInputWarning: { borderColor: '#FFB74D', backgroundColor: '#FFF8E1' },
   warningText: { color: '#B26B00', fontSize: 12, marginTop: 2, marginLeft: 4 },
+  loadingContainer: { alignItems: 'center', justifyContent: 'center', gap: 12 },
+  loadingText: { color: '#666', fontSize: 14, fontWeight: '600' },
 
   fsQuestion: { fontSize: 16, fontWeight: '700', color: '#1A1A1A', marginBottom: 8, marginTop: 8 },
   fsHint: { fontSize: 13, color: '#888', marginBottom: 12, marginTop: -4, lineHeight: 18 },

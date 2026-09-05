@@ -638,6 +638,95 @@ const COOK_STATUS_TRANSITIONS: Record<CookOrderStatus, readonly CookOrderStatus[
 };
 const ORDER_ID_PATTERN = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
 
+type OrderRelation<T> = T | T[] | null;
+const orderRelation = <T>(value: OrderRelation<T>): T | null =>
+  Array.isArray(value) ? (value[0] ?? null) : value;
+
+// GET /:id/pickup-coordination - Exact pickup details and the other party's
+// phone number are disclosed only while an accepted pickup order is active.
+router.get('/:id/pickup-coordination', requireReadableAccount, async (req: AccountRequest, res) => {
+  const { id } = req.params;
+  if (!ORDER_ID_PATTERN.test(id)) {
+    return res.status(400).json({ error: 'Order ID is invalid.' });
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('orders')
+      .select(
+        'id, customer_id, fulfillment_type, status, profiles(full_name, phone_number), listings(cook_id, profiles(full_name, restaurant_name, phone_number, address_country, address_flat, address_property_name, address_street, address_locality, address_town, address_postcode))'
+      )
+      .eq('id', id)
+      .maybeSingle();
+    if (error) throw error;
+    if (!data) return res.status(404).json({ error: 'Order not found.' });
+
+    const listing = orderRelation(
+      data.listings as OrderRelation<{
+        cook_id: string;
+        profiles: OrderRelation<{
+          full_name: string;
+          restaurant_name: string | null;
+          phone_number: string | null;
+          address_country: string | null;
+          address_flat: string | null;
+          address_property_name: string | null;
+          address_street: string | null;
+          address_locality: string | null;
+          address_town: string | null;
+          address_postcode: string | null;
+        }>;
+      }>
+    );
+    const buyer = orderRelation(
+      data.profiles as OrderRelation<{ full_name: string; phone_number: string | null }>
+    );
+    const cook = orderRelation(listing?.profiles ?? null);
+    const requesterIsBuyer = data.customer_id === req.account!.profileId;
+    const requesterIsCook = listing?.cook_id === req.account!.profileId;
+    if (!requesterIsBuyer && !requesterIsCook) {
+      return res.status(403).json({ error: 'You do not have access to this pickup.' });
+    }
+    if (data.fulfillment_type !== 'pickup') {
+      return res.status(409).json({ error: 'Pickup coordination is unavailable for delivery.' });
+    }
+    if (!['confirmed', 'ready'].includes(data.status ?? '')) {
+      return res.status(409).json({
+        error: 'Pickup details are available only after acceptance and before completion.',
+      });
+    }
+    if (!cook?.address_street || !cook.address_town || !cook.address_postcode) {
+      return res.status(409).json({ error: 'The registered pickup address is incomplete.' });
+    }
+
+    res.json({
+      pickupPoint: {
+        name: cook.restaurant_name || cook.full_name || 'Home restaurant',
+        address: [
+          cook.address_flat,
+          cook.address_property_name,
+          cook.address_street,
+          cook.address_locality,
+          cook.address_postcode,
+          cook.address_town,
+          cook.address_country,
+        ]
+          .filter(Boolean)
+          .join(', '),
+      },
+      contact: requesterIsBuyer
+        ? { name: cook.full_name || 'Cook', phoneNumber: cook.phone_number }
+        : { name: buyer?.full_name || 'Customer', phoneNumber: buyer?.phone_number ?? null },
+      sender: requesterIsBuyer
+        ? { name: buyer?.full_name || 'Customer', role: 'buyer' }
+        : { name: cook.full_name || 'Cook', role: 'cook' },
+    });
+  } catch (error: unknown) {
+    console.error('Error loading pickup coordination:', error);
+    res.status(500).json({ error: 'Pickup coordination details could not be loaded.' });
+  }
+});
+
 // PATCH /:id/status - Cook advances/cancels an order.
 // Runs through the service-role client because orders are owned (RLS-wise) by
 // the customer, not the cook — a cook updating status has no row-level grant

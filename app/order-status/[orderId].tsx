@@ -14,10 +14,11 @@ import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 import { supabase } from '@/src/utils/supabaseClient';
+import { useAuth } from '@/src/services/auth-context';
+import PickupCoordinationCard from '@/src/components/orders/PickupCoordinationCard';
 import {
-  formatPickupEta,
-  formatArrivalWindow,
   formatScheduledWindow,
+  getBuyerOrderTimingLabel,
   ORDER_STATUS_LABEL,
   shortOrderCode,
   type FulfillmentType,
@@ -82,6 +83,7 @@ const STEP_DESCRIPTION: Record<OrderStatus, string> = {
 
 export default function OrderStatusScreen() {
   const router = useRouter();
+  const { session } = useAuth();
   const params = useLocalSearchParams<{ orderId?: string | string[] }>();
   const orderId = Array.isArray(params.orderId) ? params.orderId[0] : params.orderId;
 
@@ -194,30 +196,25 @@ export default function OrderStatusScreen() {
               </View>
               <View style={styles.heroCopy}>
                 <Text style={styles.heroTitle}>
-                  {isCompleted
-                    ? isPickup
-                      ? 'Order collected'
-                      : 'Order delivered'
-                    : isPickup
-                      ? formatPickupEta(order.pickup_time)
-                      : formatArrivalWindow(
-                            order.delivery_jobs?.estimated_arrival_start ?? null,
-                            order.delivery_jobs?.estimated_arrival_end ?? null
-                          )
-                        ? `Estimated arrival ${formatArrivalWindow(
-                            order.delivery_jobs?.estimated_arrival_start ?? null,
-                            order.delivery_jobs?.estimated_arrival_end ?? null
-                          )}`
-                        : 'Delivery time being confirmed'}
+                  {getBuyerOrderTimingLabel({
+                    status: order.status,
+                    fulfillmentType: order.fulfillment_type,
+                    pickupTime: order.pickup_time,
+                    estimatedArrivalStart: order.delivery_jobs?.estimated_arrival_start,
+                    estimatedArrivalEnd: order.delivery_jobs?.estimated_arrival_end,
+                  })}
                 </Text>
-                {!isCompleted &&
+                {order.status !== 'pending' &&
+                !isCompleted &&
                 isPickup &&
                 formatScheduledWindow(order.pickup_time, order.pickup_window_end) ? (
                   <Text style={styles.heroSubtitle}>
                     Pickup window{' '}
                     {formatScheduledWindow(order.pickup_time, order.pickup_window_end)}
                   </Text>
-                ) : !isCompleted && !isPickup && order.delivery_jobs?.preparation_ready_at ? (
+                ) : order.status === 'confirmed' &&
+                  !isPickup &&
+                  order.delivery_jobs?.preparation_ready_at ? (
                   <Text style={styles.heroSubtitle}>
                     Food expected ready by{' '}
                     {new Date(order.delivery_jobs.preparation_ready_at).toLocaleTimeString([], {
@@ -311,6 +308,19 @@ export default function OrderStatusScreen() {
                 </TouchableOpacity>
               ) : null}
             </View>
+          ) : null}
+
+          {isPickup && (order.status === 'confirmed' || order.status === 'ready') ? (
+            <PickupCoordinationCard
+              orderId={order.id}
+              accessToken={session?.access_token}
+              senderRole="buyer"
+              orderSummary={{
+                quantity: order.quantity,
+                dishTitle: listing?.title ?? 'Dish',
+                selectedOptions: order.selected_options ?? [],
+              }}
+            />
           ) : null}
 
           {/* Proof of preparation */}

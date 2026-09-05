@@ -11,22 +11,49 @@ type GeocodingResult = {
   lon?: string;
 };
 
+export class RestaurantLocationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'RestaurantLocationError';
+  }
+}
+
 export async function geocodeRestaurantAddress(
   address: string
 ): Promise<RestaurantDiscoveryLocationDraft> {
   const query = address.trim();
-  if (!query) throw new Error('Enter a complete restaurant address.');
+  if (!query) throw new RestaurantLocationError('Enter a complete restaurant address.');
   const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(
     query
   )}&format=json&limit=1&countrycodes=my`;
-  const response = await fetch(url, { headers: { 'Accept-Language': 'en' } });
-  if (!response.ok) throw new Error('The restaurant area could not be located.');
-  const results = (await response.json()) as GeocodingResult[];
+  let response: Response;
+  try {
+    response = await fetch(url, { headers: { 'Accept-Language': 'en' } });
+  } catch {
+    throw new RestaurantLocationError(
+      'The restaurant area could not be located. Search for the address or check the postcode and city.'
+    );
+  }
+  if (!response.ok) {
+    throw new RestaurantLocationError(
+      'The restaurant area could not be located. Search for the address or check the postcode and city.'
+    );
+  }
+  let results: GeocodingResult[];
+  try {
+    results = (await response.json()) as GeocodingResult[];
+  } catch {
+    throw new RestaurantLocationError(
+      'The restaurant area could not be located. Search for the address or check the postcode and city.'
+    );
+  }
   const match = results[0];
   const latitude = Number(match?.lat);
   const longitude = Number(match?.lon);
   if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
-    throw new Error('Select an address suggestion or check the postcode and city.');
+    throw new RestaurantLocationError(
+      'Select an address suggestion or check the postcode and city.'
+    );
   }
   return {
     latitude,

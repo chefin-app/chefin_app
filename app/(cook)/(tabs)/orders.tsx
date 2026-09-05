@@ -151,7 +151,7 @@ export default function Orders() {
   const fetchReviewStatuses = useCallback(
     async (loadedOrders: OrderRow[]) => {
       const completedIds = loadedOrders
-        .filter(order => order.status === 'completed')
+        .filter(order => order.status === 'completed' && order.fulfillment_type === 'pickup')
         .map(order => order.id);
       if (completedIds.length === 0 || !session?.access_token) {
         setReviewedOrderIds(new Set());
@@ -541,7 +541,7 @@ export default function Orders() {
               <Text style={styles.cardActionText}>{action.label}</Text>
             )}
           </TouchableOpacity>
-        ) : order.status === 'completed' ? (
+        ) : order.status === 'completed' && order.fulfillment_type === 'pickup' ? (
           <TouchableOpacity
             style={[styles.reviewButton, reviewed && styles.reviewButtonDone]}
             onPress={event => {

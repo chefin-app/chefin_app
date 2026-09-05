@@ -202,7 +202,7 @@ export default function ReviewCustomerScreen() {
       if (body.review) setExistingReview(body.review);
       Alert.alert(
         'Review submitted',
-        'Your private feedback has been saved and can help Chefin handle future customer interactions.',
+        'Your feedback now contributes to this buyer’s rating for future pickup orders.',
         [{ text: 'Done', onPress: () => router.back() }]
       );
     } catch (caught: unknown) {
@@ -215,10 +215,7 @@ export default function ReviewCustomerScreen() {
     }
   };
 
-  const punctualityTitle =
-    order?.fulfillmentType === 'delivery'
-      ? 'Was the customer ready to receive the order?'
-      : 'Was the customer punctual?';
+  const punctualityTitle = 'Was the customer punctual?';
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
@@ -276,9 +273,10 @@ export default function ReviewCustomerScreen() {
             </View>
 
             <View style={styles.privacyNote}>
-              <Ionicons name="lock-closed-outline" size={17} color="#237A3B" />
+              <Ionicons name="information-circle-outline" size={17} color="#237A3B" />
               <Text style={styles.privacyText}>
-                This is private operational feedback. It is not posted as a public customer rating.
+                This review contributes to the buyer’s aggregate score. Other cooks may see your
+                written feedback before accepting a future order.
               </Text>
             </View>
 

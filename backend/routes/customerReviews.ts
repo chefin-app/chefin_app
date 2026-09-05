@@ -36,6 +36,55 @@ type ReviewOrder = {
 const relation = <T>(value: Relation<T>): T | null =>
   Array.isArray(value) ? (value[0] ?? null) : value;
 
+type RatingReviewRow = {
+  id: string;
+  punctuality_rating: number;
+  communication_rating: number;
+  handover_rating: number;
+  comment: string | null;
+  created_at: string;
+  orders: Relation<{ fulfillment_type: string }>;
+};
+
+const reviewAverage = (review: RatingReviewRow) =>
+  (review.punctuality_rating + review.communication_rating + review.handover_rating) / 3;
+
+const loadCustomerSummary = async (customerId: string, writtenLimit: number) => {
+  const { data, error } = await supabase
+    .from('customer_reviews')
+    .select(
+      'id, punctuality_rating, communication_rating, handover_rating, comment, created_at, orders!inner(fulfillment_type)'
+    )
+    .eq('customer_id', customerId)
+    .eq('orders.fulfillment_type', 'pickup')
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+
+  const reviews = ((data ?? []) as unknown as RatingReviewRow[]).filter(
+    review => relation(review.orders)?.fulfillment_type === 'pickup'
+  );
+  const average =
+    reviews.length > 0
+      ? Number(
+          (
+            reviews.reduce((sum, review) => sum + reviewAverage(review), 0) / reviews.length
+          ).toFixed(1)
+        )
+      : null;
+  const writtenReviews = reviews.filter(review => Boolean(review.comment?.trim()));
+  return {
+    average,
+    count: reviews.length,
+    writtenReviewCount: writtenReviews.length,
+    recentReviews: writtenReviews.slice(0, writtenLimit).map(review => ({
+      id: review.id,
+      rating: Number(reviewAverage(review).toFixed(1)),
+      comment: review.comment!.trim(),
+      createdAt: review.created_at,
+    })),
+  };
+};
+
 const loadReviewOrder = async (orderId: string): Promise<ReviewOrder | null> => {
   const { data, error } = await supabase
     .from('orders')
@@ -63,6 +112,40 @@ const ensureOwnedOrder = (
   }
   return { ok: true, listing };
 };
+
+// GET /me/summary - Buyers see only their aggregate pickup score.
+router.get('/me/summary', requireReadableAccount, async (req: AccountRequest, res) => {
+  try {
+    const summary = await loadCustomerSummary(req.account!.profileId, 0);
+    res.json({ average: summary.average });
+  } catch (error: unknown) {
+    console.error('Error loading buyer rating summary:', error);
+    res.status(500).json({ error: 'Your buyer rating could not be loaded.' });
+  }
+});
+
+// GET /customer-summary/:orderId - A cook may inspect the buyer behind one of
+// their own orders before accepting it. Written reviews remain order-gated.
+router.get(
+  '/customer-summary/:orderId',
+  requireReadableAccount,
+  async (req: AccountRequest, res) => {
+    if (!UUID_PATTERN.test(req.params.orderId)) {
+      return res.status(400).json({ error: 'orderId is invalid.' });
+    }
+    const requestedLimit = Number(req.query.limit ?? 3);
+    const limit = Number.isInteger(requestedLimit) ? Math.min(50, Math.max(0, requestedLimit)) : 3;
+    try {
+      const order = await loadReviewOrder(req.params.orderId);
+      const ownership = ensureOwnedOrder(order, req.account!.profileId);
+      if (!ownership.ok) return res.status(ownership.status).json({ error: ownership.error });
+      res.json(await loadCustomerSummary(order!.customer_id, limit));
+    } catch (error: unknown) {
+      console.error('Error loading customer rating summary:', error);
+      res.status(500).json({ error: 'The buyer rating could not be loaded.' });
+    }
+  }
+);
 
 // GET /status?orderIds=id,id - Batch status for the cook's order history.
 router.get('/status', requireReadableAccount, async (req: AccountRequest, res) => {
@@ -124,6 +207,14 @@ router.get('/order/:orderId', requireReadableAccount, async (req: AccountRequest
     const order = await loadReviewOrder(req.params.orderId);
     const ownership = ensureOwnedOrder(order, req.account!.profileId);
     if (!ownership.ok) return res.status(ownership.status).json({ error: ownership.error });
+    if (order!.fulfillment_type !== 'pickup') {
+      return res.status(409).json({
+        error: 'Customer reviews are only available for completed pickup orders.',
+      });
+    }
+    if (order!.status !== 'completed') {
+      return res.status(409).json({ error: 'Customers can only be reviewed after completion.' });
+    }
 
     const { data: review, error: reviewError } = await supabase
       .from('customer_reviews')
@@ -158,7 +249,7 @@ router.get('/order/:orderId', requireReadableAccount, async (req: AccountRequest
   }
 });
 
-// POST / - Submit one private, structured customer review per completed order.
+// POST / - Submit one structured customer review per completed pickup order.
 router.post('/', requireActiveAccount, async (req: AccountRequest, res) => {
   const { orderId, punctualityRating, communicationRating, handoverRating, tags, comment } =
     (req.body ?? {}) as {
@@ -207,6 +298,11 @@ router.post('/', requireActiveAccount, async (req: AccountRequest, res) => {
     if (!ownership.ok) return res.status(ownership.status).json({ error: ownership.error });
     if (order!.status !== 'completed') {
       return res.status(409).json({ error: 'Customers can only be reviewed after completion.' });
+    }
+    if (order!.fulfillment_type !== 'pickup') {
+      return res.status(409).json({
+        error: 'Customer reviews are only available for completed pickup orders.',
+      });
     }
     if (order!.customer_id === req.account!.profileId) {
       return res.status(403).json({ error: 'You cannot review your own customer account.' });

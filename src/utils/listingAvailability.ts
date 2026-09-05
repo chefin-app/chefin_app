@@ -12,10 +12,11 @@ export interface AvailabilityRecord {
 
 type AvailabilityListing = Pick<Listing, 'id' | 'cook_id' | 'restaurant_listing_ids'>;
 
-export type AvailabilityState = 'available' | 'noLongerAvailable' | 'unavailable';
+export type AvailabilityState = 'available' | 'opensLater' | 'noLongerAvailable' | 'unavailable';
 
 export interface AvailabilitySummary {
   nextAvailableDate?: string;
+  nextAvailableAt?: string;
   state: AvailabilityState;
 }
 
@@ -44,6 +45,21 @@ export function formatAvailabilityLabel(
   now = new Date()
 ): string {
   if (availability?.state === 'noLongerAvailable') return 'No longer available today';
+  if (availability?.state === 'opensLater') {
+    const opensAt = availability.nextAvailableAt ? new Date(availability.nextAvailableAt) : null;
+    if (opensAt && !Number.isNaN(opensAt.getTime())) {
+      const time = new Intl.DateTimeFormat('en-MY', {
+        timeZone: AVAILABILITY_TIME_ZONE,
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true,
+      })
+        .format(opensAt)
+        .replace(/\b(am|pm)\b/i, period => period.toUpperCase());
+      return `Closed · Opens at ${time}`;
+    }
+    return 'Closed · Opens later today';
+  }
 
   const dateStr = availability?.nextAvailableDate;
   if (availability?.state !== 'available' || !dateStr) return 'Currently not available';
@@ -149,36 +165,53 @@ export function getAvailabilitySummary(
   now = new Date()
 ): AvailabilitySummary {
   let hadExpiredWindowToday = false;
-  let hasUpcomingWindowToday = false;
+  let earliestUpcomingWindowToday: Date | null = null;
+  const bookableRecords: Array<{ record: AvailabilityRecord; date: string }> = [];
 
-  const bookableRecords = records
-    .map(record => ({ record, date: getAvailabilityDate(record) }))
-    .filter(({ record, date }) => {
-      if (date === null || date < today || !hasRemainingCapacity(record)) return false;
-      if (date > today) return true;
+  for (const record of records) {
+    const date = getAvailabilityDate(record);
+    if (date === null || date < today || !hasRemainingCapacity(record)) continue;
+    if (date > today) {
+      bookableRecords.push({ record, date });
+      continue;
+    }
 
-      const windowStart = getWindowStart(record, date);
-      const windowEnd = getWindowEnd(record, date);
-      const isStillOpen =
-        windowStart.getTime() <= now.getTime() && windowEnd.getTime() > now.getTime();
-      if (!isStillOpen && windowStart.getTime() > now.getTime()) hasUpcomingWindowToday = true;
-      if (!isStillOpen && windowEnd.getTime() <= now.getTime()) hadExpiredWindowToday = true;
-      return isStillOpen;
-    })
-    .sort((a, b) => {
-      const dateComparison = a.date!.localeCompare(b.date!);
-      if (dateComparison !== 0) return dateComparison;
-      return (a.record.start_time ?? '').localeCompare(b.record.start_time ?? '');
-    });
+    const windowStart = getWindowStart(record, date);
+    const windowEnd = getWindowEnd(record, date);
+    const isStillOpen =
+      windowStart.getTime() <= now.getTime() && windowEnd.getTime() > now.getTime();
+    if (isStillOpen) {
+      bookableRecords.push({ record, date });
+    } else if (
+      windowStart.getTime() > now.getTime() &&
+      (!earliestUpcomingWindowToday ||
+        windowStart.getTime() < earliestUpcomingWindowToday.getTime())
+    ) {
+      earliestUpcomingWindowToday = windowStart;
+    } else if (windowEnd.getTime() <= now.getTime()) {
+      hadExpiredWindowToday = true;
+    }
+  }
+
+  bookableRecords.sort((a, b) => {
+    const dateComparison = a.date.localeCompare(b.date);
+    if (dateComparison !== 0) return dateComparison;
+    return (a.record.start_time ?? '').localeCompare(b.record.start_time ?? '');
+  });
 
   const nextAvailableDate = bookableRecords[0]?.date ?? undefined;
   if (nextAvailableDate === today) return { nextAvailableDate, state: 'available' };
-  // A later opening window today is intentionally not "Available Now". Do
-  // not skip over it and claim tomorrow is the restaurant's next opening.
-  if (hasUpcomingWindowToday) return { state: 'unavailable' };
+  // Keep a later opening today distinct from a disabled or sold-out listing.
+  // This also prevents tomorrow's slot from hiding an earlier opening today.
+  if (earliestUpcomingWindowToday) {
+    return {
+      nextAvailableAt: earliestUpcomingWindowToday.toISOString(),
+      state: 'opensLater',
+    };
+  }
   if (nextAvailableDate) return { nextAvailableDate, state: 'available' };
   return {
-    state: hadExpiredWindowToday && !hasUpcomingWindowToday ? 'noLongerAvailable' : 'unavailable',
+    state: hadExpiredWindowToday ? 'noLongerAvailable' : 'unavailable',
   };
 }
 
@@ -215,7 +248,8 @@ export function getEarliestAvailableDate(
 
 function rollUpRestaurantAvailabilitySummaries(
   listings: AvailabilityListing[],
-  listingSummaries: AvailabilitySummaryMap
+  listingSummaries: AvailabilitySummaryMap,
+  today: string
 ): AvailabilitySummaryMap {
   const rolledUpSummaries = { ...listingSummaries };
   const restaurants = new Map<string, { cardIds: Set<string>; listingIds: Set<string> }>();
@@ -234,15 +268,28 @@ function rollUpRestaurantAvailabilitySummaries(
     const summaries = [...restaurant.listingIds].map(
       listingId => listingSummaries[listingId] ?? { state: 'unavailable' as const }
     );
+    const availableNow = summaries.find(
+      summary => summary.state === 'available' && summary.nextAvailableDate === today
+    );
+    const nextOpeningToday = summaries
+      .filter(
+        (summary): summary is AvailabilitySummary & { nextAvailableAt: string } =>
+          summary.state === 'opensLater' && typeof summary.nextAvailableAt === 'string'
+      )
+      .sort((a, b) => a.nextAvailableAt.localeCompare(b.nextAvailableAt))[0];
     const nextAvailableDate = summaries
       .map(summary => summary.nextAvailableDate)
       .filter((date): date is string => typeof date === 'string')
       .sort()[0];
-    const restaurantSummary: AvailabilitySummary = nextAvailableDate
-      ? { nextAvailableDate, state: 'available' }
-      : summaries.some(summary => summary.state === 'noLongerAvailable')
-        ? { state: 'noLongerAvailable' }
-        : { state: 'unavailable' };
+    const restaurantSummary: AvailabilitySummary = availableNow
+      ? availableNow
+      : nextOpeningToday
+        ? nextOpeningToday
+        : nextAvailableDate
+          ? { nextAvailableDate, state: 'available' }
+          : summaries.some(summary => summary.state === 'noLongerAvailable')
+            ? { state: 'noLongerAvailable' }
+            : { state: 'unavailable' };
 
     rolledUpSummaries[cookId] = restaurantSummary;
     restaurant.cardIds.forEach(listingId => {
@@ -321,7 +368,7 @@ export function buildAvailabilitySummaries(
   now = new Date()
 ): AvailabilitySummaryMap {
   const listingSummaries = buildListingAvailabilitySummaries(listings, records, today, now);
-  return rollUpRestaurantAvailabilitySummaries(listings, listingSummaries);
+  return rollUpRestaurantAvailabilitySummaries(listings, listingSummaries, today);
 }
 
 /**

@@ -114,7 +114,7 @@ export default function DishOrderModal({
         style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <SafeAreaView edges={['top']} style={styles.topSafeArea} accessibilityViewIsModal>
+        <View style={styles.topSafeArea} accessibilityViewIsModal>
           <ScrollView
             style={styles.scrollView}
             contentContainerStyle={styles.scrollContent}
@@ -257,7 +257,7 @@ export default function DishOrderModal({
               ) : null}
             </View>
           </ScrollView>
-        </SafeAreaView>
+        </View>
 
         <SafeAreaView edges={['bottom']} style={styles.footerSafeArea}>
           <View style={styles.footer}>
@@ -296,7 +296,7 @@ const styles = StyleSheet.create({
   topSafeArea: { flex: 1, backgroundColor: '#FFFFFF' },
   scrollView: { flex: 1 },
   scrollContent: { paddingBottom: 28 },
-  hero: { height: 300, backgroundColor: '#E9ECEA' },
+  hero: { height: 205, backgroundColor: '#E9ECEA' },
   heroImage: { width: '100%', height: '100%' },
   heroShade: {
     ...StyleSheet.absoluteFill,
@@ -317,14 +317,14 @@ const styles = StyleSheet.create({
     shadowRadius: 7,
     elevation: 5,
   },
-  closeButton: { left: 18 },
-  shareButton: { right: 18 },
+  closeButton: { left: 18, marginTop: 50 },
+  shareButton: { right: 18, marginTop: 50 },
   details: { paddingHorizontal: 22, paddingTop: 24, paddingBottom: 22 },
   titleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 18 },
   title: {
     flex: 1,
     fontFamily: 'mon-b',
-    fontSize: 26,
+    fontSize: 22,
     lineHeight: 33,
     color: '#1F2622',
   },

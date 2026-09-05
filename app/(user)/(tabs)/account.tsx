@@ -30,12 +30,13 @@ const formatStat = (n: number): string => {
 
 export default function AccountScreen() {
   const router = useRouter();
-  const { user, initializing, loading } = useAuth();
+  const { user, session, initializing, loading } = useAuth();
   const { favourites } = useFavourites();
   const [isSigningOut, setIsSigningOut] = React.useState(false);
   const [userRole, setUserRole] = React.useState<string | null>(null);
   const [profile, setProfile] = React.useState<ProfileData | null>(null);
-  const [stats, setStats] = React.useState({ orders: 0, reviews: 0 });
+  const [stats, setStats] = React.useState({ orders: 0 });
+  const [buyerRating, setBuyerRating] = React.useState<number | null>(null);
 
   React.useEffect(() => {
     const fetchUserRole = async () => {
@@ -61,7 +62,13 @@ export default function AccountScreen() {
   }, [user]);
 
   React.useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      setProfile(null);
+      setStats({ orders: 0 });
+      setBuyerRating(null);
+      return;
+    }
+    setBuyerRating(null);
     (async () => {
       try {
         const { data: profileData, error: profileError } = await supabase
@@ -75,26 +82,28 @@ export default function AccountScreen() {
 
         setProfile(profileData);
 
-        const [ordersRes, reviewsRes] = await Promise.all([
+        const [ordersRes, ratingResponse] = await Promise.all([
           supabase
             .from('orders')
             .select('id', { count: 'exact', head: true })
             .eq('customer_id', profileData.id),
-          supabase
-            .from('reviews')
-            .select('id', { count: 'exact', head: true })
-            .eq('customer_id', profileData.id),
+          session?.access_token
+            ? fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/customer-reviews/me/summary`, {
+                headers: { Authorization: `Bearer ${session.access_token}` },
+              })
+            : Promise.resolve(null),
         ]);
 
-        setStats({
-          orders: ordersRes.count ?? 0,
-          reviews: reviewsRes.count ?? 0,
-        });
+        setStats({ orders: ordersRes.count ?? 0 });
+        if (ratingResponse?.ok) {
+          const rating = (await ratingResponse.json()) as { average?: number | null };
+          setBuyerRating(typeof rating.average === 'number' ? rating.average : null);
+        }
       } catch (err) {
         console.error('Error fetching profile/stats:', err);
       }
     })();
-  }, [user]);
+  }, [session?.access_token, user]);
 
   const handleSignOut = async () => {
     Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
@@ -264,8 +273,10 @@ export default function AccountScreen() {
             </TouchableOpacity>
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
-              <Text style={styles.statNumber}>{formatStat(stats.reviews)}</Text>
-              <Text style={styles.statLabel}>Reviews</Text>
+              <Text style={styles.statNumber}>
+                {buyerRating == null ? '—' : `${buyerRating.toFixed(1)} ★`}
+              </Text>
+              <Text style={styles.statLabel}>Buyer rating</Text>
             </View>
           </View>
         </View>

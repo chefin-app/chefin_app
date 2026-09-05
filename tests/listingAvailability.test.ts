@@ -8,6 +8,7 @@ import {
   getEarliestAvailableDate,
   getLocalDateKey,
   isAvailableNow,
+  isSummaryAvailableNow,
   rollUpRestaurantAvailableDates,
 } from '@/src/utils/listingAvailability';
 
@@ -117,7 +118,7 @@ describe('listing availability', () => {
     expect(getEarliestAvailableDate(records, '2026-07-22', now)).toBe('2026-07-22');
   });
 
-  it('does not mark a dish Available Now before its opening window starts', () => {
+  it('marks a dish as closed with its opening time before its window starts', () => {
     const records = [
       {
         available_date: '2026-07-22',
@@ -131,8 +132,12 @@ describe('listing availability', () => {
 
     const now = new Date('2026-07-22T02:59:00.000Z');
     expect(getAvailabilitySummary(records, '2026-07-22', now)).toEqual({
-      state: 'unavailable',
+      nextAvailableAt: '2026-07-22T03:00:00.000Z',
+      state: 'opensLater',
     });
+    expect(formatAvailabilityLabel(getAvailabilitySummary(records, '2026-07-22', now), now)).toBe(
+      'Closed · Opens at 11:00 AM'
+    );
   });
 
   it('supports legacy rows without an enabled flag but excludes explicit false', () => {
@@ -252,6 +257,86 @@ describe('listing availability', () => {
 
     expect(result['cook-1']).toEqual({ state: 'noLongerAvailable' });
     expect(result['representative-dish']).toEqual({ state: 'noLongerAvailable' });
+  });
+
+  it('rolls the earliest upcoming opening onto the restaurant card', () => {
+    const now = new Date('2026-07-21T01:00:00.000Z'); // 9:00 AM in Malaysia
+    const result = buildAvailabilitySummaries(
+      [
+        {
+          id: 'representative-dish',
+          cook_id: 'cook-1',
+          restaurant_listing_ids: ['representative-dish', 'lunch-dish'],
+        },
+      ],
+      [
+        {
+          listing_id: 'representative-dish',
+          available_date: '2026-07-22',
+          start_time: '09:00:00',
+          end_time: '12:00:00',
+          is_available: true,
+          max_orders: 5,
+          orders_taken: 0,
+        },
+        {
+          listing_id: 'lunch-dish',
+          available_date: '2026-07-21',
+          start_time: '12:00:00',
+          end_time: '14:00:00',
+          is_available: true,
+          max_orders: 5,
+          orders_taken: 0,
+        },
+      ],
+      '2026-07-21',
+      now
+    );
+
+    expect(result['cook-1']).toEqual({
+      nextAvailableAt: '2026-07-21T04:00:00.000Z',
+      state: 'opensLater',
+    });
+    expect(formatAvailabilityLabel(result['cook-1'], now)).toBe('Closed · Opens at 12:00 PM');
+    expect(isSummaryAvailableNow('cook-1', result, '2026-07-21')).toBe(false);
+  });
+
+  it('prefers an open dish over another dish that opens later', () => {
+    const now = new Date('2026-07-21T02:00:00.000Z'); // 10:00 AM in Malaysia
+    const result = buildAvailabilitySummaries(
+      [
+        { id: 'open-dish', cook_id: 'cook-1' },
+        { id: 'lunch-dish', cook_id: 'cook-1' },
+      ],
+      [
+        {
+          listing_id: 'open-dish',
+          available_date: '2026-07-21',
+          start_time: '09:00:00',
+          end_time: '11:00:00',
+          is_available: true,
+          max_orders: 5,
+          orders_taken: 0,
+        },
+        {
+          listing_id: 'lunch-dish',
+          available_date: '2026-07-21',
+          start_time: '12:00:00',
+          end_time: '14:00:00',
+          is_available: true,
+          max_orders: 5,
+          orders_taken: 0,
+        },
+      ],
+      '2026-07-21',
+      now
+    );
+
+    expect(result['cook-1']).toEqual({
+      nextAvailableDate: '2026-07-21',
+      state: 'available',
+    });
+    expect(isSummaryAvailableNow('cook-1', result, '2026-07-21')).toBe(true);
   });
 
   it('keeps sibling dish availability independent before restaurant roll-up', () => {

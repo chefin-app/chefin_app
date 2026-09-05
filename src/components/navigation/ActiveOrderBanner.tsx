@@ -1,5 +1,14 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+  FlatList,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -7,8 +16,7 @@ import { supabase } from '@/src/utils/supabaseClient';
 import { useAuth } from '@/src/services/auth-context';
 import {
   ACTIVE_ORDER_STATUSES,
-  formatArrivalWindow,
-  formatPickupEta,
+  getBuyerOrderTimingLabel,
   ORDER_STATUS_LABEL,
   type FulfillmentType,
   type OrderStatus,
@@ -36,13 +44,15 @@ const EXPIRY_GRACE_MS = 15 * 60_000;
 
 export default function ActiveOrderBanner() {
   const router = useRouter();
+  const { width } = useWindowDimensions();
   const { user } = useAuth();
-  const [order, setOrder] = useState<ActiveOrderRow | null>(null);
+  const [orders, setOrders] = useState<ActiveOrderRow[]>([]);
+  const [activeIndex, setActiveIndex] = useState(0);
   const [now, setNow] = useState(() => Date.now());
 
   const load = useCallback(async () => {
     if (!user) {
-      setOrder(null);
+      setOrders([]);
       return;
     }
     try {
@@ -52,7 +62,7 @@ export default function ActiveOrderBanner() {
         .eq('user_id', user.id)
         .single();
       if (profileError || !profile) {
-        setOrder(null);
+        setOrders([]);
         return;
       }
       const { data, error } = await supabase
@@ -66,7 +76,9 @@ export default function ActiveOrderBanner() {
         .limit(20);
       if (error) throw error;
       const activeOrders = (data ?? []) as unknown as ActiveOrderRow[];
-      setOrder(activeOrders.find(candidate => !isBannerExpired(candidate, Date.now())) ?? null);
+      const nextOrders = activeOrders.filter(candidate => !isBannerExpired(candidate, Date.now()));
+      setOrders(nextOrders);
+      setActiveIndex(current => Math.min(current, Math.max(nextOrders.length - 1, 0)));
     } catch (error: unknown) {
       console.error('Error fetching active order:', error);
     }
@@ -85,46 +97,88 @@ export default function ActiveOrderBanner() {
     return () => clearInterval(tick);
   }, []);
 
-  if (!order || !order.status) return null;
   // Live expiry between polls: the `now` tick re-evaluates this every 30s.
-  if (isBannerExpired(order, now)) return null;
+  const visibleOrders = orders.filter(order => order.status && !isBannerExpired(order, now));
+  if (visibleOrders.length === 0) return null;
+  const displayedIndex = Math.min(activeIndex, visibleOrders.length - 1);
 
-  const arrivalWindow = formatArrivalWindow(
-    order.delivery_jobs?.estimated_arrival_start ?? null,
-    order.delivery_jobs?.estimated_arrival_end ?? null
-  );
-  const timingLabel =
-    order.fulfillment_type === 'delivery'
-      ? arrivalWindow
-        ? `Estimated arrival ${arrivalWindow}`
-        : 'Delivery time being confirmed'
-      : formatPickupEta(order.pickup_time);
+  const handleScrollEnd = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    setActiveIndex(
+      Math.min(
+        Math.max(Math.round(event.nativeEvent.contentOffset.x / width), 0),
+        visibleOrders.length - 1
+      )
+    );
+  };
 
   return (
-    <TouchableOpacity
-      style={styles.container}
-      activeOpacity={0.9}
-      onPress={() =>
-        router.push({ pathname: '/order-status/[orderId]', params: { orderId: order.id } })
-      }
-    >
-      <View style={styles.iconWrap}>
-        <Ionicons
-          name={order.fulfillment_type === 'delivery' ? 'bicycle-outline' : 'bag-handle-outline'}
-          size={20}
-          color="#fff"
-        />
-      </View>
-      <View style={styles.copy}>
-        <Text style={styles.title} numberOfLines={1}>
-          {ORDER_STATUS_LABEL[order.status]} · {order.listings?.title ?? 'Your order'}
-        </Text>
-        <Text style={styles.eta} key={now}>
-          {timingLabel}
-        </Text>
-      </View>
-      <Ionicons name="chevron-forward" size={18} color="#fff" />
-    </TouchableOpacity>
+    <View style={styles.container}>
+      <FlatList
+        data={visibleOrders}
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        keyExtractor={order => order.id}
+        onMomentumScrollEnd={handleScrollEnd}
+        accessibilityLabel={`${visibleOrders.length} active order${visibleOrders.length === 1 ? '' : 's'}${visibleOrders.length > 1 ? '. Swipe horizontally to view each order.' : ''}`}
+        renderItem={({ item: order }) => {
+          const timingLabel = getBuyerOrderTimingLabel({
+            status: order.status,
+            fulfillmentType: order.fulfillment_type,
+            pickupTime: order.pickup_time,
+            estimatedArrivalStart: order.delivery_jobs?.estimated_arrival_start,
+            estimatedArrivalEnd: order.delivery_jobs?.estimated_arrival_end,
+          });
+          return (
+            <View style={[styles.page, { width }]}>
+              <TouchableOpacity
+                style={styles.orderCard}
+                activeOpacity={0.88}
+                accessibilityRole="button"
+                accessibilityLabel={`${ORDER_STATUS_LABEL[order.status!]}, ${order.listings?.title ?? 'your order'}. ${timingLabel}`}
+                onPress={() =>
+                  router.push({
+                    pathname: '/order-status/[orderId]',
+                    params: { orderId: order.id },
+                  })
+                }
+              >
+                <View style={styles.iconWrap}>
+                  <Ionicons
+                    name={
+                      order.fulfillment_type === 'delivery'
+                        ? 'bicycle-outline'
+                        : 'bag-handle-outline'
+                    }
+                    size={20}
+                    color="#fff"
+                  />
+                </View>
+                <View style={styles.copy}>
+                  <Text style={styles.title} numberOfLines={1}>
+                    {ORDER_STATUS_LABEL[order.status!]} · {order.listings?.title ?? 'Your order'}
+                  </Text>
+                  <Text style={styles.eta} key={now}>
+                    {timingLabel}
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color="#E8EFEA" />
+              </TouchableOpacity>
+            </View>
+          );
+        }}
+      />
+      {visibleOrders.length > 1 && (
+        <View style={styles.pagination} pointerEvents="none">
+          {visibleOrders.map((order, index) => (
+            <View
+              key={order.id}
+              style={[styles.paginationDot, index === displayedIndex && styles.paginationDotActive]}
+            />
+          ))}
+        </View>
+      )}
+    </View>
   );
 }
 
@@ -140,12 +194,29 @@ const isBannerExpired = (order: ActiveOrderRow, now: number): boolean => {
 
 const styles = StyleSheet.create({
   container: {
+    backgroundColor: '#f8f9fa',
+    paddingTop: 9,
+    paddingBottom: 8,
+  },
+  page: {
+    paddingHorizontal: 12,
+  },
+  orderCard: {
+    minHeight: 62,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    backgroundColor: '#1A1A1A',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.12)',
+    borderRadius: 18,
+    backgroundColor: '#18211B',
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    shadowColor: '#101712',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.16,
+    shadowRadius: 9,
+    elevation: 5,
   },
   iconWrap: {
     width: 34,
@@ -158,4 +229,22 @@ const styles = StyleSheet.create({
   copy: { flex: 1 },
   title: { color: '#fff', fontSize: 13, fontWeight: '700' },
   eta: { color: '#D7D7D7', fontSize: 12, marginTop: 2 },
+  pagination: {
+    height: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    marginTop: 7,
+  },
+  paginationDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: '#C6CEC8',
+  },
+  paginationDotActive: {
+    width: 14,
+    backgroundColor: '#278C43',
+  },
 });

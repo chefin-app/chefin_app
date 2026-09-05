@@ -6,6 +6,9 @@ export type CookApplicationAccess = {
   status: string | null;
   identityStatus: string | null;
   complianceStatus: string | null;
+  citizenshipType: string | null;
+  submittedAt: string | null;
+  reviewerNote: string | null;
   reverificationDueAt: string | null;
   eligibleToSell: boolean;
   restrictedToDrafts: boolean;
@@ -19,6 +22,9 @@ export function useCookApplication(): CookApplicationAccess {
     status: null,
     identityStatus: null,
     complianceStatus: null,
+    citizenshipType: null,
+    submittedAt: null,
+    reviewerNote: null,
     reverificationDueAt: null,
     eligibleToSell: false,
     restrictedToDrafts: true,
@@ -40,6 +46,9 @@ export function useCookApplication(): CookApplicationAccess {
           status?: string;
           identity_status?: string;
           compliance_status?: string;
+          citizenship_type?: string;
+          submitted_at?: string;
+          reviewer_note?: string | null;
           reverification_due_at?: string | null;
         } | null;
         eligibility?: { eligibleToSell?: boolean; restrictedToDrafts?: boolean };
@@ -49,6 +58,9 @@ export function useCookApplication(): CookApplicationAccess {
         status: payload.application?.status ?? null,
         identityStatus: payload.application?.identity_status ?? null,
         complianceStatus: payload.application?.compliance_status ?? null,
+        citizenshipType: payload.application?.citizenship_type ?? null,
+        submittedAt: payload.application?.submitted_at ?? null,
+        reviewerNote: payload.application?.reviewer_note ?? null,
         reverificationDueAt: payload.application?.reverification_due_at ?? null,
         eligibleToSell: payload.eligibility?.eligibleToSell === true,
         restrictedToDrafts: payload.eligibility?.restrictedToDrafts !== false,

@@ -12,6 +12,14 @@ export const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
   cancelled: 'Cancelled',
 };
 
+interface BuyerOrderTimingInput {
+  status: OrderStatus | null;
+  fulfillmentType: FulfillmentType | null;
+  pickupTime: string | null;
+  estimatedArrivalStart?: string | null;
+  estimatedArrivalEnd?: string | null;
+}
+
 /** Short human-friendly code shown in place of the raw UUID, e.g. CF-3A9. */
 export const shortOrderCode = (id: string): string =>
   `CF-${id.replace(/-/g, '').slice(0, 3).toUpperCase()}`;
@@ -84,4 +92,38 @@ export function formatArrivalWindow(start: string | null, end: string | null): s
     hour12: true,
   });
   return `${startText}–${endText}`;
+}
+
+/**
+ * Buyer-facing timing copy for an order's current state. Pending orders never
+ * expose an ETA because the cook has not accepted the order yet, even when a
+ * delivery quote or requested pickup slot already exists.
+ */
+export function getBuyerOrderTimingLabel({
+  status,
+  fulfillmentType,
+  pickupTime,
+  estimatedArrivalStart = null,
+  estimatedArrivalEnd = null,
+}: BuyerOrderTimingInput): string {
+  const isDelivery = fulfillmentType === 'delivery';
+  const arrivalWindow = formatArrivalWindow(estimatedArrivalStart, estimatedArrivalEnd);
+
+  if (status === 'pending') return 'Waiting for the cook to accept';
+  if (status === 'cancelled') return 'Order cancelled';
+  if (status === 'completed') return isDelivery ? 'Order delivered' : 'Order collected';
+
+  if (status === 'ready') {
+    if (!isDelivery) return 'Ready for pickup';
+    return arrivalWindow
+      ? `Estimated arrival ${arrivalWindow}`
+      : 'Food is ready · delivery being arranged';
+  }
+
+  if (status === 'confirmed') {
+    if (!isDelivery) return formatPickupEta(pickupTime);
+    return arrivalWindow ? `Estimated arrival ${arrivalWindow}` : 'Delivery time being confirmed';
+  }
+
+  return 'Order timing unavailable';
 }
