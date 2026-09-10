@@ -1,5 +1,6 @@
 import {
   canAdminCancelCheckout,
+  canAdminCompleteCheckout,
   compactOrderId,
   deriveCheckoutStatus,
   formatFullAddress,
@@ -31,6 +32,31 @@ describe('admin order monitoring', () => {
       expect(canAdminCancelCheckout(['ready'])).toBe(false);
       expect(canAdminCancelCheckout(['completed'])).toBe(false);
       expect(canAdminCancelCheckout([])).toBe(false);
+    });
+
+    it('allows admin completion only for fully ready paid checkouts without refunds', () => {
+      expect(
+        canAdminCompleteCheckout([
+          { status: 'ready', paymentStatus: 'paid', refundStatus: 'not_required' },
+          { status: 'ready', paymentStatus: 'paid', refundStatus: 'not_required' },
+        ])
+      ).toBe(true);
+      expect(
+        canAdminCompleteCheckout([
+          { status: 'confirmed', paymentStatus: 'paid', refundStatus: 'not_required' },
+        ])
+      ).toBe(false);
+      expect(
+        canAdminCompleteCheckout([
+          { status: 'ready', paymentStatus: 'paid', refundStatus: 'refund_required' },
+        ])
+      ).toBe(false);
+      expect(
+        canAdminCompleteCheckout([
+          { status: 'ready', paymentStatus: 'pending', refundStatus: 'not_required' },
+        ])
+      ).toBe(false);
+      expect(canAdminCompleteCheckout([])).toBe(false);
     });
 
     it('recognizes pending, preparing and ready checkouts as live', () => {

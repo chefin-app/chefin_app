@@ -504,7 +504,7 @@ router.post('/lalamove/webhook', async (req, res) => {
         .from('orders')
         .update({ status: 'completed', completed_at: now })
         .eq('delivery_job_id', job.id)
-        .neq('status', 'cancelled')
+        .in('status', ['pending', 'confirmed', 'ready'])
         .select(
           'id, checkout_id, listing_id, quantity, total_price, scheduled_date, pickup_time, listings(title)'
         );

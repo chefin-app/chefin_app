@@ -246,8 +246,7 @@ export async function verifyPickupCode(orderId: string, cookUserId: string, code
     .maybeSingle();
   if (error) throw error;
   if (!handoff) throw new Error('The buyer pickup code is not ready yet.');
-  if (handoff.verified_at)
-    return completePickupCheckout(representative.checkout_id, cookUserId, 'pin');
+  if (handoff.verified_at) return completePickupCheckout(representative.checkout_id, cookUserId);
   if (new Date(handoff.expires_at).getTime() < Date.now())
     throw new Error('This pickup code has expired. Ask Chefin support for help.');
   if (handoff.locked_until && new Date(handoff.locked_until).getTime() > Date.now()) {
@@ -305,14 +304,10 @@ export async function verifyPickupCode(orderId: string, cookUserId: string, code
       event_type: 'pin_verified',
     });
   }
-  return completePickupCheckout(representative.checkout_id, cookUserId, 'pin');
+  return completePickupCheckout(representative.checkout_id, cookUserId);
 }
 
-export async function completePickupCheckout(
-  checkoutId: string,
-  actorUserId: string,
-  source: 'pin' | 'admin_override'
-) {
+async function completePickupCheckout(checkoutId: string, actorUserId: string) {
   const { data: rawLines, error } = await supabase
     .from('orders')
     .select(
@@ -323,7 +318,7 @@ export async function completePickupCheckout(
   if (error) throw error;
   const lines = (rawLines ?? []) as unknown as HandoffOrder[];
   if (lines.length === 0) throw new Error('Order not found.');
-  if (source === 'pin' && lines.some(line => line.status !== 'ready')) {
+  if (lines.some(line => line.status !== 'ready')) {
     throw new Error('Every dish must be ready before this pickup can be completed.');
   }
   const now = new Date().toISOString();
@@ -348,7 +343,7 @@ export async function completePickupCheckout(
   await supabase.from('pickup_handoff_events').insert({
     checkout_id: checkoutId,
     actor_user_id: actorUserId,
-    event_type: source === 'pin' ? 'checkout_completed' : 'admin_override_completed',
+    event_type: 'checkout_completed',
   });
 
   const representative = lines[0];

@@ -16,7 +16,7 @@ import {
 
 import {
   cancelManagedOrder,
-  confirmManagedPickup,
+  completeManagedOrder,
   createManagedOrderDispute,
   fetchManagedOrderDetails,
   fetchManagedPickupEvidence,
@@ -65,7 +65,7 @@ const DATE_RANGES: Array<{ key: DishManagementDateRange; label: string }> = [
   { key: '90d', label: 'Last 90 days' },
 ];
 
-type ActionMode = 'cancel' | 'flag' | 'resolve' | 'handoff' | null;
+type ActionMode = 'cancel' | 'flag' | 'resolve' | 'complete' | null;
 type LoadMode = 'initial' | 'manual' | 'silent';
 
 const currency = (value: number): string =>
@@ -353,8 +353,8 @@ export default function OrderMonitoringScreen() {
       setActionError('Enter a resolution note of at least 5 characters.');
       return;
     }
-    if (actionMode === 'handoff' && reason.trim().length < 5) {
-      setActionError('Enter an override reason of at least 5 characters.');
+    if (actionMode === 'complete' && reason.trim().length < 10) {
+      setActionError('Enter an override reason of at least 10 characters.');
       return;
     }
     setActionLoading(true);
@@ -370,11 +370,11 @@ export default function OrderMonitoringScreen() {
           details: disputeDetails.trim(),
         });
         showAdminSuccess('Dispute opened', 'The order is now in the open dispute queue.');
-      } else if (actionMode === 'handoff') {
-        await confirmManagedPickup(session.access_token, selectedId, reason.trim());
+      } else if (actionMode === 'complete') {
+        await completeManagedOrder(session.access_token, selectedId, reason.trim());
         showAdminSuccess(
-          'Pickup confirmed',
-          'The override and its reason were added to the audit trail.'
+          'Order completed',
+          'The checkout was completed and the override was added to the audit trail.'
         );
       } else if (resolvingDispute) {
         await updateManagedOrderDispute(
@@ -804,13 +804,11 @@ export default function OrderMonitoringScreen() {
                   onPress={() => beginAction('cancel')}
                 />
               ) : null}
-              {selectedOrder.fulfillmentType === 'pickup' &&
-              selectedOrder.status === 'ready' &&
-              selectedOrder.openAlertCount > 0 ? (
+              {selectedOrder.canComplete ? (
                 <SmallButton
-                  label="Confirm handoff"
+                  label="Override as completed"
                   tone="primary"
-                  onPress={() => beginAction('handoff')}
+                  onPress={() => beginAction('complete')}
                 />
               ) : null}
             </>
@@ -1183,8 +1181,8 @@ export default function OrderMonitoringScreen() {
             ? 'Cancel this order?'
             : actionMode === 'flag'
               ? 'Flag an order dispute'
-              : actionMode === 'handoff'
-                ? 'Confirm pickup manually?'
+              : actionMode === 'complete'
+                ? 'Override order as completed?'
                 : 'Resolve this dispute'
         }
         subtitle={selectedOrder ? `Order #${selectedOrder.displayId}` : undefined}
@@ -1202,8 +1200,8 @@ export default function OrderMonitoringScreen() {
                       ? 'Cancel order'
                       : actionMode === 'flag'
                         ? 'Open dispute'
-                        : actionMode === 'handoff'
-                          ? 'Confirm pickup'
+                        : actionMode === 'complete'
+                          ? 'Complete order'
                           : 'Resolve dispute'
                 }
                 tone={actionMode === 'cancel' ? 'danger' : 'primary'}
@@ -1224,12 +1222,14 @@ export default function OrderMonitoringScreen() {
               </Text>
             </View>
           ) : null}
-          {actionMode === 'handoff' ? (
+          {actionMode === 'complete' ? (
             <View style={styles.warningBox}>
               <Ionicons name="shield-outline" size={22} color="#B26A00" />
               <Text style={styles.warningText}>
-                Use this only after reviewing the cook&apos;s evidence or confirming receipt with
-                the buyer. The action cannot be undone.
+                {selectedOrder?.fulfillmentType === 'delivery'
+                  ? 'Use this only after reviewing Lalamove proof or confirming receipt with the buyer. This completes every item and affects the cook payout.'
+                  : 'Use this only after reviewing handoff evidence or confirming receipt with the buyer. This completes every item and affects the cook payout.'}{' '}
+                The action cannot be undone and does not automatically resolve an active dispute.
               </Text>
             </View>
           ) : null}
@@ -1262,7 +1262,7 @@ export default function OrderMonitoringScreen() {
                 ? 'Cancellation reason'
                 : actionMode === 'flag'
                   ? 'Dispute category'
-                  : actionMode === 'handoff'
+                  : actionMode === 'complete'
                     ? 'Override reason'
                     : 'Resolution note'}
             </Text>

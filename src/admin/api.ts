@@ -344,12 +344,14 @@ export const cancelManagedOrder = (accessToken: string, orderId: string, reason:
     { method: 'POST', body: { reason } }
   );
 
-export const confirmManagedPickup = (accessToken: string, orderId: string, reason: string) =>
-  adminRequest<{ success: true; checkoutId: string; orderIds: string[] }>(
-    `/orders/${orderId}/confirm-pickup`,
-    accessToken,
-    { method: 'POST', body: { reason } }
-  );
+export const completeManagedOrder = (accessToken: string, orderId: string, reason: string) =>
+  adminRequest<{
+    success: true;
+    checkoutId: string;
+    orderIds: string[];
+    fulfillmentType: string;
+    completedAt: string;
+  }>(`/orders/${orderId}/complete`, accessToken, { method: 'POST', body: { reason } });
 
 export const fetchManagedPickupEvidence = async (accessToken: string, orderId: string) => {
   const response = await adminRequest<{ fileUrl: string }>(

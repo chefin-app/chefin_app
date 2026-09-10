@@ -3,6 +3,7 @@ import express from 'express';
 import { getAdminDateBounds } from '../adminDateFilter';
 import {
   canAdminCancelCheckout,
+  canAdminCompleteCheckout,
   compactOrderId,
   deriveCheckoutStatus,
   formatFullAddress,
@@ -15,9 +16,13 @@ import { writeAdminAudit } from '../adminAudit';
 import { releaseListingCapacityForOrder } from '../availabilityService';
 import { cancelDeliveryJobWhenUnused } from '../deliveryService';
 import type { AdminRequest } from '../middleware/requireAdmin';
-import { notifyBuyerOrderCancelledByAdmin } from '../notifications';
+import {
+  notifyBuyerCheckoutFulfilled,
+  notifyBuyerOrderCancelledByAdmin,
+  notifyCookCheckoutFulfilled,
+  notifyCookDeliveryPayout,
+} from '../notifications';
 import { supabase } from '../supabaseClient';
-import { completePickupCheckout } from '../pickupHandoff';
 
 const router = express.Router();
 const UUID_PATTERN = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
@@ -348,6 +353,13 @@ const listItem = (group: CheckoutGroup) => ({
   pickupTime: group.representative.pickup_time,
   createdAt: group.createdAt,
   canCancel: canAdminCancelCheckout(group.lines.map(line => line.status)),
+  canComplete: canAdminCompleteCheckout(
+    group.lines.map(line => ({
+      status: line.status,
+      paymentStatus: line.payment_status,
+      refundStatus: line.refund_status,
+    }))
+  ),
 });
 
 const detailItem = (group: CheckoutGroup) => ({
@@ -734,41 +746,80 @@ router.post('/:id/cancel', async (req: AdminRequest, res) => {
   }
 });
 
-router.post('/:id/confirm-pickup', async (req: AdminRequest, res) => {
+router.post('/:id/complete', async (req: AdminRequest, res) => {
   const { id } = req.params;
-  const reason = String(req.body.reason ?? '').trim();
+  const reason = typeof req.body?.reason === 'string' ? req.body.reason.trim() : '';
   if (!UUID_PATTERN.test(id)) return res.status(400).json({ error: 'Order ID is invalid.' });
-  if (reason.length < 5) {
-    return res
-      .status(400)
-      .json({ error: 'An override reason of at least 5 characters is required.' });
+  if (reason.length < 10 || reason.length > 500) {
+    return res.status(400).json({ error: 'Enter an override reason of 10–500 characters.' });
   }
   try {
     const checkout = await loadCheckout(id);
     if (!checkout) return res.status(404).json({ error: 'Order not found.' });
     if (
-      checkout.representative.fulfillment_type !== 'pickup' ||
-      checkout.lines.some(line => line.status !== 'ready')
+      !canAdminCompleteCheckout(
+        checkout.lines.map(line => ({
+          status: line.status,
+          paymentStatus: line.payment_status,
+          refundStatus: line.refund_status,
+        }))
+      )
     ) {
-      return res
-        .status(409)
-        .json({ error: 'Only a fully ready pickup can be confirmed manually.' });
+      return res.status(409).json({
+        error: 'Only fully ready, paid orders without refund processing can be completed.',
+      });
     }
-    const result = await completePickupCheckout(
-      checkout.checkoutId,
-      req.admin!.userId,
-      'admin_override'
+    const { data: affectedIds, error: completionError } = await supabase.rpc(
+      'admin_complete_checkout',
+      {
+        target_checkout_id: checkout.checkoutId,
+        admin_user_id: req.admin!.userId,
+        override_reason: reason,
+      }
     );
-    await writeAdminAudit({
-      actorUserId: req.admin!.userId,
-      targetUserId: checkout.customer?.user_id,
-      action: 'pickup_handoff_admin_override',
-      details: { checkoutId: checkout.checkoutId, orderIds: result.orderIds, reason },
+    if (completionError) throw completionError;
+    const orderIds = Array.isArray(affectedIds) ? affectedIds.map(String) : [];
+    if (orderIds.length === 0) throw new Error('The completion did not update any order lines.');
+
+    const fulfillmentType = checkout.representative.fulfillment_type;
+    const itemCount = checkout.lines.reduce((sum, line) => sum + Number(line.quantity), 0);
+    const foodTotal = checkout.lines.reduce((sum, line) => sum + Number(line.total_price), 0);
+    await Promise.all([
+      checkout.customer?.user_id
+        ? notifyBuyerCheckoutFulfilled(checkout.customer.user_id, {
+            checkoutId: checkout.checkoutId,
+            representativeOrderId: checkout.representative.id,
+            itemCount,
+          })
+        : Promise.resolve(),
+      checkout.cook?.user_id
+        ? fulfillmentType === 'delivery'
+          ? notifyCookDeliveryPayout(
+              checkout.cook.user_id,
+              foodTotal,
+              checkout.cookDeliveryCharge,
+              orderIds
+            )
+          : notifyCookCheckoutFulfilled(checkout.cook.user_id, {
+              checkoutId: checkout.checkoutId,
+              orderIds,
+              creditedAmount: foodTotal,
+            })
+        : Promise.resolve(),
+    ]).catch(error => {
+      console.error('Admin completion notification failed:', error);
     });
-    res.json({ success: true, ...result });
+
+    res.json({
+      success: true,
+      checkoutId: checkout.checkoutId,
+      orderIds,
+      fulfillmentType,
+      completedAt: new Date().toISOString(),
+    });
   } catch (error: unknown) {
-    console.error('Admin pickup override failed:', error);
-    res.status(500).json({ error: 'The pickup override could not be completed.' });
+    console.error('Admin completion override failed:', error);
+    res.status(500).json({ error: 'The completion override could not be completed.' });
   }
 });
 

@@ -31,6 +31,21 @@ export const canAdminCancelCheckout = (statuses: Array<string | null>): boolean 
   statuses.every(status => status !== null && LIVE_STATUSES.has(status as AdminOrderLineStatus)) &&
   statuses.every(status => status !== 'ready');
 
+export const canAdminCompleteCheckout = (
+  lines: Array<{
+    status: string | null;
+    paymentStatus: string | null;
+    refundStatus: string | null;
+  }>
+): boolean =>
+  lines.length > 0 &&
+  lines.every(
+    line =>
+      line.status === 'ready' &&
+      line.paymentStatus === 'paid' &&
+      line.refundStatus === 'not_required'
+  );
+
 export const compactOrderId = (id: string): string => id.split('-')[0].toUpperCase();
 
 export const maskPhoneNumber = (value: string | null | undefined): string | null => {

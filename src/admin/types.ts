@@ -372,6 +372,7 @@ export interface ManagedOrderListItem {
   pickupTime: string | null;
   createdAt: string;
   canCancel: boolean;
+  canComplete: boolean;
 }
 
 export interface OrderMonitoringResponse {
