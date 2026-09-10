@@ -1,12 +1,112 @@
 import express from 'express';
 import type { AccountRequest } from '../accountAccess';
 import { requireActiveAccount, requireReadableAccount } from '../accountAccess';
+import {
+  buildCookPerformance,
+  type CookPerformanceLedgerEntry,
+  type CookPerformanceOrder,
+} from '../cookPerformance';
 import { supabase } from '../supabaseClient';
 
 const router = express.Router();
+const PAGE_SIZE = 1000;
+
+async function fetchAllRows<T>(
+  loadPage: (from: number, to: number) => PromiseLike<{ data: unknown; error: unknown }>
+): Promise<T[]> {
+  const rows: T[] = [];
+  for (let from = 0; ; from += PAGE_SIZE) {
+    const { data, error } = await loadPage(from, from + PAGE_SIZE - 1);
+    if (error) throw error;
+    const page = (data ?? []) as T[];
+    rows.push(...page);
+    if (page.length < PAGE_SIZE) return rows;
+  }
+}
 
 router.get('/status', requireReadableAccount, (req: AccountRequest, res) => {
   res.json({ account: req.account });
+});
+
+router.get('/cook-performance', requireReadableAccount, async (req: AccountRequest, res) => {
+  try {
+    const [{ data: role, error: roleError }, { data: profile, error: profileError }] =
+      await Promise.all([
+        supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', req.account!.userId)
+          .eq('role', 'cook')
+          .maybeSingle(),
+        supabase
+          .from('profiles')
+          .select('id, full_name, restaurant_name, profile_image')
+          .eq('id', req.account!.profileId)
+          .single(),
+      ]);
+    if (roleError || profileError) throw roleError ?? profileError;
+    if (!role) return res.status(403).json({ error: 'Cook access is required.' });
+
+    const { data: listings, error: listingsError } = await supabase
+      .from('listings')
+      .select('id, status, is_active')
+      .eq('cook_id', profile.id);
+    if (listingsError) throw listingsError;
+
+    const listingIds = (listings ?? []).map(listing => listing.id);
+    const publishedListingIds = (listings ?? [])
+      .filter(listing => listing.status === 'approved' && listing.is_active === true)
+      .map(listing => listing.id);
+    const [orders, reviewRows, ledgerEntries] = await Promise.all([
+      listingIds.length > 0
+        ? fetchAllRows<CookPerformanceOrder>((from, to) =>
+            supabase
+              .from('orders')
+              .select(
+                'checkout_id, customer_id, total_price, payment_status, refund_status, status, completed_at'
+              )
+              .in('listing_id', listingIds)
+              .order('id', { ascending: true })
+              .range(from, to)
+          )
+        : Promise.resolve([]),
+      publishedListingIds.length > 0
+        ? fetchAllRows<{ rating: number }>((from, to) =>
+            supabase
+              .from('reviews')
+              .select('rating')
+              .in('listing_id', publishedListingIds)
+              .order('id', { ascending: true })
+              .range(from, to)
+          )
+        : Promise.resolve([]),
+      fetchAllRows<CookPerformanceLedgerEntry>((from, to) =>
+        supabase
+          .from('cook_payout_ledger')
+          .select('amount, status, updated_at')
+          .eq('cook_id', profile.id)
+          .order('id', { ascending: true })
+          .range(from, to)
+      ),
+    ]);
+
+    res.set('Cache-Control', 'no-store');
+    res.json({
+      profile: {
+        fullName: profile.full_name,
+        restaurantName: profile.restaurant_name,
+        imageUrl: profile.profile_image,
+      },
+      performance: buildCookPerformance(
+        orders,
+        reviewRows.map(review => review.rating),
+        ledgerEntries
+      ),
+    });
+  } catch (error: unknown) {
+    console.error('Could not load cook performance:', error);
+    res.status(500).json({ error: 'Cook performance could not be loaded.' });
+  }
 });
 
 type LocationSource = 'device' | 'manual';

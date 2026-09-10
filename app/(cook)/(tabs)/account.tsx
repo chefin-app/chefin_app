@@ -7,10 +7,15 @@ import {
   StyleSheet,
   SafeAreaView,
   ScrollView,
+  ActivityIndicator,
+  Image,
+  RefreshControl,
 } from 'react-native';
-import { type Href, useRouter } from 'expo-router';
+import { type Href, useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/src/utils/supabaseClient';
+import { useAuth } from '@/src/services/auth-context';
+import { createShadowStyle } from '@/src/utils/platform-utils';
 
 interface MenuItem {
   id: string;
@@ -21,9 +26,77 @@ interface MenuItem {
   section?: 'main' | 'more';
 }
 
+interface CookOverview {
+  profile: {
+    fullName: string | null;
+    restaurantName: string | null;
+    imageUrl: string | null;
+  };
+  performance: {
+    totalEarned: number;
+    grossFoodEarnings: number;
+    deliveryChargesCovered: number;
+    ordersFulfilled: number;
+    averageRating: number | null;
+    ratingCount: number;
+    completionRate: number | null;
+    averageEarningsPerOrder: number;
+    last30DaysEarned: number;
+    last30DaysOrders: number;
+  };
+}
+
+const formatMoney = (value: number): string =>
+  `RM ${value.toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+const formatStat = (value: number): string =>
+  value < 1000 ? String(value) : `${(value / 1000).toFixed(1).replace(/\.0$/, '')}k`;
+
 const Account: React.FC = () => {
   const router = useRouter();
+  const { session } = useAuth();
   const [isSigningOut, setIsSigningOut] = React.useState(false);
+  const [overview, setOverview] = React.useState<CookOverview | null>(null);
+  const [overviewLoading, setOverviewLoading] = React.useState(true);
+  const [overviewError, setOverviewError] = React.useState<string | null>(null);
+  const [refreshing, setRefreshing] = React.useState(false);
+
+  const loadOverview = React.useCallback(
+    async (manual = false) => {
+      if (!session?.access_token) {
+        setOverviewLoading(false);
+        return;
+      }
+      if (manual) setRefreshing(true);
+      else setOverviewLoading(true);
+      setOverviewError(null);
+      try {
+        const response = await fetch(
+          `${process.env.EXPO_PUBLIC_API_URL}/api/account/cook-performance`,
+          { headers: { Authorization: `Bearer ${session.access_token}` } }
+        );
+        const payload = (await response.json().catch(() => ({}))) as CookOverview & {
+          error?: string;
+        };
+        if (!response.ok) throw new Error(payload.error ?? 'Performance overview is unavailable.');
+        setOverview(payload);
+      } catch (error: unknown) {
+        setOverviewError(
+          error instanceof Error ? error.message : 'Performance overview is unavailable.'
+        );
+      } finally {
+        setOverviewLoading(false);
+        setRefreshing(false);
+      }
+    },
+    [session?.access_token]
+  );
+
+  useFocusEffect(
+    React.useCallback(() => {
+      loadOverview();
+    }, [loadOverview])
+  );
 
   const menuItems: MenuItem[] = [
     {
@@ -171,7 +244,161 @@ const Account: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={styles.contentContainer}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => loadOverview(true)}
+            tintColor="#258B50"
+            colors={['#258B50']}
+          />
+        }
+      >
+        <View style={styles.performanceCard}>
+          {overviewLoading ? (
+            <View style={styles.performanceLoading}>
+              <ActivityIndicator color="#258B50" />
+              <Text style={styles.performanceLoadingText}>Loading your performance…</Text>
+            </View>
+          ) : overviewError && !overview ? (
+            <View style={styles.performanceLoading}>
+              <Ionicons name="analytics-outline" size={30} color="#7B877F" />
+              <Text style={styles.performanceError}>{overviewError}</Text>
+              <TouchableOpacity style={styles.retryButton} onPress={() => loadOverview()}>
+                <Text style={styles.retryButtonText}>Try again</Text>
+              </TouchableOpacity>
+            </View>
+          ) : overview ? (
+            <>
+              <View style={styles.performanceHeader}>
+                <TouchableOpacity
+                  style={styles.restaurantAvatar}
+                  activeOpacity={0.8}
+                  onPress={() => router.push('/(cook)/profile-information')}
+                >
+                  {overview.profile.imageUrl ? (
+                    <Image
+                      source={{ uri: overview.profile.imageUrl }}
+                      style={styles.restaurantAvatarImage}
+                    />
+                  ) : (
+                    <Text style={styles.restaurantAvatarText}>
+                      {(overview.profile.restaurantName || overview.profile.fullName || 'C')
+                        .charAt(0)
+                        .toUpperCase()}
+                    </Text>
+                  )}
+                </TouchableOpacity>
+                <View style={styles.performanceHeaderCopy}>
+                  <Text style={styles.performanceEyebrow}>PERFORMANCE OVERVIEW</Text>
+                  <Text style={styles.restaurantName} numberOfLines={1}>
+                    {overview.profile.restaurantName ||
+                      overview.profile.fullName ||
+                      'Your restaurant'}
+                  </Text>
+                </View>
+                <Ionicons name="analytics" size={22} color="#258B50" />
+              </View>
+
+              <View style={styles.earningsBlock}>
+                <Text style={styles.earningsLabel}>Total earned</Text>
+                <Text
+                  style={styles.earningsValue}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.72}
+                >
+                  {formatMoney(overview.performance.totalEarned)}
+                </Text>
+                <Text style={styles.earningsHint}>Net of applied delivery charges</Text>
+              </View>
+
+              <View style={styles.metricsGrid}>
+                <View style={styles.metricItem}>
+                  <Text
+                    style={styles.metricValue}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.75}
+                  >
+                    {overview.performance.averageRating == null
+                      ? '—'
+                      : `${overview.performance.averageRating.toFixed(1)} ★`}
+                  </Text>
+                  <Text style={styles.metricLabel}>Restaurant rating</Text>
+                  <Text style={styles.metricHint}>
+                    {formatStat(overview.performance.ratingCount)} public review
+                    {overview.performance.ratingCount === 1 ? '' : 's'}
+                  </Text>
+                </View>
+                <View style={styles.metricItem}>
+                  <Text
+                    style={styles.metricValue}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.75}
+                  >
+                    {formatStat(overview.performance.ordersFulfilled)}
+                  </Text>
+                  <Text style={styles.metricLabel}>Orders fulfilled</Text>
+                  <Text style={styles.metricHint}>Completed checkouts</Text>
+                </View>
+                <View style={styles.metricItem}>
+                  <Text
+                    style={styles.metricValue}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.75}
+                  >
+                    {overview.performance.completionRate == null
+                      ? '—'
+                      : `${overview.performance.completionRate.toFixed(0)}%`}
+                  </Text>
+                  <Text style={styles.metricLabel}>Completion rate</Text>
+                  <Text style={styles.metricHint}>Completed vs cancelled</Text>
+                </View>
+                <View style={styles.metricItem}>
+                  <Text
+                    style={styles.metricValue}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.65}
+                  >
+                    {formatMoney(overview.performance.averageEarningsPerOrder)}
+                  </Text>
+                  <Text style={styles.metricLabel}>Average per order</Text>
+                  <Text style={styles.metricHint}>Net earnings</Text>
+                </View>
+              </View>
+
+              <View style={styles.recentSummary}>
+                <View style={styles.recentIcon}>
+                  <Ionicons name="trending-up" size={18} color="#258B50" />
+                </View>
+                <View style={styles.recentCopy}>
+                  <Text style={styles.recentLabel}>Last 30 days</Text>
+                  <Text style={styles.recentValue}>
+                    {formatMoney(overview.performance.last30DaysEarned)} from{' '}
+                    {overview.performance.last30DaysOrders} fulfilled order
+                    {overview.performance.last30DaysOrders === 1 ? '' : 's'}
+                  </Text>
+                </View>
+              </View>
+
+              {overview.performance.deliveryChargesCovered > 0 ? (
+                <Text style={styles.breakdownText}>
+                  Gross food sales {formatMoney(overview.performance.grossFoodEarnings)} · Delivery
+                  charges covered {formatMoney(overview.performance.deliveryChargesCovered)}
+                </Text>
+              ) : null}
+              {overviewError ? <Text style={styles.staleText}>{overviewError}</Text> : null}
+            </>
+          ) : null}
+        </View>
+
         <View style={styles.section}>{mainItems.map(renderMenuItem)}</View>
 
         {/* <View style={styles.sectionHeader}>
@@ -209,6 +436,88 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 20,
   },
+  contentContainer: { paddingTop: 16, paddingBottom: 16 },
+  performanceCard: {
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+    padding: 20,
+    marginBottom: 22,
+    ...createShadowStyle({
+      shadowColor: '#17251C',
+      shadowOffset: { width: 0, height: 3 },
+      shadowOpacity: 0.1,
+      shadowRadius: 8,
+      elevation: 3,
+    }),
+  },
+  performanceLoading: {
+    minHeight: 210,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    paddingHorizontal: 20,
+  },
+  performanceLoadingText: { fontSize: 14, color: '#707A73' },
+  performanceError: { textAlign: 'center', fontSize: 13, lineHeight: 19, color: '#707A73' },
+  retryButton: {
+    minHeight: 38,
+    borderRadius: 19,
+    paddingHorizontal: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#E8F6EC',
+  },
+  retryButtonText: { color: '#237A3B', fontSize: 13, fontWeight: '700' },
+  performanceHeader: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  restaurantAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#258B50',
+  },
+  restaurantAvatarImage: { width: '100%', height: '100%' },
+  restaurantAvatarText: { color: '#FFFFFF', fontSize: 20, fontWeight: '800' },
+  performanceHeaderCopy: { flex: 1 },
+  performanceEyebrow: { fontSize: 10, fontWeight: '800', letterSpacing: 0.8, color: '#258B50' },
+  restaurantName: { marginTop: 3, fontSize: 18, fontWeight: '700', color: '#26332B' },
+  earningsBlock: { alignItems: 'center', paddingVertical: 24 },
+  earningsLabel: { fontSize: 12, color: '#758078' },
+  earningsValue: { marginTop: 3, fontSize: 31, fontWeight: '800', color: '#1E2C23' },
+  earningsHint: { marginTop: 4, fontSize: 11, color: '#929A95' },
+  metricsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    borderTopWidth: 1,
+    borderTopColor: '#EDF1EE',
+  },
+  metricItem: { width: '50%', minHeight: 102, paddingVertical: 15, paddingRight: 8 },
+  metricValue: { fontSize: 18, fontWeight: '800', color: '#2D3931' },
+  metricLabel: { marginTop: 4, fontSize: 12, fontWeight: '600', color: '#59655D' },
+  metricHint: { marginTop: 3, fontSize: 10, color: '#959D98' },
+  recentSummary: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 11,
+    borderRadius: 14,
+    padding: 13,
+    backgroundColor: '#EDF8F0',
+  },
+  recentIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#D6EFDD',
+  },
+  recentCopy: { flex: 1 },
+  recentLabel: { fontSize: 11, fontWeight: '700', color: '#237A3B' },
+  recentValue: { marginTop: 2, fontSize: 12, lineHeight: 18, color: '#3D4B42' },
+  breakdownText: { marginTop: 11, fontSize: 10, lineHeight: 16, color: '#8A938D' },
+  staleText: { marginTop: 8, fontSize: 10, color: '#B26A00' },
   section: {
     marginBottom: 30,
   },
