@@ -22,8 +22,8 @@ import {
   type RequestedOptionGroup,
 } from '../menuOptionService';
 import {
+  notifyBuyerCheckoutFulfilled,
   notifyBuyerDeliveryUpdate,
-  notifyBuyerReviewRequest,
   notifyCookDeliveryUpdate,
   notifyCookDeliveryPayout,
 } from '../notifications';
@@ -506,7 +506,7 @@ router.post('/lalamove/webhook', async (req, res) => {
         .eq('delivery_job_id', job.id)
         .neq('status', 'cancelled')
         .select(
-          'id, listing_id, quantity, total_price, scheduled_date, pickup_time, listings(title)'
+          'id, checkout_id, listing_id, quantity, total_price, scheduled_date, pickup_time, listings(title)'
         );
       if (orderError) throw orderError;
       await supabase
@@ -514,28 +514,20 @@ router.post('/lalamove/webhook', async (req, res) => {
         .update({ status: 'applied', updated_at: now })
         .eq('delivery_job_id', job.id)
         .eq('status', 'pending');
-      for (const order of orders ?? []) {
-        const listing = Array.isArray(order.listings) ? order.listings[0] : order.listings;
-        const context = {
-          orderId: order.id,
-          listingTitle: listing?.title ?? 'your order',
-          quantity: order.quantity,
-          totalPrice: order.total_price,
-          scheduledDate: order.scheduled_date,
-          pickupTime: order.pickup_time,
-        };
-        if (customerUserId)
-          await notifyBuyerReviewRequest(customerUserId, {
-            ...context,
-            listingId: order.listing_id,
-          });
+      const completedOrders = orders ?? [];
+      if (customerUserId && completedOrders[0]) {
+        await notifyBuyerCheckoutFulfilled(customerUserId, {
+          checkoutId: completedOrders[0].checkout_id,
+          representativeOrderId: completedOrders[0].id,
+          itemCount: completedOrders.reduce((sum, order) => sum + Number(order.quantity), 0),
+        });
       }
-      if (cookUserId) {
+      if (cookUserId && completedOrders.length > 0) {
         await notifyCookDeliveryPayout(
           cookUserId,
-          (orders ?? []).reduce((sum, order) => sum + Number(order.total_price), 0),
+          completedOrders.reduce((sum, order) => sum + Number(order.total_price), 0),
           Number(job.cook_delivery_charge ?? 0),
-          (orders ?? []).map(order => order.id)
+          completedOrders.map(order => order.id)
         );
       }
     }

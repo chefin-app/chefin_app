@@ -160,11 +160,10 @@ export async function cancelDeliveryJob(jobId: string): Promise<void> {
   const job = await getJob(jobId);
   if (['cancelled', 'delivered', 'failed', 'expired'].includes(job.status)) return;
   if (job.provider_order_id) {
-    try {
-      await cancelLalamoveOrder(job.provider_order_id);
-    } catch (error) {
-      console.error('Lalamove cancellation failed:', error);
-    }
+    // Do not claim the fleet job was cancelled locally when Lalamove rejected
+    // or could not confirm the cancellation. Callers can surface/retry this
+    // reconciliation while the order cancellation itself remains authoritative.
+    await cancelLalamoveOrder(job.provider_order_id);
   }
   const now = new Date().toISOString();
   await Promise.all([

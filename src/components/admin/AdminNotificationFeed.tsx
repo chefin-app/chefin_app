@@ -15,6 +15,7 @@ const ACTIVITY_META: Record<
   AdminActivityItem['type'],
   { icon: React.ComponentProps<typeof Ionicons>['name']; color: string; background: string }
 > = {
+  alert: { icon: 'warning-outline', color: '#B42318', background: '#FEE4E2' },
   report: { icon: 'flag-outline', color: '#B42318', background: '#FEE4E2' },
   verification: { icon: 'shield-checkmark-outline', color: '#9A6700', background: '#FFF1C2' },
   order: { icon: 'receipt-outline', color: '#175CD3', background: '#E8F1FF' },

@@ -1,4 +1,4 @@
-import { Stack } from 'expo-router';
+import { Stack, useSegments } from 'expo-router';
 import { AuthProvider } from '@/src/services/auth-context';
 import { CartProvider } from '@/src/context/CartContext';
 import { FavouritesProvider } from '@/src/context/FavouritesContext';
@@ -11,6 +11,20 @@ import { useEffect } from 'react';
 import { useFonts } from 'expo-font';
 import { NavigationBar as AndroidNavigationBar } from 'expo-navigation-bar';
 import { AppState, Keyboard, Platform, TextInput } from 'react-native';
+import OrderFulfilledPopup from '@/src/components/orders/OrderFulfilledPopup';
+
+function FulfilledPopupHost() {
+  const segments = useSegments();
+  const firstSegment = String(segments[0] ?? '');
+  const role =
+    firstSegment === '(cook)'
+      ? ('cook' as const)
+      : firstSegment === 'admin' || firstSegment === '(auth)' || !firstSegment
+        ? null
+        : ('customer' as const);
+
+  return <OrderFulfilledPopup role={role} />;
+}
 
 // Keep Enter consistent across the app. Individual multiline fields explicitly
 // opt back into newline behaviour.
@@ -72,6 +86,7 @@ export default function RootLayout() {
                   <Stack.Screen name="admin" />
                   <Stack.Screen name="+not-found" />
                 </Stack>
+                <FulfilledPopupHost />
               </OnboardingProvider>
             </NotificationsProvider>
           </FavouritesProvider>

@@ -18,6 +18,13 @@ import type {
   DishManagementResponse,
   DishManagementSort,
   ManagedDishDetails,
+  ManagedOrderContact,
+  ManagedOrderDetailsResponse,
+  ManagedOrderDispute,
+  OrderDisputeStatus,
+  OrderMonitoringFilter,
+  OrderMonitoringResponse,
+  OrderMonitoringSort,
 } from './types';
 
 export class AdminApiError extends Error {
@@ -284,6 +291,101 @@ export const fetchManagedDishDetails = (
   accessToken: string,
   dishId: string
 ): Promise<ManagedDishDetails> => adminRequest(`/dishes/${dishId}`, accessToken);
+
+export const fetchManagedOrders = (
+  accessToken: string,
+  options: {
+    search: string;
+    filter: OrderMonitoringFilter;
+    sort: OrderMonitoringSort;
+    dateRange: DishManagementDateRange;
+    exactDate?: string | null;
+    cookId?: string | null;
+    customerId?: string | null;
+    page: number;
+    pageSize: number;
+  }
+): Promise<OrderMonitoringResponse> => {
+  const params = new URLSearchParams({
+    search: options.search,
+    filter: options.filter,
+    sort: options.sort,
+    dateRange: options.dateRange,
+    page: String(options.page),
+    pageSize: String(options.pageSize),
+  });
+  if (options.exactDate) params.set('date', options.exactDate);
+  if (options.cookId) params.set('cookId', options.cookId);
+  if (options.customerId) params.set('customerId', options.customerId);
+  return adminRequest(`/orders?${params.toString()}`, accessToken);
+};
+
+export const fetchManagedOrderDetails = (
+  accessToken: string,
+  orderId: string
+): Promise<ManagedOrderDetailsResponse> => adminRequest(`/orders/${orderId}`, accessToken);
+
+export const revealManagedOrderContact = async (
+  accessToken: string,
+  orderId: string
+): Promise<ManagedOrderContact> => {
+  const response = await adminRequest<{ contact: ManagedOrderContact }>(
+    `/orders/${orderId}/reveal`,
+    accessToken,
+    { method: 'POST' }
+  );
+  return response.contact;
+};
+
+export const cancelManagedOrder = (accessToken: string, orderId: string, reason: string) =>
+  adminRequest<{ success: true; checkoutId: string; orderIds: string[] }>(
+    `/orders/${orderId}/cancel`,
+    accessToken,
+    { method: 'POST', body: { reason } }
+  );
+
+export const confirmManagedPickup = (accessToken: string, orderId: string, reason: string) =>
+  adminRequest<{ success: true; checkoutId: string; orderIds: string[] }>(
+    `/orders/${orderId}/confirm-pickup`,
+    accessToken,
+    { method: 'POST', body: { reason } }
+  );
+
+export const fetchManagedPickupEvidence = async (accessToken: string, orderId: string) => {
+  const response = await adminRequest<{ fileUrl: string }>(
+    `/orders/${orderId}/handoff-evidence`,
+    accessToken
+  );
+  return response.fileUrl;
+};
+
+export const createManagedOrderDispute = (
+  accessToken: string,
+  orderId: string,
+  input: {
+    complainantType: 'customer' | 'cook' | 'other';
+    reason: string;
+    details: string;
+    evidenceUrls?: string[];
+  }
+) =>
+  adminRequest<{ success: true; dispute: ManagedOrderDispute }>(
+    `/orders/${orderId}/disputes`,
+    accessToken,
+    { method: 'POST', body: input }
+  );
+
+export const updateManagedOrderDispute = (
+  accessToken: string,
+  disputeId: string,
+  status: Exclude<OrderDisputeStatus, 'open'>,
+  resolutionNote?: string
+) =>
+  adminRequest<{ success: true; dispute: ManagedOrderDispute }>(
+    `/orders/disputes/${disputeId}`,
+    accessToken,
+    { method: 'PATCH', body: { status, resolutionNote } }
+  );
 
 export const runManagedDishAction = (
   accessToken: string,

@@ -20,6 +20,7 @@ import { supabase } from '@/src/utils/supabaseClient';
 import { useAuth } from '@/src/services/auth-context';
 import PickupCoordinationCard from '@/src/components/orders/PickupCoordinationCard';
 import BuyerRatingCard from '@/src/components/reviews/BuyerRatingCard';
+import PickupPinModal from '@/src/components/orders/PickupPinModal';
 
 type OrderStatus = 'pending' | 'confirmed' | 'ready' | 'completed' | 'cancelled';
 
@@ -84,6 +85,7 @@ export default function CookOrderDetail() {
   const [updating, setUpdating] = useState(false);
   const [uploadingProof, setUploadingProof] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [pickupPinOpen, setPickupPinOpen] = useState(false);
 
   const load = useCallback(async () => {
     if (!orderId) return;
@@ -400,7 +402,11 @@ export default function CookOrderDetail() {
         {action ? (
           <TouchableOpacity
             style={[styles.primaryButton, updating && styles.buttonDisabled]}
-            onPress={() => updateStatus(action.next)}
+            onPress={() =>
+              action.next === 'completed' && order.fulfillment_type === 'pickup'
+                ? setPickupPinOpen(true)
+                : updateStatus(action.next)
+            }
             disabled={updating}
           >
             {updating ? (
@@ -411,6 +417,13 @@ export default function CookOrderDetail() {
           </TouchableOpacity>
         ) : null}
       </ScrollView>
+      <PickupPinModal
+        visible={pickupPinOpen}
+        orderId={order.id}
+        accessToken={session?.access_token}
+        onClose={() => setPickupPinOpen(false)}
+        onCompleted={() => router.back()}
+      />
     </SafeAreaView>
   );
 }

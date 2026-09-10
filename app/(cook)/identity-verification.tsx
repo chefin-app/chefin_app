@@ -15,6 +15,7 @@ import { useRouter } from 'expo-router';
 import * as DocumentPicker from 'expo-document-picker';
 import { useAuth } from '@/src/services/auth-context';
 import { supabase } from '@/src/utils/supabaseClient';
+import { useCookApplication } from '@/src/hooks/useCookApplication';
 
 const BUCKET = 'cook-identity-documents';
 type Citizenship = 'malaysian_citizen' | 'permanent_resident';
@@ -23,9 +24,15 @@ type Asset = { uri: string; mime: string; name: string; isPdf: boolean };
 export default function IdentityVerificationScreen() {
   const router = useRouter();
   const { user, session } = useAuth();
+  const application = useCookApplication();
   const [citizenship, setCitizenship] = useState<Citizenship | null>(null);
   const [asset, setAsset] = useState<Asset | null>(null);
   const [saving, setSaving] = useState(false);
+  const submissionLocked =
+    (application.status === 'reverification_required' &&
+      Boolean(application.reverificationIdentitySubmittedAt)) ||
+    (application.status !== 'reverification_required' &&
+      ['pending', 'approved'].includes(application.identityStatus ?? ''));
 
   const selectCitizenship = (value: Citizenship) => {
     setCitizenship(value);
@@ -52,7 +59,7 @@ export default function IdentityVerificationScreen() {
   };
 
   const submit = async () => {
-    if (!user || !session?.access_token || !citizenship || !asset) return;
+    if (!user || !session?.access_token || !citizenship || !asset || submissionLocked) return;
     setSaving(true);
     try {
       const documentType = citizenship === 'malaysian_citizen' ? 'mykad' : 'mypr';
@@ -92,6 +99,43 @@ export default function IdentityVerificationScreen() {
       setSaving(false);
     }
   };
+
+  if (application.loading) {
+    return (
+      <SafeAreaView style={styles.page}>
+        <View style={styles.loading}>
+          <ActivityIndicator color="#237A3B" />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (submissionLocked) {
+    return (
+      <SafeAreaView style={styles.page} edges={['top', 'left', 'right']}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.closeButton}>
+            <Ionicons name="close" size={22} color="#344039" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Identity verification</Text>
+          <View style={styles.closeButton} />
+        </View>
+        <View style={styles.lockedState}>
+          <View style={styles.lockedIcon}>
+            <Ionicons name="checkmark-circle" size={36} color="#237A3B" />
+          </View>
+          <Text style={styles.lockedTitle}>Identity submitted</Text>
+          <Text style={styles.lockedBody}>
+            Your document is awaiting review. This stage will reopen only if an administrator asks
+            for changes.
+          </Text>
+          <TouchableOpacity style={styles.lockedButton} onPress={() => router.back()}>
+            <Text style={styles.lockedButtonText}>Back to dashboard</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.page} edges={['top', 'left', 'right']}>
@@ -252,4 +296,33 @@ const styles = StyleSheet.create({
   },
   submitDisabled: { opacity: 0.45 },
   submitText: { color: '#fff', fontSize: 14, fontWeight: '800' },
+  loading: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  lockedState: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 30 },
+  lockedIcon: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: '#EAF7ED',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  lockedTitle: { marginTop: 18, fontSize: 22, fontWeight: '800', color: '#26322B' },
+  lockedBody: {
+    maxWidth: 380,
+    marginTop: 8,
+    textAlign: 'center',
+    fontSize: 14,
+    lineHeight: 21,
+    color: '#66716A',
+  },
+  lockedButton: {
+    marginTop: 22,
+    minHeight: 48,
+    borderRadius: 24,
+    backgroundColor: '#237A3B',
+    paddingHorizontal: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  lockedButtonText: { color: '#fff', fontSize: 14, fontWeight: '800' },
 });

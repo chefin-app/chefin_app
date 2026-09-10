@@ -20,6 +20,10 @@ export default function CookTabsLayout() {
   const application = useCookApplication();
   const reverificationRequired = application.status === 'reverification_required';
   const applicationRejected = application.status === 'rejected';
+  const identityStageSubmitted = Boolean(application.reverificationIdentitySubmittedAt);
+  const foodStageSubmitted = Boolean(
+    application.reverificationFoodSubmittedAt || application.reverificationFoodSkippedAt
+  );
   const showApplicationBanner =
     !application.loading && (application.restrictedToDrafts || reverificationRequired);
 
@@ -78,21 +82,41 @@ export default function CookTabsLayout() {
                       accessibilityRole="button"
                       accessibilityLabel="Review identity verification"
                       activeOpacity={0.7}
-                      style={styles.applicationAction}
+                      disabled={identityStageSubmitted}
+                      style={[
+                        styles.applicationAction,
+                        identityStageSubmitted && styles.applicationActionDisabled,
+                      ]}
                       onPress={() => router.push('/(cook)/identity-verification')}
                     >
-                      <Text style={styles.applicationLink}>Identity</Text>
-                      <Ionicons name="chevron-forward" size={14} color="#237A3B" />
+                      <Text style={styles.applicationLink}>
+                        {identityStageSubmitted ? 'Identity submitted' : 'Identity'}
+                      </Text>
+                      <Ionicons
+                        name={identityStageSubmitted ? 'checkmark-circle' : 'chevron-forward'}
+                        size={14}
+                        color="#237A3B"
+                      />
                     </TouchableOpacity>
                     <TouchableOpacity
                       accessibilityRole="button"
                       accessibilityLabel="Review food safety documents"
                       activeOpacity={0.7}
-                      style={styles.applicationAction}
+                      disabled={foodStageSubmitted}
+                      style={[
+                        styles.applicationAction,
+                        foodStageSubmitted && styles.applicationActionDisabled,
+                      ]}
                       onPress={() => router.push('/(cook)/food-safety')}
                     >
-                      <Text style={styles.applicationLink}>Food documents</Text>
-                      <Ionicons name="chevron-forward" size={14} color="#237A3B" />
+                      <Text style={styles.applicationLink}>
+                        {foodStageSubmitted ? 'Food stage complete' : 'Food documents'}
+                      </Text>
+                      <Ionicons
+                        name={foodStageSubmitted ? 'checkmark-circle' : 'chevron-forward'}
+                        size={14}
+                        color="#237A3B"
+                      />
                     </TouchableOpacity>
                   </>
                 ) : (
@@ -221,4 +245,5 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     backgroundColor: '#EDF7EF',
   },
+  applicationActionDisabled: { opacity: 0.72 },
 });

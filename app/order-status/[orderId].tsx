@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/src/utils/supabaseClient';
 import { useAuth } from '@/src/services/auth-context';
 import PickupCoordinationCard from '@/src/components/orders/PickupCoordinationCard';
+import BuyerPickupCodeCard from '@/src/components/orders/BuyerPickupCodeCard';
 import {
   formatScheduledWindow,
   getBuyerOrderTimingLabel,
@@ -321,6 +322,10 @@ export default function OrderStatusScreen() {
                 selectedOptions: order.selected_options ?? [],
               }}
             />
+          ) : null}
+
+          {isPickup && order.status === 'ready' ? (
+            <BuyerPickupCodeCard orderId={order.id} accessToken={session?.access_token} />
           ) : null}
 
           {/* Proof of preparation */}

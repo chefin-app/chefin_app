@@ -19,7 +19,7 @@ router.get('/status', requireReadableAccount, async (req: AccountRequest, res) =
     const { data, error } = await supabase
       .from('cook_applications')
       .select(
-        'status, identity_status, compliance_status, citizenship_type, submitted_at, reviewer_note, reverification_due_at'
+        'status, identity_status, compliance_status, citizenship_type, submitted_at, reviewer_note, reverification_due_at, reverification_started_at, reverification_identity_submitted_at, reverification_food_submitted_at, reverification_food_skipped_at'
       )
       .eq('user_id', req.account!.userId)
       .maybeSingle();
@@ -57,6 +57,29 @@ router.post('/submit', requireActiveAccount, async (req: AccountRequest, res) =>
   }
 
   try {
+    const { data: existingApplication, error: existingApplicationError } = await supabase
+      .from('cook_applications')
+      .select(
+        'status, identity_status, reverification_identity_submitted_at, reverification_food_submitted_at, reverification_food_skipped_at'
+      )
+      .eq('user_id', req.account!.userId)
+      .maybeSingle();
+    if (existingApplicationError) throw existingApplicationError;
+    if (
+      existingApplication?.status === 'reverification_required' &&
+      existingApplication.reverification_identity_submitted_at
+    ) {
+      return res.status(409).json({
+        error: 'Your identity document has already been submitted for this reverification cycle.',
+      });
+    }
+    if (
+      existingApplication?.status !== 'reverification_required' &&
+      ['pending', 'approved'].includes(existingApplication?.identity_status ?? '')
+    ) {
+      return res.status(409).json({ error: 'Your identity document is already under review.' });
+    }
+
     const { data: files, error: storageError } = await supabase.storage
       .from(IDENTITY_BUCKET)
       .list(req.account!.userId, { limit: 100 });
@@ -105,12 +128,6 @@ router.post('/submit', requireActiveAccount, async (req: AccountRequest, res) =>
     if (identityError) throw identityError;
 
     const now = new Date().toISOString();
-    const { data: existingApplication, error: existingApplicationError } = await supabase
-      .from('cook_applications')
-      .select('status')
-      .eq('user_id', req.account!.userId)
-      .maybeSingle();
-    if (existingApplicationError) throw existingApplicationError;
     const applicationStatus =
       existingApplication?.status === 'reverification_required'
         ? 'reverification_required'
@@ -129,6 +146,9 @@ router.post('/submit', requireActiveAccount, async (req: AccountRequest, res) =>
           rejected_at: null,
           rejected_by: null,
           updated_at: now,
+          ...(applicationStatus === 'reverification_required'
+            ? { reverification_identity_submitted_at: now }
+            : {}),
         },
         { onConflict: 'user_id' }
       )
@@ -151,5 +171,64 @@ router.post('/submit', requireActiveAccount, async (req: AccountRequest, res) =>
     res.status(400).json({ error: error instanceof Error ? error.message : 'Application failed.' });
   }
 });
+
+// Records completion of the optional food-document stage for one
+// reverification cycle. Uploads remain optional by product policy.
+router.post(
+  '/reverification/food-stage',
+  requireActiveAccount,
+  async (req: AccountRequest, res) => {
+    try {
+      const { data: application, error } = await supabase
+        .from('cook_applications')
+        .select(
+          'status, reverification_started_at, reverification_food_submitted_at, reverification_food_skipped_at'
+        )
+        .eq('user_id', req.account!.userId)
+        .maybeSingle();
+      if (error) throw error;
+      if (!application || application.status !== 'reverification_required') {
+        return res
+          .status(409)
+          .json({ error: 'Food-document reverification is not currently open.' });
+      }
+      if (
+        application.reverification_food_submitted_at ||
+        application.reverification_food_skipped_at
+      ) {
+        return res.status(409).json({
+          error: 'The food-document stage has already been completed for this cycle.',
+        });
+      }
+      let documentQuery = supabase
+        .from('verification_documents')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', req.account!.userId);
+      if (application.reverification_started_at) {
+        documentQuery = documentQuery.gte('submitted_at', application.reverification_started_at);
+      }
+      const { count: submittedDocumentCount, error: countError } = await documentQuery;
+      if (countError) throw countError;
+      const now = new Date().toISOString();
+      const { error: updateError } = await supabase
+        .from('cook_applications')
+        .update({
+          ...(Number(submittedDocumentCount) > 0
+            ? { reverification_food_submitted_at: now, compliance_status: 'pending' }
+            : { reverification_food_skipped_at: now }),
+          updated_at: now,
+        })
+        .eq('user_id', req.account!.userId)
+        .is('reverification_food_submitted_at', null)
+        .is('reverification_food_skipped_at', null);
+      if (updateError) throw updateError;
+      res.json({ success: true, skipped: Number(submittedDocumentCount) === 0 });
+    } catch (error: unknown) {
+      res.status(400).json({
+        error: error instanceof Error ? error.message : 'Food-document stage could not be saved.',
+      });
+    }
+  }
+);
 
 export default router;

@@ -14,7 +14,7 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import {
   fetchManagedUserDetails,
@@ -39,6 +39,7 @@ import AdminDateFilter from '@/src/components/admin/AdminDateFilter';
 import { AdminPanel, AdminStatusBadge } from '@/src/components/admin/AdminOverviewUI';
 import AdminSelect from '@/src/components/admin/AdminSelect';
 import { showAdminFailure, showAdminSuccess } from '@/src/admin/feedback';
+import { ADMIN_SHARED_STYLES } from '@/src/admin/theme';
 
 type ActionMode = 'invite' | 'edit' | 'suspend' | 'deactivate' | 'message' | 'verification' | null;
 
@@ -199,6 +200,7 @@ function ActionButton({
 
 export default function UserManagementScreen() {
   const { userId: linkedUserId } = useLocalSearchParams<{ userId?: string }>();
+  const router = useRouter();
   const { width } = useWindowDimensions();
   const { session } = useAuth();
   const { admin } = useAdminAuth();
@@ -1003,10 +1005,10 @@ export default function UserManagementScreen() {
               <ActionButton
                 label="View in Order Monitoring"
                 onPress={() =>
-                  Alert.alert(
-                    'Order Monitoring',
-                    'This user filter will open in the Order Monitoring phase.'
-                  )
+                  router.push({
+                    pathname: '/admin/orders',
+                    params: { customerId: details.user.userId },
+                  })
                 }
               />
             </View>
@@ -1317,72 +1319,32 @@ export default function UserManagementScreen() {
 }
 
 const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: '#F4F6F8' },
-  pageContent: {
-    width: '100%',
-    maxWidth: 1548,
-    alignSelf: 'center',
-    padding: 24,
-    paddingBottom: 56,
-    gap: 18,
-  },
+  page: ADMIN_SHARED_STYLES.page,
+  pageContent: ADMIN_SHARED_STYLES.pageContent,
   pageHeader: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'flex-end',
-    justifyContent: 'space-between',
-    gap: 16,
+    ...ADMIN_SHARED_STYLES.pageHeader,
   },
   pageHeaderCopy: { flex: 1, minWidth: 280 },
-  eyebrow: {
-    fontFamily: 'mon-b',
-    fontSize: 9,
-    letterSpacing: 1.4,
-    color: '#2C9C5B',
-    marginBottom: 7,
-  },
-  pageTitle: { fontFamily: 'mon-b', fontSize: 30, color: '#1C2720', marginBottom: 7 },
-  pageSubtitle: { fontFamily: 'mon', fontSize: 12, lineHeight: 19, color: '#737D77' },
+  eyebrow: ADMIN_SHARED_STYLES.eyebrow,
+  pageTitle: ADMIN_SHARED_STYLES.pageTitle,
+  pageSubtitle: ADMIN_SHARED_STYLES.pageSubtitle,
   headerActions: { flexDirection: 'row', gap: 9 },
-  statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  statsGrid: ADMIN_SHARED_STYLES.statsGrid,
   statCard: {
-    flexGrow: 1,
-    minWidth: 165,
-    maxWidth: 280,
-    minHeight: 118,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E5EAE7',
-    borderRadius: 15,
-    padding: 15,
+    ...ADMIN_SHARED_STYLES.statCard,
   },
-  statIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 11,
-  },
-  statLabel: { fontFamily: 'mon-sb', fontSize: 9, color: '#7B857E', marginBottom: 4 },
-  statValue: { fontFamily: 'mon-b', fontSize: 23, color: '#202B24' },
+  statIcon: ADMIN_SHARED_STYLES.statIcon,
+  statLabel: ADMIN_SHARED_STYLES.statLabel,
+  statValue: ADMIN_SHARED_STYLES.statValue,
   filterScroller: { marginHorizontal: -3, marginBottom: 16 },
   filters: { flexDirection: 'row', gap: 8, paddingHorizontal: 3 },
   filter: {
-    flexDirection: 'row',
-    minHeight: 36,
-    paddingHorizontal: 15,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#DDE3DF',
-    alignItems: 'center',
+    ...ADMIN_SHARED_STYLES.filter,
     justifyContent: 'center',
-    gap: 7,
-    backgroundColor: '#FFFFFF',
   },
-  filterActive: { backgroundColor: '#E8F7ED', borderColor: '#A9DEB9' },
-  filterText: { fontFamily: 'mon-sb', fontSize: 9, color: '#727C75' },
-  filterTextActive: { color: '#237A3B' },
+  filterActive: ADMIN_SHARED_STYLES.filterActive,
+  filterText: ADMIN_SHARED_STYLES.filterText,
+  filterTextActive: ADMIN_SHARED_STYLES.filterTextActive,
   filterCount: {
     minWidth: 20,
     height: 20,
@@ -1392,34 +1354,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: '#EEF1EF',
   },
-  filterCountActive: { backgroundColor: '#4CAF50' },
-  filterCountText: { fontFamily: 'mon-b', fontSize: 9, color: '#667069' },
-  filterCountTextActive: { color: '#FFFFFF' },
+  filterCountActive: { backgroundColor: '#CDEED6' },
+  filterCountText: { fontFamily: 'mon-b', fontSize: 8, color: '#6F7973' },
+  filterCountTextActive: { color: '#237A3B' },
   controls: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 17 },
-  searchBox: {
-    flex: 1,
-    minWidth: 250,
-    height: 42,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 9,
-    paddingHorizontal: 13,
-    borderWidth: 1,
-    borderColor: '#DDE3DF',
-    borderRadius: 11,
-    backgroundColor: '#FFFFFF',
-  },
-  searchInput: { flex: 1, fontFamily: 'mon', fontSize: 10, color: '#303C35' },
-  refreshButton: {
-    width: 42,
-    height: 42,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#DDE3DF',
-    borderRadius: 11,
-    backgroundColor: '#FFFFFF',
-  },
+  searchBox: ADMIN_SHARED_STYLES.searchBox,
+  searchInput: ADMIN_SHARED_STYLES.searchInput,
+  refreshButton: ADMIN_SHARED_STYLES.refreshButton,
   actionButton: {
     minHeight: 34,
     paddingHorizontal: 13,
@@ -1467,10 +1408,10 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#EDF1EE',
   },
-  tableHeader: { minHeight: 43, backgroundColor: '#F3F6F8' },
-  tableHeaderText: { fontFamily: 'mon-b', fontSize: 8, color: '#59645D' },
-  tableCell: { fontFamily: 'mon', fontSize: 9, color: '#59655D' },
-  tableCellStrong: { fontFamily: 'mon-sb', fontSize: 9, color: '#354139' },
+  tableHeader: ADMIN_SHARED_STYLES.tableHeader,
+  tableHeaderText: ADMIN_SHARED_STYLES.tableHeaderText,
+  tableCell: ADMIN_SHARED_STYLES.tableCell,
+  tableCellStrong: ADMIN_SHARED_STYLES.tableStrong,
   uidColumn: { width: 100 },
   nameColumn: { width: 230 },
   roleColumn: { width: 100 },

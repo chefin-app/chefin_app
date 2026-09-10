@@ -9,6 +9,7 @@ export type NotificationType =
   | 'new_order'
   | 'order_confirmed'
   | 'order_ready'
+  | 'pickup_code'
   | 'order_cancelled'
   | 'payout_sent'
   | 'verification_approved'
@@ -38,6 +39,7 @@ export const NOTIFICATION_TYPE_META: Record<NotificationType, NotificationTypeMe
   new_order: { icon: 'receipt-outline', color: '#4CAF50', background: '#E8F5E9' },
   order_confirmed: { icon: 'checkmark-circle-outline', color: '#1976D2', background: '#E3F2FD' },
   order_ready: { icon: 'restaurant-outline', color: '#2E7D32', background: '#E8F5E9' },
+  pickup_code: { icon: 'keypad-outline', color: '#175CD3', background: '#E8F1FF' },
   order_cancelled: { icon: 'close-circle-outline', color: '#C62828', background: '#FFEBEE' },
   payout_sent: { icon: 'cash-outline', color: '#B26A00', background: '#FFF3E0' },
   verification_approved: {

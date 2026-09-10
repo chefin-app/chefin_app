@@ -21,6 +21,7 @@ import cookApplicationRoutes from './routes/cookApplications';
 import cookMenuRoutes from './routes/cookMenu';
 import customerReviewRoutes from './routes/customerReviews';
 import deliveryRoutes from './routes/delivery';
+import { startOrderAlertMonitor } from './orderAlerts';
 
 const app = express();
 const PORT = process.env.PORT || 8000;
@@ -87,4 +88,5 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
+  startOrderAlertMonitor();
 });

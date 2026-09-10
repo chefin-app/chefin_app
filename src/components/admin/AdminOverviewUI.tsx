@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { OverviewPeriod } from '@/src/admin/types';
+import { ADMIN_SHARED_STYLES, ADMIN_THEME } from '@/src/admin/theme';
 
 export const ADMIN_COLORS = {
   green: '#4CAF50',
@@ -227,11 +228,20 @@ const STATUS_META: Record<string, { label: string; color: string; background: st
   delivered: { label: 'Delivered', color: '#237A3B', background: '#DDF6E5' },
   ready: { label: 'Ready', color: '#175CD3', background: '#E8F1FF' },
   confirmed: { label: 'Confirmed', color: '#175CD3', background: '#E8F1FF' },
+  preparing: { label: 'Preparing', color: '#8B6508', background: '#FFF1C2' },
   pending: { label: 'Pending', color: '#8B6508', background: '#FFF1C2' },
   cancelled: { label: 'Cancelled', color: '#B42318', background: '#FEE4E2' },
   rejected: { label: 'Rejected', color: '#B42318', background: '#FEE4E2' },
   approved: { label: 'Approved', color: '#237A3B', background: '#DDF6E5' },
   draft: { label: 'Draft', color: '#667085', background: '#EEF0F3' },
+  attention: { label: 'Needs attention', color: '#B42318', background: '#FEE4E2' },
+  open: { label: 'Open', color: '#B42318', background: '#FEE4E2' },
+  reviewing: { label: 'Under review', color: '#175CD3', background: '#E8F1FF' },
+  resolved: { label: 'Resolved', color: '#237A3B', background: '#DDF6E5' },
+  dismissed: { label: 'Dismissed', color: '#667085', background: '#EEF0F3' },
+  refund_required: { label: 'Refund required', color: '#B42318', background: '#FEE4E2' },
+  refunded: { label: 'Refunded', color: '#237A3B', background: '#DDF6E5' },
+  refund_failed: { label: 'Refund failed', color: '#B42318', background: '#FEE4E2' },
   reverification_required: {
     label: 'Reverification required',
     color: '#9A6700',
@@ -262,8 +272,8 @@ export function AdminStatusBadge({ status }: { status: string }) {
 
 const styles = StyleSheet.create({
   panel: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 18,
+    backgroundColor: ADMIN_THEME.colors.surface,
+    borderRadius: ADMIN_THEME.radius.panel,
     borderWidth: 1,
     borderColor: '#E8ECE9',
     padding: 22,
@@ -274,24 +284,24 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   metricCard: {
-    minHeight: 154,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#E7ECE8',
-    padding: 17,
+    ...ADMIN_SHARED_STYLES.statCard,
+    minHeight: 140,
   },
   metricIcon: {
-    width: 42,
-    height: 42,
-    borderRadius: 13,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
+    ...ADMIN_SHARED_STYLES.statIcon,
   },
-  metricLabel: { fontFamily: 'mon-sb', fontSize: 10, color: '#77817B', marginBottom: 6 },
-  metricValue: { fontFamily: 'mon-b', fontSize: 22, color: '#1F2923', marginBottom: 4 },
-  metricDetail: { fontFamily: 'mon', fontSize: 9, lineHeight: 14, color: '#9AA29D' },
+  metricLabel: ADMIN_SHARED_STYLES.statLabel,
+  metricValue: {
+    ...ADMIN_SHARED_STYLES.statValue,
+    color: '#1F2923',
+    marginBottom: 3,
+  },
+  metricDetail: {
+    fontFamily: ADMIN_THEME.fonts.regular,
+    fontSize: ADMIN_THEME.sizes.caption,
+    lineHeight: 13,
+    color: '#9AA29D',
+  },
   periodSelector: {
     flexDirection: 'row',
     backgroundColor: '#F1F4F2',
@@ -402,5 +412,8 @@ const styles = StyleSheet.create({
     borderRadius: 99,
   },
   statusDot: { width: 5, height: 5, borderRadius: 3 },
-  statusText: { fontFamily: 'mon-sb', fontSize: 8 },
+  statusText: {
+    fontFamily: ADMIN_THEME.fonts.semibold,
+    fontSize: ADMIN_THEME.sizes.caption,
+  },
 });

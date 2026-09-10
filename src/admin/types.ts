@@ -1,4 +1,4 @@
-import type { MenuOptionGroup } from '@/src/types/menuOptions';
+import type { CartSelectedOption, MenuOptionGroup } from '@/src/types/menuOptions';
 
 export type AdminAccessStatus =
   | 'checking'
@@ -18,7 +18,7 @@ export type OverviewPeriod = '7d' | '30d' | '90d' | '1y';
 
 export interface AdminActivityItem {
   id: string;
-  type: 'report' | 'verification' | 'order' | 'cook' | 'user';
+  type: 'alert' | 'report' | 'verification' | 'order' | 'cook' | 'user';
   title: string;
   body: string;
   imageUrl?: string | null;
@@ -326,6 +326,177 @@ export interface ManagedDish {
   averageRating: number | null;
   ratingCount: number;
   openReportCount: number;
+}
+
+export type OrderMonitoringFilter =
+  | 'all'
+  | 'live'
+  | 'pending'
+  | 'completed'
+  | 'cancelled'
+  | 'attention'
+  | 'disputed';
+export type OrderMonitoringSort =
+  | 'newest'
+  | 'oldest'
+  | 'value_desc'
+  | 'value_asc'
+  | 'pickup_soonest';
+export type OrderMonitoringStatus =
+  | 'pending'
+  | 'preparing'
+  | 'ready'
+  | 'completed'
+  | 'cancelled'
+  | 'attention';
+export type OrderDisputeStatus = 'open' | 'reviewing' | 'resolved' | 'dismissed';
+
+export interface ManagedOrderListItem {
+  checkoutId: string;
+  representativeOrderId: string;
+  displayId: string;
+  customerName: string;
+  customerAvatarUrl: string | null;
+  cookName: string;
+  cookAvatarUrl: string | null;
+  items: Array<{ id: string; title: string; quantity: number }>;
+  orderValue: number;
+  fulfillmentType: string;
+  status: OrderMonitoringStatus;
+  hasOpenDispute: boolean;
+  openAlertCount: number;
+  alertSeverity: 'warning' | 'critical' | null;
+  openDisputeCount: number;
+  paymentStatus: string;
+  refundStatus: string;
+  pickupTime: string | null;
+  createdAt: string;
+  canCancel: boolean;
+}
+
+export interface OrderMonitoringResponse {
+  orders: ManagedOrderListItem[];
+  stats: {
+    totalOrders: number;
+    activeNow: number;
+    completionRate: number;
+    cancellationRate: number;
+    openDisputes: number;
+    needsAttention: number;
+  };
+  counts: Record<OrderMonitoringFilter, number>;
+  pagination: { page: number; pageSize: number; totalItems: number; totalPages: number };
+  generatedAt: string;
+}
+
+export interface ManagedOrderDispute {
+  id: string;
+  checkout_id: string;
+  representative_order_id: string;
+  complainant_type: 'customer' | 'cook' | 'other';
+  reason: string;
+  details: string;
+  evidence_urls: string[];
+  status: OrderDisputeStatus;
+  resolution: string | null;
+  resolution_note: string | null;
+  resolved_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ManagedOrderDetails extends ManagedOrderListItem {
+  customer: {
+    profileId: string;
+    userId: string;
+    name: string;
+    avatarUrl: string | null;
+    phoneNumber: string | null;
+  };
+  cook: {
+    profileId: string;
+    userId: string;
+    name: string;
+    restaurantName: string | null;
+    avatarUrl: string | null;
+    phoneNumber: string | null;
+  };
+  lines: Array<{
+    id: string;
+    listingId: string;
+    title: string;
+    imageUrl: string | null;
+    quantity: number;
+    totalPrice: number;
+    selectedOptions: CartSelectedOption[];
+    customerNote: string | null;
+    status: string;
+    proofOfPreparationUrl: string | null;
+  }>;
+  foodSubtotal: number;
+  deliveryFee: number;
+  cookDeliveryCharge: number;
+  scheduledDate: string;
+  pickupWindowEnd: string | null;
+  cancelledBy: string | null;
+  cancelledAt: string | null;
+  cancellationReason: string | null;
+  completedAt: string | null;
+  refundRequiredAt: string | null;
+  refundNote: string | null;
+  contact: ManagedOrderContact;
+  delivery: {
+    id: string;
+    provider: string;
+    providerOrderId: string | null;
+    providerStatus: string | null;
+    status: string;
+    quotedFee: number;
+    freeDeliveryApplied: boolean;
+    distanceMeters: number | null;
+    scheduledAt: string;
+    driverName: string | null;
+    driverPlateNumber: string | null;
+    shareLink: string | null;
+    proofOfDeliveryUrl: string | null;
+    bookedAt: string | null;
+    pickedUpAt: string | null;
+    deliveredAt: string | null;
+    cancelledAt: string | null;
+    estimatedArrivalStart: string | null;
+    estimatedArrivalEnd: string | null;
+  } | null;
+  disputes: ManagedOrderDispute[];
+  alerts: Array<{
+    id: string;
+    alert_type: string;
+    severity: 'warning' | 'critical';
+    status: 'open' | 'resolved';
+    due_at: string;
+    triggered_at: string;
+    details: Record<string, unknown>;
+  }>;
+}
+
+export interface ManagedOrderContact {
+  revealed: boolean;
+  customerPhone?: string | null;
+  cookPhone?: string | null;
+  pickupAddress: string | null;
+  deliveryAddress: string | null;
+  deliveryInstructions?: string | null;
+  driverPhone: string | null;
+}
+
+export interface ManagedOrderDetailsResponse {
+  order: ManagedOrderDetails;
+  history: Array<{
+    id: string;
+    actor_user_id: string;
+    action: string;
+    details: Record<string, unknown>;
+    created_at: string;
+  }>;
 }
 
 export interface DishManagementResponse {

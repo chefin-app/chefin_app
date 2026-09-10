@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
+import { useFocusEffect } from 'expo-router';
 import { useAuth } from '@/src/services/auth-context';
 
 export type CookApplicationAccess = {
@@ -10,6 +11,9 @@ export type CookApplicationAccess = {
   submittedAt: string | null;
   reviewerNote: string | null;
   reverificationDueAt: string | null;
+  reverificationIdentitySubmittedAt: string | null;
+  reverificationFoodSubmittedAt: string | null;
+  reverificationFoodSkippedAt: string | null;
   eligibleToSell: boolean;
   restrictedToDrafts: boolean;
   refresh: () => Promise<void>;
@@ -26,6 +30,9 @@ export function useCookApplication(): CookApplicationAccess {
     submittedAt: null,
     reviewerNote: null,
     reverificationDueAt: null,
+    reverificationIdentitySubmittedAt: null,
+    reverificationFoodSubmittedAt: null,
+    reverificationFoodSkippedAt: null,
     eligibleToSell: false,
     restrictedToDrafts: true,
   });
@@ -50,6 +57,9 @@ export function useCookApplication(): CookApplicationAccess {
           submitted_at?: string;
           reviewer_note?: string | null;
           reverification_due_at?: string | null;
+          reverification_identity_submitted_at?: string | null;
+          reverification_food_submitted_at?: string | null;
+          reverification_food_skipped_at?: string | null;
         } | null;
         eligibility?: { eligibleToSell?: boolean; restrictedToDrafts?: boolean };
       };
@@ -62,6 +72,11 @@ export function useCookApplication(): CookApplicationAccess {
         submittedAt: payload.application?.submitted_at ?? null,
         reviewerNote: payload.application?.reviewer_note ?? null,
         reverificationDueAt: payload.application?.reverification_due_at ?? null,
+        reverificationIdentitySubmittedAt:
+          payload.application?.reverification_identity_submitted_at ?? null,
+        reverificationFoodSubmittedAt:
+          payload.application?.reverification_food_submitted_at ?? null,
+        reverificationFoodSkippedAt: payload.application?.reverification_food_skipped_at ?? null,
         eligibleToSell: payload.eligibility?.eligibleToSell === true,
         restrictedToDrafts: payload.eligibility?.restrictedToDrafts !== false,
       });
@@ -73,9 +88,11 @@ export function useCookApplication(): CookApplicationAccess {
     }
   }, [session?.access_token]);
 
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
+  useFocusEffect(
+    useCallback(() => {
+      refresh();
+    }, [refresh])
+  );
 
   return { loading, ...state, refresh };
 }

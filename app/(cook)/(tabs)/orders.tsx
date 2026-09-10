@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { supabase } from '@/src/utils/supabaseClient';
 import { useAuth } from '@/src/services/auth-context';
+import PickupPinModal from '@/src/components/orders/PickupPinModal';
 
 type OrderStatus = 'pending' | 'confirmed' | 'ready' | 'completed' | 'cancelled';
 type TabKey = 'preparing' | 'ready' | 'upcoming' | 'completed';
@@ -117,6 +118,7 @@ export default function Orders() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [pickupPinOrderId, setPickupPinOrderId] = useState<string | null>(null);
   const [reviewedOrderIds, setReviewedOrderIds] = useState<Set<string>>(new Set());
   const [openingHours, setOpeningHours] = useState<OpeningHour[]>([]);
   const [now, setNow] = useState(() => Date.now());
@@ -532,7 +534,11 @@ export default function Orders() {
             disabled={busy}
             onPress={event => {
               event.stopPropagation();
-              advanceOrder(order);
+              if (action.next === 'completed' && order.fulfillment_type === 'pickup') {
+                setPickupPinOrderId(order.id);
+              } else {
+                advanceOrder(order);
+              }
             }}
           >
             {busy ? (
@@ -815,6 +821,16 @@ export default function Orders() {
           </View>
         </View>
       </Modal>
+      <PickupPinModal
+        visible={Boolean(pickupPinOrderId)}
+        orderId={pickupPinOrderId}
+        accessToken={session?.access_token}
+        onClose={() => setPickupPinOrderId(null)}
+        onCompleted={() => {
+          setPickupPinOrderId(null);
+          fetchOrders(false);
+        }}
+      />
     </SafeAreaView>
   );
 }

@@ -29,6 +29,7 @@ import {
   getCurrentFoodComplianceAcceptance,
   recordFoodComplianceAcceptance,
 } from '@/src/utils/foodCompliance';
+import { useCookApplication } from '@/src/hooks/useCookApplication';
 
 type HostingType = 'private' | 'business' | null;
 
@@ -57,7 +58,8 @@ const STATUS_META: Record<VerificationDocStatus, { label: string; color: string;
 
 export default function FoodSafetyScreen() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, session } = useAuth();
+  const application = useCookApplication();
   const params = useLocalSearchParams<{ onboarding?: string; next?: string }>();
   const isOnboarding = params.onboarding === '1' || params.onboarding === 'true';
   const { setFoodSafety: stashFoodSafety } = useOnboarding();
@@ -68,6 +70,10 @@ export default function FoodSafetyScreen() {
   const [complianceAcceptedAt, setComplianceAcceptedAt] = useState<string | null>(null);
 
   const [hostingType, setHostingType] = useState<HostingType>(null);
+  const isReverification = application.status === 'reverification_required';
+  const stageLocked =
+    isReverification &&
+    Boolean(application.reverificationFoodSubmittedAt || application.reverificationFoodSkippedAt);
   // Latest submitted row per doc type (if any).
   const [submittedDocs, setSubmittedDocs] = useState<
     Partial<Record<VerificationDocType, SubmittedDoc>>
@@ -233,6 +239,25 @@ export default function FoodSafetyScreen() {
         .eq('user_id', user.id);
       if (error) throw error;
 
+      if (isReverification) {
+        // If finalisation needs a retry, do not upload the same files twice.
+        setPendingAssets({});
+        const response = await fetch(
+          `${process.env.EXPO_PUBLIC_API_URL}/api/cook-applications/reverification/food-stage`,
+          {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${session?.access_token ?? ''}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({}),
+          }
+        );
+        const payload = (await response.json().catch(() => ({}))) as { error?: string };
+        if (!response.ok)
+          throw new Error(payload.error ?? 'Reverification stage could not be saved.');
+      }
+
       if (Object.keys(pendingAssets).length > 0) {
         Alert.alert(
           'Documents submitted',
@@ -258,11 +283,31 @@ export default function FoodSafetyScreen() {
     ]);
   };
 
-  if (loading) {
+  if (loading || application.loading) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.centered}>
           <ActivityIndicator size="large" color="#4CAF50" />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!application.loading && stageLocked) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+        <View style={styles.lockedState}>
+          <View style={styles.lockedIcon}>
+            <Ionicons name="checkmark-circle" size={36} color="#237A3B" />
+          </View>
+          <Text style={styles.lockedTitle}>Food-document stage submitted</Text>
+          <Text style={styles.lockedBody}>
+            This optional stage is awaiting review. It will reopen only if an administrator requests
+            another document.
+          </Text>
+          <TouchableOpacity style={styles.lockedButton} onPress={() => router.back()}>
+            <Text style={styles.lockedButtonText}>Back to dashboard</Text>
+          </TouchableOpacity>
         </View>
       </SafeAreaView>
     );
@@ -319,7 +364,9 @@ export default function FoodSafetyScreen() {
           const pending = pendingAssets[doc.type];
           // A rejected document or one needing more information can be replaced.
           const canResubmit =
-            submitted?.status === 'rejected' || submitted?.status === 'more_info_requested';
+            (isReverification && !stageLocked) ||
+            submitted?.status === 'rejected' ||
+            submitted?.status === 'more_info_requested';
           const locked = submitted != null && !canResubmit && !pending;
 
           return (
@@ -427,13 +474,15 @@ export default function FoodSafetyScreen() {
               <ActivityIndicator color="#fff" />
             ) : (
               <Text style={styles.nextBtnText}>
-                {complianceAcceptedAt
-                  ? isOnboarding
-                    ? 'Continue'
-                    : 'Save'
-                  : isOnboarding
-                    ? 'Agree & continue'
-                    : 'Agree & save'}
+                {isReverification && Object.keys(pendingAssets).length === 0
+                  ? 'Complete without documents'
+                  : complianceAcceptedAt
+                    ? isOnboarding
+                      ? 'Continue'
+                      : 'Save'
+                    : isOnboarding
+                      ? 'Agree & continue'
+                      : 'Agree & save'}
               </Text>
             )}
           </TouchableOpacity>
@@ -586,4 +635,38 @@ const styles = StyleSheet.create({
   },
   nextBtnDisabled: { backgroundColor: '#A5D6A7' },
   nextBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  lockedState: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 30 },
+  lockedIcon: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: '#EAF7ED',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  lockedTitle: {
+    marginTop: 18,
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#26322B',
+    textAlign: 'center',
+  },
+  lockedBody: {
+    maxWidth: 400,
+    marginTop: 8,
+    textAlign: 'center',
+    fontSize: 14,
+    lineHeight: 21,
+    color: '#66716A',
+  },
+  lockedButton: {
+    marginTop: 22,
+    minHeight: 48,
+    borderRadius: 24,
+    backgroundColor: '#237A3B',
+    paddingHorizontal: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  lockedButtonText: { color: '#fff', fontSize: 14, fontWeight: '800' },
 });

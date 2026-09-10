@@ -10,6 +10,7 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
+import { ADMIN_THEME } from '@/src/admin/theme';
 
 export interface AdminSelectOption<T extends string> {
   key: T;
@@ -128,7 +129,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 13,
     backgroundColor: '#FFFFFF',
   },
-  buttonText: { flexShrink: 1, fontFamily: 'mon-sb', fontSize: 10, color: '#56635B' },
+  buttonText: {
+    flexShrink: 1,
+    fontFamily: ADMIN_THEME.fonts.semibold,
+    fontSize: ADMIN_THEME.sizes.control,
+    color: '#56635B',
+  },
   backdrop: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(20, 29, 23, 0.08)' },
   menu: {
     position: 'absolute',
@@ -153,6 +159,11 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   optionSelected: { backgroundColor: '#EAF8EE' },
-  optionText: { flex: 1, fontFamily: 'mon', fontSize: 11, color: '#536058' },
-  optionTextSelected: { fontFamily: 'mon-sb', color: '#237A3B' },
+  optionText: {
+    flex: 1,
+    fontFamily: ADMIN_THEME.fonts.regular,
+    fontSize: ADMIN_THEME.sizes.control,
+    color: '#536058',
+  },
+  optionTextSelected: { fontFamily: ADMIN_THEME.fonts.semibold, color: '#237A3B' },
 });

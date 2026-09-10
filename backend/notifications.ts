@@ -15,6 +15,7 @@ export type NotificationType =
   | 'new_order' // cook: a paid order came in
   | 'order_confirmed' // buyer: cook confirmed and is preparing
   | 'order_ready' // buyer: ready for pickup
+  | 'pickup_code' // buyer: code required to confirm a self-pickup handoff
   | 'order_cancelled' // buyer: cook cancelled the order
   | 'payout_sent' // cook: earnings for a completed order are on the way
   | 'verification_approved' // cook: food-safety document approved → badge granted
@@ -41,6 +42,7 @@ const ROLE_BY_TYPE: Record<NotificationType, 'customer' | 'cook'> = {
   new_order: 'cook',
   order_confirmed: 'customer',
   order_ready: 'customer',
+  pickup_code: 'customer',
   order_cancelled: 'customer',
   payout_sent: 'cook',
   verification_approved: 'cook',
@@ -149,12 +151,38 @@ export function notifyBuyerOrderReady(buyerUserId: string, o: OrderContext) {
   });
 }
 
+export function notifyBuyerPickupCode(buyerUserId: string, orderId: string, code: string) {
+  return createNotification(buyerUserId, {
+    type: 'pickup_code',
+    title: 'Your pickup code',
+    body: `Give ${code} to the cook only after you receive your food.`,
+    data: { order_id: orderId },
+  });
+}
+
 export function notifyBuyerOrderCancelled(buyerUserId: string, o: OrderContext) {
   return createNotification(buyerUserId, {
     type: 'order_cancelled',
     title: 'Order cancelled',
     body: `Your order for ${o.quantity}× ${o.listingTitle} was cancelled by the cook. Your payment of ${formatRM(o.totalPrice)} will be refunded.`,
     data: { order_id: o.orderId },
+  });
+}
+
+export function notifyBuyerOrderCancelledByAdmin(
+  buyerUserId: string,
+  order: {
+    checkoutId: string;
+    representativeOrderId: string;
+    totalPrice: number | string;
+    reason: string;
+  }
+) {
+  return createNotification(buyerUserId, {
+    type: 'order_cancelled',
+    title: 'Order cancelled by Chefin support',
+    body: `Chefin support cancelled this order. ${order.reason} A refund of ${formatRM(order.totalPrice)} is being arranged.`,
+    data: { order_id: order.representativeOrderId, checkout_id: order.checkoutId },
   });
 }
 
@@ -168,9 +196,28 @@ export function notifyBuyerReviewRequest(
 ) {
   return createNotification(buyerUserId, {
     type: 'review_request',
-    title: 'How was your food?',
-    body: `Enjoyed your ${o.quantity}× ${o.listingTitle}? Tap to leave a rating and help other foodies decide.`,
+    title: 'Order fulfilled',
+    body: `Your ${o.quantity}× ${o.listingTitle} has been completed. Tap to rate your order and help other foodies decide.`,
     data: { order_id: o.orderId, listing_id: o.listingId },
+  });
+}
+
+export function notifyBuyerCheckoutFulfilled(
+  buyerUserId: string,
+  checkout: {
+    checkoutId: string;
+    representativeOrderId: string;
+    itemCount: number;
+  }
+) {
+  return createNotification(buyerUserId, {
+    type: 'review_request',
+    title: 'Order fulfilled',
+    body: `Your order with ${checkout.itemCount} item${checkout.itemCount === 1 ? '' : 's'} is complete. Tap to rate your order.`,
+    data: {
+      order_id: checkout.representativeOrderId,
+      checkout_id: checkout.checkoutId,
+    },
   });
 }
 
@@ -229,9 +276,30 @@ export function notifyCookNewOrder(cookUserId: string, o: OrderContext) {
 export function notifyCookPayoutSent(cookUserId: string, o: OrderContext) {
   return createNotification(cookUserId, {
     type: 'payout_sent',
-    title: 'Earnings on the way',
-    body: `${formatRM(o.totalPrice)} for ${o.quantity}× ${o.listingTitle} will be transferred to your bank account.`,
-    data: { order_id: o.orderId },
+    title: 'Order fulfilled',
+    body: `${formatRM(o.totalPrice)} for ${o.quantity}× ${o.listingTitle} will be credited to your account.`,
+    data: { order_id: o.orderId, credited_amount: Number(o.totalPrice) },
+  });
+}
+
+export function notifyCookCheckoutFulfilled(
+  cookUserId: string,
+  checkout: {
+    checkoutId: string;
+    orderIds: string[];
+    creditedAmount: number;
+  }
+) {
+  return createNotification(cookUserId, {
+    type: 'payout_sent',
+    title: 'Order fulfilled',
+    body: `${formatRM(checkout.creditedAmount)} will be credited to your account.`,
+    data: {
+      order_id: checkout.orderIds[0],
+      order_ids: checkout.orderIds,
+      checkout_id: checkout.checkoutId,
+      credited_amount: checkout.creditedAmount,
+    },
   });
 }
 
@@ -244,12 +312,18 @@ export function notifyCookDeliveryPayout(
   const net = Math.max(0, foodTotal - deliveryDeduction);
   return createNotification(cookUserId, {
     type: 'payout_sent',
-    title: 'Delivery completed · earnings updated',
+    title: 'Order fulfilled',
     body:
       deliveryDeduction > 0
-        ? `${formatRM(net)} is on the way after the ${formatRM(deliveryDeduction)} Lalamove fee you covered.`
-        : `${formatRM(foodTotal)} for this delivery is on the way to your bank account.`,
-    data: { order_ids: orderIds, food_total: foodTotal, delivery_deduction: deliveryDeduction },
+        ? `${formatRM(net)} will be credited to your account after the ${formatRM(deliveryDeduction)} Lalamove fee you covered.`
+        : `${formatRM(foodTotal)} will be credited to your account for this delivery.`,
+    data: {
+      order_id: orderIds[0],
+      order_ids: orderIds,
+      food_total: foodTotal,
+      delivery_deduction: deliveryDeduction,
+      credited_amount: net,
+    },
   });
 }
 

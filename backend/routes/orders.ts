@@ -1,4 +1,5 @@
 import express from 'express';
+import { randomUUID } from 'node:crypto';
 import { supabase } from '../supabaseClient';
 import {
   notifyBuyerOrderPlaced,
@@ -32,6 +33,14 @@ import {
   cancelDeliveryJob,
   cancelDeliveryJobWhenUnused,
 } from '../deliveryService';
+import {
+  ensurePickupHandoff,
+  getPickupHandoffForAccount,
+  loadPickupCheckout,
+  regeneratePickupCode,
+  verifyPickupCode,
+} from '../pickupHandoff';
+import { notifyAdminsOfCriticalOrderAlert } from '../orderAlerts';
 
 const router = express.Router();
 
@@ -471,6 +480,7 @@ router.post('/', requireActiveAccount, async (req: AccountRequest, res) => {
         .json({ error: 'Delivery quotes cannot be attached to a pickup order.' });
     }
 
+    const checkoutId = randomUUID();
     const orderRows = items.map((item, index) => {
       const scheduled = normalizeServiceDate(item.pickupDate);
       if (!scheduled) {
@@ -483,6 +493,7 @@ router.post('/', requireActiveAccount, async (req: AccountRequest, res) => {
       const unitPriceWithOptions = unitPrice + validatedOptions[index].surcharge;
       return {
         customer_id: profile.id,
+        checkout_id: checkoutId,
         listing_id: item.listingId,
         quantity: item.quantity,
         total_price: +(unitPriceWithOptions * item.quantity).toFixed(2),
@@ -727,6 +738,68 @@ router.get('/:id/pickup-coordination', requireReadableAccount, async (req: Accou
   }
 });
 
+// GET /:id/pickup-handoff - Buyer retrieves their code; cook sees only state.
+router.get('/:id/pickup-handoff', requireReadableAccount, async (req: AccountRequest, res) => {
+  if (!ORDER_ID_PATTERN.test(req.params.id)) {
+    return res.status(400).json({ error: 'Order ID is invalid.' });
+  }
+  try {
+    const lines = await loadPickupCheckout(req.params.id);
+    if (lines.some(line => line.status === 'ready')) {
+      await ensurePickupHandoff(req.params.id);
+    }
+    const handoff = await getPickupHandoffForAccount(req.params.id, req.account!.userId);
+    res.set('Cache-Control', 'no-store');
+    res.json({ handoff });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Pickup verification is unavailable.';
+    const status = message === 'Order not found.' ? 404 : message.includes('access') ? 403 : 409;
+    res.status(status).json({ error: message });
+  }
+});
+
+// POST /:id/pickup-handoff/verify - A cook can complete the whole checkout
+// only with the buyer's valid handoff code.
+router.post(
+  '/:id/pickup-handoff/verify',
+  requireActiveAccount,
+  async (req: AccountRequest, res) => {
+    if (!ORDER_ID_PATTERN.test(req.params.id)) {
+      return res.status(400).json({ error: 'Order ID is invalid.' });
+    }
+    try {
+      const result = await verifyPickupCode(
+        req.params.id,
+        req.account!.userId,
+        String(req.body?.code ?? '').trim()
+      );
+      res.json({ success: true, ...result });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Pickup could not be verified.';
+      const status = message.includes('access') ? 403 : message === 'Order not found.' ? 404 : 409;
+      res.status(status).json({ error: message });
+    }
+  }
+);
+
+router.post(
+  '/:id/pickup-handoff/regenerate',
+  requireActiveAccount,
+  async (req: AccountRequest, res) => {
+    if (!ORDER_ID_PATTERN.test(req.params.id)) {
+      return res.status(400).json({ error: 'Order ID is invalid.' });
+    }
+    try {
+      const result = await regeneratePickupCode(req.params.id, req.account!.userId);
+      res.json({ success: true, ...result });
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : 'The pickup code could not be regenerated.';
+      res.status(message.includes('access') ? 403 : 409).json({ error: message });
+    }
+  }
+);
+
 // PATCH /:id/status - Cook advances/cancels an order.
 // Runs through the service-role client because orders are owned (RLS-wise) by
 // the customer, not the cook — a cook updating status has no row-level grant
@@ -808,6 +881,12 @@ router.patch('/:id/status', requireActiveAccount, async (req: AccountRequest, re
         error: 'Lalamove marks delivery orders complete automatically after proof of delivery.',
       });
     }
+    if (order.fulfillment_type === 'pickup' && requestedStatus === 'completed') {
+      return res.status(409).json({
+        error: 'Enter the buyer pickup code to complete this checkout.',
+        requiresPickupCode: true,
+      });
+    }
     if (order.delivery_job_id && requestedStatus === 'cancelled') {
       const { data: deliveryJob, error: deliveryJobError } = await supabase
         .from('delivery_jobs')
@@ -870,6 +949,12 @@ router.patch('/:id/status', requireActiveAccount, async (req: AccountRequest, re
       );
     }
 
+    if (requestedStatus === 'ready' && order.fulfillment_type === 'pickup') {
+      await ensurePickupHandoff(order.id).catch(handoffError =>
+        console.error('Pickup handoff code creation failed:', handoffError)
+      );
+    }
+
     // Notify the affected party (best-effort — the status change already
     // landed). Buyer hears about confirm/ready/cancel; the cook hears about
     // their payout when the order completes.
@@ -919,9 +1004,119 @@ router.patch('/:id/status', requireActiveAccount, async (req: AccountRequest, re
 });
 
 const PROOF_BUCKET = 'order-proofs';
+const HANDOFF_EVIDENCE_BUCKET = 'pickup-handoff-evidence';
 const PROOF_MAX_BYTES = 5 * 1024 * 1024;
 const PROOF_CONTENT_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 let proofBucketReady = false;
+let handoffEvidenceBucketReady = false;
+
+// POST /:id/pickup-handoff/exception - A failed handoff never completes an
+// order. It creates a critical, audited admin case with optional photo proof.
+router.post(
+  '/:id/pickup-handoff/exception',
+  requireActiveAccount,
+  async (req: AccountRequest, res) => {
+    const { id } = req.params;
+    const reason = String(req.body?.reason ?? '').trim();
+    const imageBase64 = typeof req.body?.imageBase64 === 'string' ? req.body.imageBase64 : null;
+    const contentType = typeof req.body?.contentType === 'string' ? req.body.contentType : null;
+    if (!ORDER_ID_PATTERN.test(id)) return res.status(400).json({ error: 'Order ID is invalid.' });
+    if (reason.length < 10 || reason.length > 1000) {
+      return res
+        .status(400)
+        .json({ error: 'Describe the handoff problem in 10 to 1000 characters.' });
+    }
+    try {
+      const lines = await loadPickupCheckout(id);
+      if (lines.length === 0) return res.status(404).json({ error: 'Order not found.' });
+      const representative = lines[0];
+      const listing = Array.isArray(representative.listings)
+        ? representative.listings[0]
+        : representative.listings;
+      const cook = listing
+        ? Array.isArray(listing.profiles)
+          ? listing.profiles[0]
+          : listing.profiles
+        : null;
+      if (cook?.user_id !== req.account!.userId) {
+        return res.status(403).json({ error: 'You do not have access to this pickup.' });
+      }
+      if (lines.some(line => line.status !== 'ready')) {
+        return res
+          .status(409)
+          .json({ error: 'Only a ready pickup can be sent for handoff review.' });
+      }
+
+      let evidenceUrl: string | null = null;
+      if (imageBase64) {
+        if (!contentType || !PROOF_CONTENT_TYPES.has(contentType)) {
+          return res.status(400).json({ error: 'The evidence must be a JPEG, PNG or WebP image.' });
+        }
+        const bytes = Buffer.from(imageBase64, 'base64');
+        if (bytes.length === 0 || bytes.length > PROOF_MAX_BYTES) {
+          return res.status(400).json({ error: 'The evidence photo must be no larger than 5 MB.' });
+        }
+        if (!handoffEvidenceBucketReady) {
+          await supabase.storage
+            .createBucket(HANDOFF_EVIDENCE_BUCKET, {
+              public: false,
+              fileSizeLimit: PROOF_MAX_BYTES,
+            })
+            .catch(() => undefined);
+          handoffEvidenceBucketReady = true;
+        }
+        const ext =
+          contentType === 'image/png' ? 'png' : contentType === 'image/webp' ? 'webp' : 'jpg';
+        const path = `${representative.checkout_id}/exception-${Date.now()}.${ext}`;
+        const { error: uploadError } = await supabase.storage
+          .from(HANDOFF_EVIDENCE_BUCKET)
+          .upload(path, bytes, { contentType, upsert: false });
+        if (uploadError) throw uploadError;
+        evidenceUrl = path;
+      }
+      const now = new Date().toISOString();
+      const details = { reason, evidenceStoragePath: evidenceUrl };
+      const { error: eventError } = await supabase.from('pickup_handoff_events').insert({
+        checkout_id: representative.checkout_id,
+        actor_user_id: req.account!.userId,
+        event_type: 'exception_requested',
+        details,
+      });
+      if (eventError) throw eventError;
+      const { data: createdAlert, error: alertError } = await supabase
+        .from('order_alerts')
+        .upsert(
+          {
+            checkout_id: representative.checkout_id,
+            representative_order_id: representative.id,
+            alert_type: 'pickup_handoff_exception',
+            severity: 'critical',
+            status: 'open',
+            due_at: representative.pickup_window_end ?? now,
+            triggered_at: now,
+            details,
+            updated_at: now,
+          },
+          { onConflict: 'checkout_id,alert_type', ignoreDuplicates: true }
+        )
+        .select('id')
+        .maybeSingle();
+      if (alertError) throw alertError;
+      if (createdAlert) {
+        await notifyAdminsOfCriticalOrderAlert({
+          checkoutId: representative.checkout_id,
+          representativeOrderId: representative.id,
+          title: 'Critical: pickup handoff needs review',
+          message: `A cook could not obtain the buyer pickup code. Reason: ${reason}`,
+        });
+      }
+      res.status(201).json({ success: true, status: 'awaiting_admin_review' });
+    } catch (error: unknown) {
+      console.error('Pickup handoff exception failed:', error);
+      res.status(500).json({ error: 'The handoff review request could not be submitted.' });
+    }
+  }
+);
 
 // POST /:id/proof - Cook attaches a proof-of-preparation photo to an order.
 // Runs through the service-role client (same ownership rules as the status

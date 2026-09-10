@@ -30,7 +30,7 @@ export const TIER1_DOCUMENTS: VerificationDocMeta[] = [
   {
     type: 'food_handler_certificate',
     title: 'MOH Food Handler Certificate',
-    subtitle: '3-hour MOH-accredited course · RM50 · lifetime validity',
+    subtitle: '3-hour MOH-accredited course',
   },
   {
     type: 'typhoid_vaccination',

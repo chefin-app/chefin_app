@@ -10,6 +10,7 @@ import {
   View,
 } from 'react-native';
 import { Calendar, type DateData } from 'react-native-calendars';
+import { ADMIN_THEME } from '@/src/admin/theme';
 
 export interface AdminDateRangeOption<T extends string> {
   key: T;
@@ -172,7 +173,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 13,
     backgroundColor: '#FFFFFF',
   },
-  buttonText: { flex: 1, fontFamily: 'mon-sb', fontSize: 10, color: '#56635B' },
+  buttonText: {
+    flex: 1,
+    fontFamily: ADMIN_THEME.fonts.semibold,
+    fontSize: ADMIN_THEME.sizes.control,
+    color: '#56635B',
+  },
   modalRoot: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 18 },
   backdrop: {
     ...StyleSheet.absoluteFill,

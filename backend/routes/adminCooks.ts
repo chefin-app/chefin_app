@@ -331,6 +331,7 @@ router.post('/:userId/identity/:documentId/review', async (req: AdminRequest, re
         identity_reviewed_at: new Date().toISOString(),
         identity_reviewed_by: req.admin!.userId,
         reviewer_note: reviewerNote || null,
+        ...(decision === 'approved' ? {} : { reverification_identity_submitted_at: null }),
         updated_at: new Date().toISOString(),
       })
       .eq('user_id', req.params.userId);
@@ -399,6 +400,10 @@ router.post('/:userId/application/:action', async (req: AdminRequest, res) => {
         rejected_by: approved ? null : req.admin!.userId,
         reviewer_note: reviewerNote || null,
         reverification_due_at: null,
+        reverification_started_at: null,
+        reverification_identity_submitted_at: null,
+        reverification_food_submitted_at: null,
+        reverification_food_skipped_at: null,
         updated_at: now,
       })
       .eq('user_id', req.params.userId);

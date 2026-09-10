@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { fetchAdminOverview } from '@/src/admin/api';
 import type { AdminOverviewData, OverviewPeriod } from '@/src/admin/types';
 import { useAuth } from '@/src/services/auth-context';
+import { ADMIN_SHARED_STYLES } from '@/src/admin/theme';
 import SkeletonLoader from '@/src/components/feedback/SkeletonLoader';
 import {
   ADMIN_COLORS,
@@ -267,8 +268,8 @@ export default function AdminOverviewScreen() {
             <SkeletonLoader
               key={index}
               width={index < 5 ? metricWidth : '100%'}
-              height={index < 5 ? 154 : 220}
-              borderRadius={16}
+              height={index < 5 ? 140 : 220}
+              borderRadius={15}
             />
           ))}
         </View>
@@ -530,44 +531,15 @@ export default function AdminOverviewScreen() {
 }
 
 const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: '#F4F6F8' },
-  pageContent: {
-    width: '100%',
-    maxWidth: 1548,
-    alignSelf: 'center',
-    paddingHorizontal: 24,
-    paddingTop: 30,
-    paddingBottom: 54,
-    gap: 18,
-  },
-  pageHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    justifyContent: 'space-between',
-    gap: 18,
-    marginBottom: 6,
-  },
-  eyebrow: {
-    fontFamily: 'mon-b',
-    fontSize: 9,
-    letterSpacing: 1.4,
-    color: '#2C9C5B',
-    marginBottom: 7,
-  },
-  pageTitle: { fontFamily: 'mon-b', fontSize: 30, color: '#1C2720', marginBottom: 7 },
-  pageSubtitle: { fontFamily: 'mon', fontSize: 12, lineHeight: 19, color: '#737D77' },
+  page: ADMIN_SHARED_STYLES.page,
+  pageContent: ADMIN_SHARED_STYLES.pageContent,
+  pageHeader: { ...ADMIN_SHARED_STYLES.pageHeader, marginBottom: 6 },
+  eyebrow: ADMIN_SHARED_STYLES.eyebrow,
+  pageTitle: ADMIN_SHARED_STYLES.pageTitle,
+  pageSubtitle: ADMIN_SHARED_STYLES.pageSubtitle,
   pageHeaderActions: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   updatedText: { fontFamily: 'mon', fontSize: 9, color: '#929A95' },
-  refreshButton: {
-    width: 38,
-    height: 38,
-    borderRadius: 11,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E4E9E6',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  refreshButton: ADMIN_SHARED_STYLES.refreshButton,
   metricGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   loadingGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 14 },
   sectionHeading: {

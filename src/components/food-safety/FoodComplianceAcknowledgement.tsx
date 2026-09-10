@@ -22,7 +22,7 @@ export function FoodComplianceAcknowledgement({
   onAcceptedChange,
   acceptedAt,
 }: FoodComplianceAcknowledgementProps) {
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(false);
   const isRecorded = Boolean(acceptedAt);
 
   return (

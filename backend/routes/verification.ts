@@ -222,6 +222,12 @@ router.post('/review', requireAdmin, async (req: AdminRequest, res) => {
         .from('cook_applications')
         .update({
           compliance_status: complianceStatus,
+          ...(['rejected', 'more_info_requested'].includes(decision)
+            ? {
+                reverification_food_submitted_at: null,
+                reverification_food_skipped_at: null,
+              }
+            : {}),
           ...(complianceStatus !== 'pending'
             ? {
                 compliance_reviewed_at: new Date().toISOString(),

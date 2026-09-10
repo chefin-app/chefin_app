@@ -41,6 +41,7 @@ import AdminDialog from '@/src/components/admin/AdminDialog';
 import { AdminPanel, AdminStatusBadge } from '@/src/components/admin/AdminOverviewUI';
 import AdminSelect from '@/src/components/admin/AdminSelect';
 import { showAdminFailure, showAdminSuccess } from '@/src/admin/feedback';
+import { ADMIN_SHARED_STYLES, ADMIN_THEME } from '@/src/admin/theme';
 
 const FILTERS: Array<{ key: CookManagementFilter; label: string }> = [
   { key: 'all', label: 'All cooks' },
@@ -603,7 +604,7 @@ export default function CookManagementScreen() {
   return (
     <ScrollView style={styles.page} contentContainerStyle={styles.pageContent}>
       <View style={styles.header}>
-        <View style={{ flex: 1 }}>
+        <View style={styles.headerCopy}>
           <Text style={styles.eyebrow}>ADMIN DASHBOARD</Text>
           <Text style={styles.title}>Cook Management</Text>
           <Text style={styles.subtitle}>
@@ -640,7 +641,13 @@ export default function CookManagementScreen() {
           ],
         ].map(([label, value, icon, color]) => (
           <View key={String(label)} style={styles.statCard}>
-            <Ionicons name={icon as any} size={20} color={String(color)} />
+            <View style={[styles.statIcon, { backgroundColor: `${color}18` }]}>
+              <Ionicons
+                name={icon as React.ComponentProps<typeof Ionicons>['name']}
+                size={20}
+                color={String(color)}
+              />
+            </View>
             <Text style={styles.statLabel}>{label}</Text>
             <Text style={styles.statValue}>{Number(value).toLocaleString('en-MY')}</Text>
           </View>
@@ -663,8 +670,15 @@ export default function CookManagementScreen() {
                   {option.label}
                 </Text>
                 {option.key === 'pending' && (
-                  <View style={styles.countBadge}>
-                    <Text style={styles.countBadgeText}>
+                  <View
+                    style={[styles.countBadge, filter === option.key && styles.countBadgeActive]}
+                  >
+                    <Text
+                      style={[
+                        styles.countBadgeText,
+                        filter === option.key && styles.countBadgeTextActive,
+                      ]}
+                    >
                       {response?.stats.pendingVerification ?? 0}
                     </Text>
                   </View>
@@ -738,7 +752,7 @@ export default function CookManagementScreen() {
                         <Text style={styles.avatarText}>{initials(cook.name)}</Text>
                       </View>
                     )}
-                    <View style={{ flex: 1 }}>
+                    <View style={styles.flexOne}>
                       <Text style={styles.personName}>{cook.name}</Text>
                       <Text style={styles.meta}>
                         #{cook.displayId} · {cook.restaurantName ?? 'No restaurant name'}
@@ -759,14 +773,14 @@ export default function CookManagementScreen() {
             </View>
           </ScrollView>
         ) : (
-          <View style={{ gap: 12 }}>
+          <View style={styles.mobileCards}>
             {(response?.cooks ?? []).map(cook => (
               <View key={cook.userId} style={styles.mobileCard}>
                 <View style={styles.person}>
                   <View style={styles.avatarFallback}>
                     <Text style={styles.avatarText}>{initials(cook.name)}</Text>
                   </View>
-                  <View style={{ flex: 1 }}>
+                  <View style={styles.flexOne}>
                     <Text style={styles.personName}>{cook.name}</Text>
                     <Text style={styles.meta}>{cook.restaurantName}</Text>
                   </View>
@@ -866,7 +880,7 @@ export default function CookManagementScreen() {
         ) : detailsError ? (
           <Text style={styles.errorText}>{detailsError}</Text>
         ) : details ? (
-          <View style={{ gap: 22 }}>
+          <View style={styles.detailsContent}>
             <View style={styles.hero}>
               {details.cook.avatarUrl ? (
                 <Image source={{ uri: details.cook.avatarUrl }} style={styles.heroAvatar} />
@@ -875,7 +889,7 @@ export default function CookManagementScreen() {
                   <Text style={styles.avatarText}>{initials(details.cook.name)}</Text>
                 </View>
               )}
-              <View style={{ flex: 1 }}>
+              <View style={styles.flexOne}>
                 <Text style={styles.heroName}>{details.cook.name}</Text>
                 <Text style={styles.meta}>
                   {details.cook.restaurantName ?? 'No restaurant name'} · {details.cook.address}
@@ -950,7 +964,7 @@ export default function CookManagementScreen() {
                   linkedDocumentId === latestIdentity.id && styles.documentRowHighlighted,
                 ]}
               >
-                <View style={{ flex: 1 }}>
+                <View style={styles.flexOne}>
                   <Text style={styles.documentTitle}>{humanize(latestIdentity.document_type)}</Text>
                   <Text style={styles.meta}>
                     Submitted {formatDate(latestIdentity.submitted_at)}
@@ -1002,7 +1016,7 @@ export default function CookManagementScreen() {
             )}
 
             <Text style={styles.sectionTitle}>OPTIONAL FOOD & BUSINESS CREDENTIALS</Text>
-            <View style={{ gap: 10 }}>
+            <View style={styles.credentialList}>
               {REQUIRED_DOCS.map(type => {
                 const document = latestCompliance.get(type);
                 return (
@@ -1013,7 +1027,7 @@ export default function CookManagementScreen() {
                       linkedDocumentId === document?.id && styles.documentRowHighlighted,
                     ]}
                   >
-                    <View style={{ flex: 1 }}>
+                    <View style={styles.flexOne}>
                       <Text style={styles.documentTitle}>{humanize(type)}</Text>
                       <Text style={styles.meta}>
                         {document ? `Submitted ${formatDate(document.submitted_at)}` : 'Missing'}
@@ -1067,7 +1081,7 @@ export default function CookManagementScreen() {
               />
             </View>
             <View style={styles.finalReview}>
-              <View style={{ flex: 1 }}>
+              <View style={styles.flexOne}>
                 <Text style={styles.finalTitle}>Final platform approval</Text>
                 <Text style={styles.meta}>
                   Enabled after identity approval. Food and business documents are optional and only
@@ -1146,7 +1160,7 @@ export default function CookManagementScreen() {
           </>
         }
       >
-        <View style={{ gap: 14 }}>
+        <View style={styles.dialogForm}>
           {dialog === 'invite' ? (
             <>
               <TextInput
@@ -1257,49 +1271,44 @@ export default function CookManagementScreen() {
 }
 
 const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: '#F5F7F8' },
-  pageContent: { padding: 28, gap: 22, paddingBottom: 70 },
-  header: { flexDirection: 'row', alignItems: 'flex-start', gap: 18 },
+  page: ADMIN_SHARED_STYLES.page,
+  pageContent: ADMIN_SHARED_STYLES.pageContent,
+  header: ADMIN_SHARED_STYLES.pageHeader,
+  headerCopy: { flex: 1, minWidth: 280 },
+  flexOne: { flex: 1 },
   headerActions: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8 },
-  eyebrow: { fontSize: 10, fontWeight: '800', color: '#4CAF50', letterSpacing: 1.4 },
-  title: { fontSize: 32, fontWeight: '800', color: '#202823', marginTop: 5 },
-  subtitle: { fontSize: 14, color: '#6F7973', lineHeight: 21, marginTop: 7, maxWidth: 700 },
-  stats: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  eyebrow: ADMIN_SHARED_STYLES.eyebrow,
+  title: ADMIN_SHARED_STYLES.pageTitle,
+  subtitle: ADMIN_SHARED_STYLES.pageSubtitle,
+  stats: ADMIN_SHARED_STYLES.statsGrid,
   statCard: {
+    ...ADMIN_SHARED_STYLES.statCard,
     minWidth: 180,
-    flex: 1,
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#E5EAE7',
-    borderRadius: 16,
-    padding: 17,
   },
-  statLabel: { fontSize: 12, color: '#77817B', marginTop: 13 },
-  statValue: { fontSize: 27, fontWeight: '800', color: '#202823', marginTop: 3 },
-  filters: { flexDirection: 'row', gap: 8, paddingBottom: 18 },
-  filter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 7,
-    borderWidth: 1,
-    borderColor: '#E0E6E2',
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-  },
-  filterActive: { backgroundColor: '#E6F7EA', borderColor: '#4CAF50' },
-  filterText: { fontSize: 12, color: '#657068', fontWeight: '600' },
-  filterTextActive: { color: '#237A3B' },
+  statIcon: ADMIN_SHARED_STYLES.statIcon,
+  statLabel: ADMIN_SHARED_STYLES.statLabel,
+  statValue: ADMIN_SHARED_STYLES.statValue,
+  filters: { flexDirection: 'row', gap: 8, paddingBottom: 16 },
+  filter: ADMIN_SHARED_STYLES.filter,
+  filterActive: ADMIN_SHARED_STYLES.filterActive,
+  filterText: ADMIN_SHARED_STYLES.filterText,
+  filterTextActive: ADMIN_SHARED_STYLES.filterTextActive,
   countBadge: {
-    minWidth: 20,
-    height: 20,
+    minWidth: 19,
+    height: 19,
     borderRadius: 10,
     paddingHorizontal: 5,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F4C44E',
+    backgroundColor: '#EEF1EF',
   },
-  countBadgeText: { fontSize: 10, fontWeight: '800', color: '#594200' },
+  countBadgeActive: { backgroundColor: '#CDEED6' },
+  countBadgeText: {
+    fontFamily: ADMIN_THEME.fonts.bold,
+    fontSize: ADMIN_THEME.sizes.caption,
+    color: '#6F7973',
+  },
+  countBadgeTextActive: { color: '#237A3B' },
   controls: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -1307,38 +1316,20 @@ const styles = StyleSheet.create({
     gap: 10,
     marginBottom: 18,
   },
-  searchBox: {
-    flex: 1,
-    minWidth: 260,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    borderWidth: 1,
-    borderColor: '#E0E6E2',
-    borderRadius: 11,
-    paddingHorizontal: 13,
-  },
-  searchInput: { flex: 1, paddingVertical: 11, fontSize: 13, color: '#26322B' },
-  refresh: {
-    width: 40,
-    height: 40,
-    borderWidth: 1,
-    borderColor: '#E0E6E2',
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  searchBox: ADMIN_SHARED_STYLES.searchBox,
+  searchInput: ADMIN_SHARED_STYLES.searchInput,
+  refresh: ADMIN_SHARED_STYLES.refreshButton,
   table: { minWidth: 1200 },
   tableRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    minHeight: 76,
+    minHeight: ADMIN_THEME.layout.tableRowHeight,
     borderBottomWidth: 1,
     borderBottomColor: '#EDF1EE',
     paddingHorizontal: 8,
   },
-  tableHeader: { minHeight: 46, backgroundColor: '#F7F9F8', borderRadius: 10 },
-  th: { fontSize: 10, fontWeight: '800', color: '#657068' },
+  tableHeader: { ...ADMIN_SHARED_STYLES.tableHeader, borderRadius: 10 },
+  th: ADMIN_SHARED_STYLES.tableHeaderText,
   person: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   avatar: { width: 38, height: 38, borderRadius: 19 },
   avatarFallback: {
@@ -1349,12 +1340,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarText: { fontSize: 12, fontWeight: '800', color: '#237A3B' },
-  personName: { fontSize: 13, fontWeight: '700', color: '#27322B' },
-  meta: { fontSize: 10, color: '#818A84', marginTop: 3 },
-  cell: { fontSize: 12, color: '#56625A' },
+  avatarText: { fontFamily: 'mon-b', fontSize: 10, color: '#237A3B' },
+  personName: { fontFamily: 'mon-sb', fontSize: 10, color: '#27322B' },
+  meta: { fontFamily: 'mon', fontSize: 8, color: '#818A84', marginTop: 3 },
+  cell: ADMIN_SHARED_STYLES.tableCell,
   rowActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, alignItems: 'center' },
   button: {
+    minHeight: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
     borderWidth: 1,
     borderColor: '#DCE3DE',
     borderRadius: 9,
@@ -1365,11 +1359,12 @@ const styles = StyleSheet.create({
   buttonPrimary: { backgroundColor: '#4CAF50', borderColor: '#4CAF50' },
   buttonDanger: { backgroundColor: '#FFF4F3', borderColor: '#F1B3AE' },
   buttonDisabled: { opacity: 0.42 },
-  buttonText: { fontSize: 11, fontWeight: '700', color: '#5D6861' },
+  buttonText: ADMIN_SHARED_STYLES.buttonText,
   buttonTextPrimary: { color: '#fff' },
   buttonTextDanger: { color: '#B42318' },
-  protected: { fontSize: 10, color: '#237A3B', fontWeight: '700' },
+  protected: { fontFamily: 'mon-sb', fontSize: 8, color: '#237A3B' },
   mobileCard: { borderWidth: 1, borderColor: '#E6EBE7', borderRadius: 14, padding: 14, gap: 12 },
+  mobileCards: { gap: 12 },
   pagination: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -1377,7 +1372,7 @@ const styles = StyleSheet.create({
     marginTop: 18,
   },
   empty: { minHeight: 180, alignItems: 'center', justifyContent: 'center', gap: 10 },
-  emptyTitle: { fontSize: 14, fontWeight: '700', color: '#5F6963' },
+  emptyTitle: { fontFamily: 'mon-b', fontSize: 14, color: '#5F6963' },
   errorBox: {
     padding: 14,
     backgroundColor: '#FFF3F2',
@@ -1386,10 +1381,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  errorText: { color: '#B42318', fontSize: 12 },
+  errorText: { fontFamily: 'mon', color: '#B42318', fontSize: 10 },
   hero: { flexDirection: 'row', alignItems: 'center', gap: 13 },
+  detailsContent: { gap: 22 },
   heroAvatar: { width: 58, height: 58, borderRadius: 29 },
-  heroName: { fontSize: 20, fontWeight: '800', color: '#202823' },
+  heroName: { fontFamily: 'mon-b', fontSize: 20, color: '#202823' },
   detailStats: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   detailStat: {
     flex: 1,
@@ -1399,9 +1395,9 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 14,
   },
-  detailValue: { fontSize: 20, fontWeight: '800', color: '#27322B' },
+  detailValue: { fontFamily: 'mon-b', fontSize: 17, color: '#27322B' },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  sectionTitle: { fontSize: 11, fontWeight: '800', color: '#6A746E', letterSpacing: 0.8 },
+  sectionTitle: { fontFamily: 'mon-b', fontSize: 9, color: '#6A746E', letterSpacing: 0.8 },
   infoGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -1417,8 +1413,8 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: '#E3E8E5',
   },
-  infoLabel: { fontSize: 9, color: '#8A938D', fontWeight: '700', letterSpacing: 0.5 },
-  infoValue: { fontSize: 13, color: '#28332C', marginTop: 5 },
+  infoLabel: { fontFamily: 'mon', fontSize: 8, color: '#8A938D', letterSpacing: 0.5 },
+  infoValue: { fontFamily: 'mon-sb', fontSize: 10, color: '#28332C', marginTop: 5 },
   documentRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -1437,7 +1433,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.12,
     shadowRadius: 8,
   },
-  documentTitle: { fontSize: 13, color: '#28332C', fontWeight: '700' },
+  documentTitle: { fontFamily: 'mon-sb', fontSize: 9, color: '#28332C' },
   permissionBox: {
     flexDirection: 'row',
     gap: 9,
@@ -1445,7 +1441,8 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 13,
   },
-  permissionText: { flex: 1, fontSize: 11, lineHeight: 16, color: '#745C13' },
+  permissionText: { flex: 1, fontFamily: 'mon', fontSize: 9, lineHeight: 15, color: '#745C13' },
+  credentialList: { gap: 10 },
   textarea: {
     minHeight: 90,
     borderWidth: 1,
@@ -1454,7 +1451,8 @@ const styles = StyleSheet.create({
     padding: 12,
     marginTop: 6,
     textAlignVertical: 'top',
-    fontSize: 13,
+    fontFamily: 'mon',
+    fontSize: 10,
   },
   input: {
     borderWidth: 1,
@@ -1462,7 +1460,8 @@ const styles = StyleSheet.create({
     borderRadius: 11,
     paddingHorizontal: 12,
     paddingVertical: 11,
-    fontSize: 13,
+    fontFamily: 'mon',
+    fontSize: 10,
   },
   finalReview: {
     flexDirection: 'row',
@@ -1473,5 +1472,6 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     padding: 15,
   },
-  finalTitle: { fontSize: 14, fontWeight: '800', color: '#28332C' },
+  finalTitle: { fontFamily: 'mon-b', fontSize: 14, color: '#28332C' },
+  dialogForm: { gap: 14 },
 });

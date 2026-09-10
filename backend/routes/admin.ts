@@ -6,6 +6,7 @@ import adminUsersRoutes from './adminUsers';
 import adminModerationRoutes from './adminModeration';
 import adminCooksRoutes from './adminCooks';
 import adminDishesRoutes from './adminDishes';
+import adminOrdersRoutes from './adminOrders';
 
 const router = express.Router();
 
@@ -117,6 +118,7 @@ router.use('/users', adminUsersRoutes);
 router.use('/moderation', adminModerationRoutes);
 router.use('/cooks', adminCooksRoutes);
 router.use('/dishes', adminDishesRoutes);
+router.use('/orders', adminOrdersRoutes);
 
 router.get('/session', (req: AdminRequest, res) => {
   res.json({ admin: req.admin });
@@ -138,6 +140,7 @@ router.get('/overview', async (req, res) => {
       reviewsResult,
       docsResult,
       reportsResult,
+      alertsResult,
     ] = await Promise.all([
       supabase
         .from('profiles')
@@ -160,6 +163,10 @@ router.get('/overview', async (req, res) => {
         .from('content_reports')
         .select('id', { count: 'exact', head: true })
         .in('status', ['pending', 'reviewing']),
+      supabase
+        .from('order_alerts')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'open'),
     ]);
 
     const firstError = [
@@ -170,6 +177,7 @@ router.get('/overview', async (req, res) => {
       reviewsResult.error,
       docsResult.error,
       reportsResult.error,
+      alertsResult.error,
     ].find(Boolean);
     if (firstError) throw firstError;
 
@@ -304,7 +312,10 @@ router.get('/overview', async (req, res) => {
         totalOrders: orders.length,
         recordedOrderValue: Number(recordedOrderValue.toFixed(2)),
         pendingActions:
-          (docsResult.count ?? 0) + (reportsResult.count ?? 0) + (dishStatus.pending ?? 0),
+          (docsResult.count ?? 0) +
+          (reportsResult.count ?? 0) +
+          (alertsResult.count ?? 0) +
+          (dishStatus.pending ?? 0),
       },
       salesSeries: buildSalesSeries(orders, days),
       breakdowns: {
@@ -324,38 +335,68 @@ router.get('/overview', async (req, res) => {
 
 router.get('/activity', async (_req, res) => {
   try {
-    const [reportsResult, documentsResult, ordersResult, profilesResult] = await Promise.all([
-      supabase
-        .from('content_reports')
-        .select('id, target_label, reason, created_at')
-        .in('status', ['pending', 'reviewing'])
-        .order('created_at', { ascending: false })
-        .limit(5),
-      supabase
-        .from('verification_documents')
-        .select('id, user_id, submitted_at, profiles(full_name, profile_image)')
-        .eq('status', 'pending')
-        .order('submitted_at', { ascending: false })
-        .limit(5),
-      supabase
-        .from('orders')
-        .select('id, created_at, listings(title)')
-        .order('created_at', { ascending: false })
-        .limit(4),
-      supabase
-        .from('profiles')
-        .select('id, user_id, full_name, profile_image, restaurant_name, created_at')
-        .order('created_at', { ascending: false })
-        .limit(5),
-    ]);
+    const [alertsResult, reportsResult, documentsResult, ordersResult, profilesResult] =
+      await Promise.all([
+        supabase
+          .from('order_alerts')
+          .select('id, checkout_id, representative_order_id, alert_type, severity, triggered_at')
+          .eq('status', 'open')
+          .order('triggered_at', { ascending: false })
+          .limit(8),
+        supabase
+          .from('content_reports')
+          .select('id, target_label, reason, created_at')
+          .in('status', ['pending', 'reviewing'])
+          .order('created_at', { ascending: false })
+          .limit(5),
+        supabase
+          .from('verification_documents')
+          .select('id, user_id, submitted_at, profiles(full_name, profile_image)')
+          .eq('status', 'pending')
+          .order('submitted_at', { ascending: false })
+          .limit(5),
+        supabase
+          .from('orders')
+          .select('id, created_at, listings(title)')
+          .order('created_at', { ascending: false })
+          .limit(4),
+        supabase
+          .from('profiles')
+          .select('id, user_id, full_name, profile_image, restaurant_name, created_at')
+          .order('created_at', { ascending: false })
+          .limit(5),
+      ]);
 
     const firstError = [
+      alertsResult.error,
       reportsResult.error,
       documentsResult.error,
       ordersResult.error,
       profilesResult.error,
     ].find(Boolean);
     if (firstError) throw firstError;
+
+    const alertActivity = (alertsResult.data ?? []).map(alert => ({
+      id: `order-alert-${alert.id}`,
+      type: 'alert' as const,
+      title:
+        alert.alert_type === 'pickup_handoff_exception'
+          ? 'Pickup handoff needs review'
+          : alert.alert_type === 'acceptance_overdue_20'
+            ? 'Order still unaccepted after 20 minutes'
+            : alert.alert_type === 'acceptance_overdue_10'
+              ? 'Order still unaccepted after 10 minutes'
+              : alert.severity === 'critical'
+                ? 'Order is over 60 minutes late'
+                : 'Order is over 30 minutes late',
+      body: `Order #${compactId(alert.checkout_id)} needs attention`,
+      createdAt: alert.triggered_at,
+      unread: true,
+      deepLink: {
+        pathname: '/admin/orders' as const,
+        params: { orderId: alert.representative_order_id },
+      },
+    }));
 
     const reportActivity = (reportsResult.data ?? []).map(report => ({
       id: `report-${report.id}`,
@@ -415,7 +456,13 @@ router.get('/activity', async (_req, res) => {
         : { pathname: '/admin/users' as const, params: { userId: profile.user_id } },
     }));
 
-    const activity = [...reportActivity, ...documentActivity, ...orderActivity, ...profileActivity]
+    const activity = [
+      ...alertActivity,
+      ...reportActivity,
+      ...documentActivity,
+      ...orderActivity,
+      ...profileActivity,
+    ]
       .filter(item => item.createdAt)
       .sort((a, b) => new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime())
       .slice(0, 8);
