@@ -1,9 +1,6 @@
 import express from 'express';
 import cors from 'cors';
-import { config } from 'dotenv';
-
-// Load environment variables FIRST, before importing other modules
-config();
+import './env';
 
 // import { supabase } from "./supabaseClient";
 import authRoutes from './routes/auth';

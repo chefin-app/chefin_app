@@ -65,6 +65,18 @@ export default function TabLayout() {
         <Tabs.Screen name="home" options={{ title: 'Home' }} />
         <Tabs.Screen name="search" options={{ title: 'Search' }} />
         <Tabs.Screen
+          name="notifications"
+          options={{ title: 'Notifications', headerShown: false }}
+          listeners={{
+            tabPress: e => {
+              if (!isLoggedIn) {
+                e.preventDefault();
+                router.push('/(auth)/login');
+              }
+            },
+          }}
+        />
+        <Tabs.Screen
           name="account"
           options={{
             title: isLoggedIn ? 'Account' : 'Log In',

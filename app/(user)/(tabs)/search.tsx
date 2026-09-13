@@ -98,11 +98,13 @@ const SearchScreen = () => {
     reset,
   } = useFetch(
     () =>
-      discoveryMode === 'nearest' && location
+      location
         ? fetchNearestCooks({
             latitude: location.latitude,
             longitude: location.longitude,
             limit: 50,
+            radiusKm: 50,
+            query: searchQuery,
           })
         : fetchCooks({ query: searchQuery }),
     false
@@ -422,6 +424,7 @@ const SearchScreen = () => {
       <LocationPromptModal
         visible={locationPromptVisible}
         onClose={() => setLocationPromptVisible(false)}
+        initialView="location"
       />
     </SafeAreaView>
   );

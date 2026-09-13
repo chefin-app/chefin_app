@@ -3,6 +3,7 @@ import React, { useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import theme from '../../styles/theme';
+import { useNotifications } from '@/src/context/NotificationsContext';
 
 // Props definition for the component, received from Expo Router's Tabs
 interface BottomTabBarUserProps {
@@ -16,6 +17,7 @@ interface BottomTabBarUserProps {
 const icons: Record<string, string> = {
   home: 'home',
   search: 'search-outline',
+  notifications: 'notifications-outline',
   account: 'person-outline',
 };
 
@@ -27,6 +29,7 @@ const BottomTabBarUser: React.FC<BottomTabBarUserProps> = ({
   onSearchDoubleTap,
 }) => {
   const lastSearchPressRef = useRef(0);
+  const { unreadCounts } = useNotifications();
 
   return (
     // we are creating the horizontal tab bar at the bottom
@@ -48,7 +51,11 @@ const BottomTabBarUser: React.FC<BottomTabBarUserProps> = ({
         // if its active = set it as primary colour otherwise
         const textColor = isFocused ? theme.colors.primary : theme.colors.inactive;
 
-        const iconName = icons[route.name] || 'help-circle-outline'; // Default to 'help-circle-outline' if no specific icon is set
+        const iconName =
+          route.name === 'notifications' && isFocused
+            ? 'notifications'
+            : icons[route.name] || 'help-circle-outline';
+        const unreadCount = route.name === 'notifications' ? unreadCounts.customer : 0;
 
         // when we press on the tab
         const onPress = () => {
@@ -88,7 +95,10 @@ const BottomTabBarUser: React.FC<BottomTabBarUserProps> = ({
             key={route.key} // we track each tab
             accessibilityRole="button"
             accessibilityState={isFocused ? { selected: true } : {}} // shows which tab is active
-            accessibilityLabel={options.tabBarAccessibilityLabel}
+            accessibilityLabel={
+              options.tabBarAccessibilityLabel ||
+              `${label}${unreadCount > 0 ? `, ${unreadCount} unread` : ''}`
+            }
             testID={options.tabBarTestID}
             onPress={onPress}
             onLongPress={onLongPress}
@@ -99,6 +109,11 @@ const BottomTabBarUser: React.FC<BottomTabBarUserProps> = ({
               size={32}
               color={textColor}
             />
+            {unreadCount > 0 ? (
+              <View style={styles.unreadBadge}>
+                <Text style={styles.unreadBadgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
+              </View>
+            ) : null}
             {/* we are applying styling */}
             <Text style={{ ...styles.tabLabel, color: textColor }}>{label}</Text>
           </TouchableOpacity>
@@ -124,11 +139,27 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 20, // Vertical padding inside each tab
+    position: 'relative',
   },
   tabLabel: {
     fontSize: 10, // Small text size as per Figma
     marginTop: 2, // Space between icon and text
   },
+  unreadBadge: {
+    position: 'absolute',
+    top: 14,
+    left: '56%',
+    minWidth: 18,
+    height: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+    borderRadius: 9,
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+    backgroundColor: '#E5484D',
+  },
+  unreadBadgeText: { color: '#FFFFFF', fontSize: 9, fontWeight: '800' },
 });
 
 export default BottomTabBarUser;

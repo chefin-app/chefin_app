@@ -52,8 +52,8 @@ export const normalizeMalaysianPhone = (value: string): string | null => {
 
 export const formatDeliveryAddress = (address: DeliveryAddressSnapshot): string =>
   [
-    address.addressLine1,
     address.addressLine2,
+    address.addressLine1,
     address.locality,
     address.postcode,
     address.city,

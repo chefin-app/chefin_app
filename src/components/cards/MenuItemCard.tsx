@@ -35,7 +35,7 @@ const MenuItemCard: React.FC<MenuItemCardProps> = ({
   const displayName = title || 'Unknown dish';
   const ratingSummary = getRatingSummary(reviews);
   const displayRating = formatRating(ratingSummary.average);
-  const showQuantityStepper = !hasOptionGroups && cartQuantity > 0;
+  const showQuantityStepper = cartQuantity > 0;
   const increaseDisabled = maxQuantity != null && cartQuantity >= Math.max(0, maxQuantity);
 
   return (
@@ -141,9 +141,17 @@ const MenuItemCard: React.FC<MenuItemCardProps> = ({
                 onPress={onAddPress}
                 disabled={increaseDisabled}
                 accessibilityRole="button"
-                accessibilityLabel={`Add one more ${displayName} to cart`}
+                accessibilityLabel={
+                  hasOptionGroups
+                    ? `Choose options to add another ${displayName}`
+                    : `Add one more ${displayName} to cart`
+                }
                 accessibilityHint={
-                  increaseDisabled ? 'Maximum available quantity reached' : undefined
+                  increaseDisabled
+                    ? 'Maximum available quantity reached'
+                    : hasOptionGroups
+                      ? 'Opens dish options'
+                      : undefined
                 }
                 accessibilityState={{ disabled: increaseDisabled }}
               >

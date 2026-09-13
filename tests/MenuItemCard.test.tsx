@@ -35,20 +35,28 @@ describe('MenuItemCard add control', () => {
     expect(screen.getByLabelText('Add Nasi Lemak to cart')).toBeTruthy();
   });
 
-  it('labels the add action as an option picker when option groups are attached', () => {
+  it('shows quantity controls after a dish with option groups is added', () => {
+    const onAddPress = jest.fn();
+    const onDecreasePress = jest.fn();
     render(
       <MenuItemCard
         {...dish}
         hasOptionGroups
         cartQuantity={2}
         onPress={jest.fn()}
-        onAddPress={jest.fn()}
-        onDecreasePress={jest.fn()}
+        onAddPress={onAddPress}
+        onDecreasePress={onDecreasePress}
       />
     );
 
-    expect(screen.getByLabelText('Choose options for Nasi Lemak')).toBeTruthy();
-    expect(screen.queryByTestId('menu-item-quantity-dish-1')).toBeNull();
+    expect(screen.getByTestId('menu-item-quantity-value-dish-1').props.children).toBe(2);
+    expect(screen.getByLabelText('Choose options to add another Nasi Lemak')).toBeTruthy();
+
+    fireEvent.press(screen.getByTestId('menu-item-decrease-dish-1'));
+    fireEvent.press(screen.getByTestId('menu-item-increase-dish-1'));
+
+    expect(onDecreasePress).toHaveBeenCalledTimes(1);
+    expect(onAddPress).toHaveBeenCalledTimes(1);
   });
 
   it('shows inline quantity controls for a dish without option groups', () => {

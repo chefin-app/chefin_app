@@ -24,6 +24,10 @@ import RestaurantScheduleSheet from '@/src/components/restaurant/RestaurantSched
 import { images } from '@/src/constants/images';
 import { useCart } from '@/src/context/CartContext';
 import { useFavourites } from '@/src/context/FavouritesContext';
+import {
+  useCustomerLocation,
+  type CustomerOrderTimePreference,
+} from '@/src/context/CustomerLocationContext';
 import { useAuth } from '@/src/services/auth-context';
 import type { Listing } from '@/src/types/models';
 import type { MenuOptionGroup } from '@/src/types/menuOptions';
@@ -84,6 +88,20 @@ interface RestaurantData {
 const ASAP_SELECTION: RestaurantOrderSelection = { mode: 'asap' };
 const UNAVAILABLE_BANNER_COLOR = '#8A6100';
 
+const toRestaurantOrderSelection = (
+  preference: CustomerOrderTimePreference
+): RestaurantOrderSelection => {
+  if (preference.mode === 'asap') return ASAP_SELECTION;
+  const start = new Date(preference.scheduledAt);
+  if (Number.isNaN(start.getTime()) || start.getTime() <= Date.now()) return ASAP_SELECTION;
+  return {
+    mode: 'scheduled',
+    serviceDate: getLocalDateKey(start),
+    startTime: start.toISOString(),
+    endTime: new Date(start.getTime() + 30 * 60_000).toISOString(),
+  };
+};
+
 const formatMatchLabel = (match: ListingScheduleMatch): string => {
   if (!match.available || !match.startTime || !match.endTime) return 'Order time unavailable';
   const selection: RestaurantOrderSelection = {
@@ -107,6 +125,7 @@ export default function RestaurantScreen() {
   const highlightDishId = Array.isArray(dish) ? dish[0] : dish;
   const shouldOpenSchedule = (Array.isArray(openSchedule) ? openSchedule[0] : openSchedule) === '1';
   const { session } = useAuth();
+  const { orderTimePreference, setOrderTimePreference } = useCustomerLocation();
   const { toggleFavourite, isFavourite } = useFavourites();
   const { addToCart, cartItems, clearCookCart, rescheduleCookCart, updateQuantity } = useCart();
 
@@ -114,7 +133,9 @@ export default function RestaurantScreen() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [clock, setClock] = useState(() => new Date());
-  const [orderSelection, setOrderSelection] = useState<RestaurantOrderSelection>(ASAP_SELECTION);
+  const [orderSelection, setOrderSelection] = useState<RestaurantOrderSelection>(() =>
+    toRestaurantOrderSelection(orderTimePreference)
+  );
   const [scheduleVisible, setScheduleVisible] = useState(false);
   const [selectedDish, setSelectedDish] = useState<RestaurantDish | null>(null);
   const promptedClosedKeyRef = useRef<string | null>(null);
@@ -123,6 +144,10 @@ export default function RestaurantScreen() {
     const timer = setInterval(() => setClock(new Date()), 60_000);
     return () => clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    setOrderSelection(toRestaurantOrderSelection(orderTimePreference));
+  }, [orderTimePreference]);
 
   // A `dish` param (from the profile page's top picks) opens that dish's
   // order sheet once the menu has loaded, then is consumed so closing the
@@ -321,6 +346,11 @@ export default function RestaurantScreen() {
     const apply = () => {
       setSelectedDish(null);
       setOrderSelection(selection);
+      setOrderTimePreference(
+        selection.mode === 'asap'
+          ? { mode: 'asap' }
+          : { mode: 'scheduled', scheduledAt: selection.startTime }
+      );
     };
 
     if (!hasConflict) {
@@ -679,7 +709,7 @@ export default function RestaurantScreen() {
                 <Text style={styles.menuSubtitle}>
                   {orderSelection.mode === 'scheduled'
                     ? 'Availability for your selected time'
-                    : 'Fresh dishes from this home cook'}
+                    : 'Fresh dishes from this cook'}
                 </Text>
               </View>
               <View style={styles.itemCountPill}>
@@ -690,10 +720,14 @@ export default function RestaurantScreen() {
             <View style={styles.menuCard}>
               {listings.map(dish => {
                 const match = getDishMatch(dish.id);
-                const cartItem = cartItems.find(
+                const dishCartItems = cartItems.filter(
                   item => item.cookId === profile.id && item.listingId === dish.id
                 );
-                const cartQuantity = cartItem?.quantity ?? 0;
+                const cartQuantity = dishCartItems.reduce(
+                  (total, item) => total + item.quantity,
+                  0
+                );
+                const cartItemToDecrease = dishCartItems[dishCartItems.length - 1];
                 return (
                   <MenuItemCard
                     key={dish.id}
@@ -710,7 +744,9 @@ export default function RestaurantScreen() {
                     onPress={() => setSelectedDish(dish)}
                     onAddPress={() => handleDishAddPress(dish, match)}
                     onDecreasePress={() => {
-                      if (cartItem) updateQuantity(cartItem.lineId, cartItem.quantity - 1);
+                      if (cartItemToDecrease) {
+                        updateQuantity(cartItemToDecrease.lineId, cartItemToDecrease.quantity - 1);
+                      }
                     }}
                   />
                 );
@@ -755,7 +791,19 @@ export default function RestaurantScreen() {
             : null
         }
         scheduleLabel={selectedDishMatch ? formatMatchLabel(selectedDishMatch) : ''}
-        maxQuantity={selectedDishMatch?.remainingSlots ?? 0}
+        maxQuantity={
+          selectedDish
+            ? Math.max(
+                0,
+                (selectedDishMatch?.remainingSlots ?? 0) -
+                  cartItems
+                    .filter(
+                      item => item.cookId === profile.id && item.listingId === selectedDish.id
+                    )
+                    .reduce((total, item) => total + item.quantity, 0)
+              )
+            : 0
+        }
         onClose={() => setSelectedDish(null)}
         onAdd={addSelectedDish}
         onShare={() =>

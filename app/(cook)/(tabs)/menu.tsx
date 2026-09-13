@@ -908,12 +908,12 @@ export default function CookMenuScreen() {
               <View style={styles.promotionCopy}>
                 <Text style={styles.promotionTitle}>Free-delivery offer</Text>
                 <Text style={styles.promotionText}>
-                  {threshold == null
-                    ? 'Choose how much customers must spend with you to get free delivery'
-                    : `Free delivery when customers spend RM ${threshold.toFixed(2)} or more with you`}
+                    {threshold == null
+                      ? 'Choose how much customers must spend with you to get free delivery'
+                      : `Free delivery when customers spend RM ${threshold.toFixed(2)} or more with you`}
                 </Text>
               </View>
-              <Ionicons name="chevron-forward" size={19} color="#59615C" />
+                <Ionicons name="chevron-forward" size={19} color="#59615C" />
             </TouchableOpacity>
 
             {categories.length === 0 ? (

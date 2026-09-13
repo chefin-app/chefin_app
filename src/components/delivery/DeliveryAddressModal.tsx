@@ -20,7 +20,6 @@ export type DeliveryAddress = {
   phoneNumber: string;
   addressLine1: string;
   addressLine2?: string | null;
-  locality?: string | null;
   city: string;
   state: string;
   postcode: string;
@@ -40,7 +39,6 @@ const emptyDraft = (defaults?: Partial<DeliveryAddress>): Draft => ({
   phoneNumber: defaults?.phoneNumber ?? '',
   addressLine1: defaults?.addressLine1 ?? '',
   addressLine2: defaults?.addressLine2 ?? '',
-  locality: defaults?.locality ?? '',
   city: defaults?.city ?? '',
   state: defaults?.state ?? 'Selangor',
   postcode: defaults?.postcode ?? '',
@@ -73,7 +71,7 @@ export function DeliveryAddressModal({
 
   const setField = (key: keyof Draft, value: string) => {
     const changes: Partial<Draft> = { [key]: value };
-    if (['addressLine1', 'addressLine2', 'locality', 'city', 'state', 'postcode'].includes(key)) {
+    if (['addressLine1', 'addressLine2', 'city', 'state', 'postcode'].includes(key)) {
       changes.latitude = null;
       changes.longitude = null;
     }
@@ -95,7 +93,6 @@ export function DeliveryAddressModal({
           match?.streetNumber && match?.street
             ? `${match.streetNumber} ${match.street}`
             : match?.name || match?.street || current.addressLine1,
-        locality: match?.district || match?.subregion || current.locality,
         city: match?.city || match?.region || current.city,
         state: match?.region || current.state,
         postcode: match?.postalCode || current.postcode,
@@ -132,15 +129,7 @@ export function DeliveryAddressModal({
       let latitude = draft.latitude;
       let longitude = draft.longitude;
       if (latitude == null || longitude == null) {
-        const query = [
-          draft.addressLine1,
-          draft.addressLine2,
-          draft.locality,
-          draft.postcode,
-          draft.city,
-          draft.state,
-          'Malaysia',
-        ]
+        const query = [draft.addressLine1, draft.postcode, draft.city, draft.state, 'Malaysia']
           .filter(Boolean)
           .join(', ');
         const matches = await Location.geocodeAsync(query);
@@ -159,7 +148,6 @@ export function DeliveryAddressModal({
         phoneNumber: draft.phoneNumber.trim(),
         addressLine1: draft.addressLine1.trim(),
         addressLine2: draft.addressLine2?.trim() || null,
-        locality: draft.locality?.trim() || null,
         city: draft.city.trim(),
         state: draft.state.trim(),
         postcode: draft.postcode.trim(),
@@ -240,9 +228,12 @@ export function DeliveryAddressModal({
             keyboardType: 'phone-pad',
             placeholder: '+60 12-345 6789',
           })}
-          {field('Unit and street address', 'addressLine1')}
-          {field('Building / floor (optional)', 'addressLine2')}
-          {field('Neighbourhood (optional)', 'locality')}
+          {field('Street address', 'addressLine1', {
+            placeholder: 'House number and street name',
+          })}
+          {field('Unit number (optional)', 'addressLine2', {
+            placeholder: 'e.g. A-12-3',
+          })}
           <View style={styles.row}>
             <View style={styles.flex}>{field('City', 'city')}</View>
             <View style={styles.postcode}>
@@ -254,7 +245,7 @@ export function DeliveryAddressModal({
             multiline: true,
             placeholder: 'Gate, landmark or handoff note',
           })}
-          <Text style={styles.areaNote}>Delivery is available in Klang Valley at launch.</Text>
+          <Text style={styles.areaNote}>Delivery is available in Klang Valley only.</Text>
         </ScrollView>
         <View style={styles.footer}>
           <TouchableOpacity
