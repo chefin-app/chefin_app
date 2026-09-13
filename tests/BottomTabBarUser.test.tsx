@@ -5,10 +5,14 @@ import BottomTabBarUser from '@/src/components/navigation/BottomTabBarUser';
 jest.mock('@expo/vector-icons', () => ({
   Ionicons: () => null,
 }));
+jest.mock('@/src/context/NotificationsContext', () => ({
+  useNotifications: () => ({ unreadCounts: { customer: 3, cook: 0 } }),
+}));
 
 const routes = [
   { key: 'home-key', name: 'home' },
   { key: 'search-key', name: 'search' },
+  { key: 'notifications-key', name: 'notifications' },
   { key: 'account-key', name: 'account' },
 ];
 
@@ -72,5 +76,18 @@ describe('BottomTabBarUser search double tap', () => {
 
     expect(navigation.navigate).toHaveBeenCalledWith({ name: 'search', merge: true });
     expect(onSearchDoubleTap).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows the buyer unread count on the notifications tab', () => {
+    render(
+      <BottomTabBarUser
+        state={{ routes, index: 0 }}
+        descriptors={descriptors}
+        navigation={navigation}
+      />
+    );
+
+    expect(screen.getByLabelText('notifications, 3 unread')).toBeTruthy();
+    expect(screen.getByText('3')).toBeTruthy();
   });
 });

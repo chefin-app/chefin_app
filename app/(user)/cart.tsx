@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCart, CartItem } from '@/src/context/CartContext';
 import { useAuth } from '@/src/services/auth-context';
+import { useCustomerLocation } from '@/src/context/CustomerLocationContext';
 import {
   getDefaultPaymentCard,
   loadPaymentMethods,
@@ -54,6 +55,7 @@ export default function CartScreen() {
 function RestaurantCartScreen({ cookId }: { cookId: string }) {
   const router = useRouter();
   const { user, session, canMutate, accountStatus } = useAuth();
+  const { fulfillmentPreference, region, setFulfillmentPreference } = useCustomerLocation();
   const {
     cartItems: allCartItems,
     removeFromCart,
@@ -75,7 +77,7 @@ function RestaurantCartScreen({ cookId }: { cookId: string }) {
   );
   const clearCart = useCallback(() => clearCookCart(cookId), [clearCookCart, cookId]);
   const [placingOrder, setPlacingOrder] = useState(false);
-  const [fulfillmentType, setFulfillmentType] = useState<FulfillmentType>('pickup');
+  const [fulfillmentType, setFulfillmentType] = useState<FulfillmentType>(fulfillmentPreference);
   const [address, setAddress] = useState<DeliveryAddress | null>(null);
   const [addressDefaults, setAddressDefaults] = useState<Partial<DeliveryAddress>>({});
   const [addressOpen, setAddressOpen] = useState(false);
@@ -99,6 +101,10 @@ function RestaurantCartScreen({ cookId }: { cookId: string }) {
   );
 
   const previousCartFingerprint = useRef(cartFingerprint);
+
+  useEffect(() => {
+    if (!checkoutDraftLoaded) setFulfillmentType(fulfillmentPreference);
+  }, [checkoutDraftLoaded, fulfillmentPreference]);
 
   useEffect(() => {
     if (previousCartFingerprint.current === cartFingerprint) return;
@@ -254,6 +260,13 @@ function RestaurantCartScreen({ cookId }: { cookId: string }) {
     new Date(quoteExpiresAt!).getTime() > Date.now();
 
   const chooseDelivery = () => {
+    if (!setFulfillmentPreference('delivery')) {
+      Alert.alert(
+        'Delivery unavailable',
+        `Delivery is not available in ${region.name} yet. Choose pickup or change to Klang Valley.`
+      );
+      return;
+    }
     setFulfillmentType('delivery');
     if (!user) {
       Alert.alert(
@@ -285,7 +298,6 @@ function RestaurantCartScreen({ cookId }: { cookId: string }) {
       promptForUnavailableBasket(latestAvailability);
       return;
     }
-
     if (!user) {
       Alert.alert('Login Required', 'Please login to place your order.', [
         { text: 'Cancel', style: 'cancel' },
@@ -554,7 +566,10 @@ function RestaurantCartScreen({ cookId }: { cookId: string }) {
               styles.fulfillmentOption,
               fulfillmentType === 'pickup' && styles.fulfillmentOptionActive,
             ]}
-            onPress={() => setFulfillmentType('pickup')}
+            onPress={() => {
+              setFulfillmentPreference('pickup');
+              setFulfillmentType('pickup');
+            }}
           >
             <Ionicons
               name="bag-handle-outline"
@@ -602,7 +617,8 @@ function RestaurantCartScreen({ cookId }: { cookId: string }) {
               </Text>
               {address ? (
                 <Text style={styles.addressText} numberOfLines={2}>
-                  {address.addressLine1}, {address.postcode} {address.city}
+                  {[address.addressLine2, address.addressLine1].filter(Boolean).join(', ')},{' '}
+                  {address.postcode} {address.city}
                 </Text>
               ) : null}
             </View>

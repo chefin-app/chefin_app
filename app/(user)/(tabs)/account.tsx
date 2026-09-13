@@ -225,7 +225,7 @@ export default function AccountScreen() {
       icon: 'notifications-outline',
       title: 'Notifications',
       subtitle: 'View order and favourite updates',
-      onPress: () => router.push('/(user)/notifications'),
+      onPress: () => router.push('/(user)/(tabs)/notifications'),
     },
     {
       icon: 'help-circle-outline',

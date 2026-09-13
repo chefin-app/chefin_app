@@ -5,10 +5,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter, useSegments } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/src/services/auth-context';
-import { useNotifications } from '@/src/context/NotificationsContext';
 import SearchBar from '@/src/components/filters/SearchBar';
 import LocationPromptModal from '@/src/components/location/LocationPromptModal';
-import { useCustomerLocation } from '@/src/context/CustomerLocationContext';
+import {
+  formatCustomerOrderTime,
+  useCustomerLocation,
+} from '@/src/context/CustomerLocationContext';
 
 interface NavBarProps {
   options?: {
@@ -25,8 +27,12 @@ export default function TopNavBarHomeUser({
 }: NavBarProps) {
   const router = useRouter();
   const { session } = useAuth();
-  const { location, loading: locationLoading } = useCustomerLocation();
-  const { unreadCounts } = useNotifications();
+  const {
+    location,
+    loading: locationLoading,
+    fulfillmentPreference,
+    orderTimePreference,
+  } = useCustomerLocation();
   const user = session?.user;
   const segments = useSegments();
   const currentTab = options?.headerProps?.currentTab || segments[segments.length - 1];
@@ -59,10 +65,6 @@ export default function TopNavBarHomeUser({
     }
   };
 
-  const handleNotifPress = () => {
-    router.push('/(user)/notifications');
-  };
-
   const handleFoodOrdersPress = () => {
     router.push('/(user)/food-orders'); // Navigate to past food orders
   };
@@ -80,30 +82,21 @@ export default function TopNavBarHomeUser({
   };
 
   const renderRightButtons = () => {
-    if (currentTab === 'account') {
-      return (
-        <TouchableOpacity style={styles.iconButton} onPress={handleNotifPress}>
-          <Ionicons name="notifications" size={24} color="#333" />
-          {user && unreadCounts.customer > 0 && <View style={styles.notificationDot} />}
+    return (
+      <View style={styles.buttonRow}>
+        <TouchableOpacity style={styles.iconButton} onPress={handleFavouritesPress}>
+          <Ionicons name="heart-outline" size={24} color="#333" />
         </TouchableOpacity>
-      );
-    } else {
-      return (
-        <View style={styles.buttonRow}>
-          <TouchableOpacity style={styles.iconButton} onPress={handleFavouritesPress}>
-            <Ionicons name="heart-outline" size={24} color="#333" />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.iconButton}
-            onPress={handleFoodOrdersPress}
-            accessibilityRole="button"
-            accessibilityLabel="Past food orders"
-          >
-            <Ionicons name="receipt-outline" size={24} color="#333" />
-          </TouchableOpacity>
-        </View>
-      );
-    }
+        <TouchableOpacity
+          style={styles.iconButton}
+          onPress={handleFoodOrdersPress}
+          accessibilityRole="button"
+          accessibilityLabel="Past food orders"
+        >
+          <Ionicons name="receipt-outline" size={24} color="#333" />
+        </TouchableOpacity>
+      </View>
+    );
   };
 
   return (
@@ -115,8 +108,8 @@ export default function TopNavBarHomeUser({
           accessibilityRole="button"
           accessibilityLabel={
             location
-              ? `Delivery and pickup area: ${location.label}`
-              : 'Choose delivery and pickup area'
+              ? `${fulfillmentPreference} area: ${location.label}. ${formatCustomerOrderTime(orderTimePreference)}`
+              : 'Choose delivery or pickup area and time'
           }
         >
           <View style={styles.locationIcon}>
@@ -124,7 +117,10 @@ export default function TopNavBarHomeUser({
           </View>
           <View style={styles.locationCopy}>
             <View style={styles.locationLabelRow}>
-              <Text style={styles.locationEyebrow}>DELIVERY &amp; PICKUP AREA</Text>
+              <Text style={styles.locationEyebrow}>
+                {fulfillmentPreference === 'delivery' ? 'DELIVER' : 'PICKUP'}{' '}
+                {orderTimePreference.mode === 'asap' ? 'NOW' : 'LATER'}
+              </Text>
               <Ionicons name="chevron-down" size={14} color="#526359" />
             </View>
             <Text style={styles.locationValue} numberOfLines={1}>
@@ -133,8 +129,8 @@ export default function TopNavBarHomeUser({
           </View>
         </TouchableOpacity>
       ) : null}
-      <View style={styles.header}>
-        {(currentTab === 'home' || currentTab === 'search') && (
+      {(currentTab === 'home' || currentTab === 'search') && (
+        <View style={styles.header}>
           <SearchBar
             inputRef={searchInputRef}
             value={searchValue}
@@ -142,9 +138,9 @@ export default function TopNavBarHomeUser({
             onSubmitEditing={handleSearchSubmit}
             containerStyle={styles.searchBar}
           />
-        )}
-        {renderRightButtons()}
-      </View>
+          {renderRightButtons()}
+        </View>
+      )}
       <LocationPromptModal
         visible={locationPromptVisible}
         onClose={() => setLocationPromptVisible(false)}
@@ -202,14 +198,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
-  },
-  notificationDot: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#FF5252',
   },
 });

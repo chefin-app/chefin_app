@@ -161,7 +161,7 @@ export default function HelpSupportScreen() {
 
           <TouchableOpacity
             style={styles.quickAction}
-            onPress={() => router.push('/(user)/notifications')}
+            onPress={() => router.push('/(user)/(tabs)/notifications')}
             accessibilityRole="button"
           >
             <View style={[styles.quickActionIcon, styles.notificationIcon]}>

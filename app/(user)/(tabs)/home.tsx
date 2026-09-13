@@ -172,7 +172,16 @@ export default function HomeScreen() {
 
       // Listings and availability must come from the same Supabase project;
       // otherwise a valid sibling-dish slot cannot be matched to this card.
-      const chefins = (await fetchCooks({ query: '' })) as ListingWithProfile[];
+      const chefins = (
+        location
+          ? await fetchNearestCooks({
+              latitude: location.latitude,
+              longitude: location.longitude,
+              limit: 50,
+              radiusKm: 50,
+            })
+          : await fetchCooks({ query: '' })
+      ) as ListingWithProfile[];
       setPopularChefins(chefins);
       setAvailabilitySummaries(await fetchAvailabilitySummaries(chefins, currentDate));
     } catch (err) {
@@ -181,7 +190,7 @@ export default function HomeScreen() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [location]);
 
   useFocusEffect(
     useCallback(() => {
@@ -456,7 +465,7 @@ export default function HomeScreen() {
               'all',
               'All Home Restaurants'
             )}
-            {renderRail('Available Now', availableToday, 'availableNow')}
+            {/* {renderRail('Available Now', availableToday, 'availableNow')} */}
             {renderRail('Top Rated', topRated, 'topRated')}
           </>
         ) : (
@@ -473,6 +482,7 @@ export default function HomeScreen() {
       <LocationPromptModal
         visible={locationPromptVisible}
         onClose={() => setLocationPromptVisible(false)}
+        initialView="location"
       />
     </SafeAreaView>
   );

@@ -795,9 +795,9 @@ export default function DishManagementScreen() {
               <DetailRow
                 label="Delivery offer"
                 value={
-                  details.dish.freeDeliveryThreshold == null
-                    ? 'No free-delivery threshold'
-                    : `Cook covers delivery from RM ${details.dish.freeDeliveryThreshold.toFixed(2)}`
+                    details.dish.freeDeliveryThreshold == null
+                      ? 'No free-delivery threshold'
+                      : `Cook covers delivery from RM ${details.dish.freeDeliveryThreshold.toFixed(2)}`
                 }
               />
             </View>

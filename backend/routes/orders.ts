@@ -138,7 +138,9 @@ router.post('/cart-status', async (req, res) => {
           .in('id', listingIds),
         supabase
           .from('profiles')
-          .select('id, full_name, restaurant_name, profile_image, store_status, store_paused_until')
+          .select(
+            'id, full_name, restaurant_name, profile_image, store_status, store_paused_until'
+          )
           .in('id', cookIds),
       ]);
     if (listingsError) throw listingsError;
@@ -371,7 +373,9 @@ router.post('/', requireActiveAccount, async (req: AccountRequest, res) => {
     }
     const { data: cookStores, error: cookStoresError } = await supabase
       .from('profiles')
-      .select('id, restaurant_name, store_status, store_busy_prep_minutes, store_paused_until')
+      .select(
+        'id, restaurant_name, store_status, store_busy_prep_minutes, store_paused_until'
+      )
       .in('id', cookIds);
     if (cookStoresError) throw cookStoresError;
     const storeByCook = new Map((cookStores ?? []).map(store => [store.id, store]));

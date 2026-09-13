@@ -48,12 +48,14 @@ export const fetchNearestCooks = async ({
   limit = 20,
   radiusKm = 25,
   cuisine,
+  query,
 }: {
   latitude: number;
   longitude: number;
   limit?: number;
   radiusKm?: number;
   cuisine?: string;
+  query?: string;
 }): Promise<ListingWithProfile[]> => {
   const apiUrl = getApiUrl();
   let response: Response;
@@ -61,7 +63,7 @@ export const fetchNearestCooks = async ({
     response = await fetch(`${apiUrl}/api/home/nearest-chefin-listings`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ latitude, longitude, limit, radiusKm, cuisine }),
+      body: JSON.stringify({ latitude, longitude, limit, radiusKm, cuisine, query }),
     });
   } catch {
     throw new Error(

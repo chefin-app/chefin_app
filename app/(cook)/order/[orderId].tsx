@@ -258,8 +258,8 @@ export default function CookOrderDetail() {
             </Text>
             <Text style={styles.deliveryAddress}>
               {[
-                order.delivery_jobs.dropoff_address.addressLine1,
                 order.delivery_jobs.dropoff_address.addressLine2,
+                order.delivery_jobs.dropoff_address.addressLine1,
                 order.delivery_jobs.dropoff_address.locality,
                 order.delivery_jobs.dropoff_address.postcode,
                 order.delivery_jobs.dropoff_address.city,

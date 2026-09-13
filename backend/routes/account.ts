@@ -7,6 +7,7 @@ import {
   type CookPerformanceOrder,
 } from '../cookPerformance';
 import { supabase } from '../supabaseClient';
+import { findServiceRegion } from '../../src/constants/serviceRegions';
 
 const router = express.Router();
 const PAGE_SIZE = 1000;
@@ -162,6 +163,11 @@ router.put('/location', requireActiveAccount, async (req: AccountRequest, res) =
   const source = String(body.source ?? '') as LocationSource;
   if (latitude === null || longitude === null) {
     return res.status(400).json({ error: 'A valid latitude and longitude are required.' });
+  }
+  if (!findServiceRegion(latitude, longitude)) {
+    return res.status(409).json({
+      error: 'Chefin is not available in this area yet. Choose Klang Valley or Sandakan.',
+    });
   }
   if (source !== 'device' && source !== 'manual') {
     return res.status(400).json({ error: "source must be 'device' or 'manual'." });

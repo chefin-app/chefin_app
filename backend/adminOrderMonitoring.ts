@@ -69,8 +69,8 @@ export const formatFullAddress = (value: unknown): string | null => {
   const address = value as Record<string, unknown>;
   const parts = [
     address.address,
-    address.addressLine1 ?? address.address_line_1,
     address.addressLine2 ?? address.address_line_2,
+    address.addressLine1 ?? address.address_line_1,
     address.locality,
     address.city,
     address.state,
