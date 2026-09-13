@@ -2,7 +2,7 @@ import express from 'express';
 import type { AccountRequest } from '../accountAccess';
 import { requireActiveAccount, requireReadableAccount } from '../accountAccess';
 import { supabase } from '../supabaseClient';
-import { findServiceRegion } from '../../src/constants/serviceRegions';
+import { findServiceRegion } from '../serviceRegions';
 
 const router = express.Router();
 

@@ -1,7 +1,7 @@
-import { supabase } from '@/src/services/supabase';
+import { supabase } from '@/src/utils/supabaseClient';
 import { fetchRestaurantName } from '@/src/utils/fetchRestaurantName';
 
-jest.mock('@/src/services/supabase', () => ({
+jest.mock('@/src/utils/supabaseClient', () => ({
   supabase: {
     from: jest.fn().mockReturnThis(),
     select: jest.fn(), // mock select method

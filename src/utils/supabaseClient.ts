@@ -1,17 +1,29 @@
+import 'react-native-url-polyfill/auto';
 import { createClient } from '@supabase/supabase-js';
-// import Constants from 'expo-constants';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from 'expo-constants';
+import { Platform } from 'react-native';
 
-// const extra = Constants.expoConfig?.extra as {
-//   supabaseUrl: string;
-//   supabaseAnonKey: string;
-// };
+type SupabaseExpoExtra = {
+  supabaseUrl?: string;
+  supabaseAnonKey?: string;
+};
 
-// if (!extra?.supabaseUrl || !extra?.supabaseAnonKey) {
-//   throw new Error('Missing Supabase environment variables. Please check app.config.js / app.json');
-// }
+const extra = Constants.expoConfig?.extra as SupabaseExpoExtra | undefined;
+const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL ?? extra?.supabaseUrl;
+const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? extra?.supabaseAnonKey;
 
-// export const supabase = createClient(extra.supabaseUrl, extra.supabaseAnonKey);
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!;
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error(
+    'Missing Supabase client configuration. Set EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY, then restart Expo with a cleared cache.'
+  );
+}
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    ...(Platform.OS !== 'web' ? { storage: AsyncStorage } : {}),
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: false,
+  },
+});

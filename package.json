@@ -15,11 +15,15 @@
     "lint:fix": "npm run lint -- --fix",
     "format": "prettier --write .",
     "prepare": "husky",
-    "seed": "ts-node prisma/seed.ts",
-    "db:migrate:deploy": "prisma migrate deploy"
+    "seed": "dotenv -e backend/.env -- ts-node prisma/seed.ts",
+    "db:validate": "dotenv -e backend/.env -- prisma validate",
+    "db:migrate:deploy": "dotenv -e backend/.env -- prisma migrate deploy"
   },
   "jest": {
-    "preset": "jest-expo"
+    "preset": "jest-expo",
+    "setupFiles": [
+      "<rootDir>/jest.setup.cjs"
+    ]
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [

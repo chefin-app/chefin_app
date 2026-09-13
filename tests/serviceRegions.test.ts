@@ -3,15 +3,19 @@ import {
   getRegionSearchViewbox,
   getServiceRegion,
 } from '@/src/constants/serviceRegions';
+import { findServiceRegion as findBackendServiceRegion } from '@/backend/serviceRegions';
 
 describe('service regions', () => {
   it('recognises Klang Valley and Sandakan discovery locations', () => {
     expect(findServiceRegion(3.139, 101.6869)?.id).toBe('klang-valley');
     expect(findServiceRegion(5.8394, 118.1178)?.id).toBe('sandakan');
+    expect(findBackendServiceRegion(3.139, 101.6869)?.id).toBe('klang-valley');
+    expect(findBackendServiceRegion(5.8394, 118.1178)?.id).toBe('sandakan');
   });
 
   it('rejects locations outside the supported discovery regions', () => {
     expect(findServiceRegion(5.9804, 116.0735)).toBeNull();
+    expect(findBackendServiceRegion(5.9804, 116.0735)).toBeNull();
   });
 
   it('keeps delivery limited to Klang Valley while Sandakan supports pickup discovery', () => {
