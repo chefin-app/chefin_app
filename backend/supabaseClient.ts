@@ -1,4 +1,3 @@
-// backend/supabaseClient.ts
 import { createClient } from '@supabase/supabase-js';
 import './env';
 

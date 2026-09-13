@@ -7,7 +7,7 @@ import {
   type CookPerformanceOrder,
 } from '../cookPerformance';
 import { supabase } from '../supabaseClient';
-import { findServiceRegion } from '../../src/constants/serviceRegions';
+import { findServiceRegion } from '../serviceRegions';
 
 const router = express.Router();
 const PAGE_SIZE = 1000;
