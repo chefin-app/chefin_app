@@ -19,6 +19,7 @@ const ACTIVITY_META: Record<
   report: { icon: 'flag-outline', color: '#B42318', background: '#FEE4E2' },
   verification: { icon: 'shield-checkmark-outline', color: '#9A6700', background: '#FFF1C2' },
   order: { icon: 'receipt-outline', color: '#175CD3', background: '#E8F1FF' },
+  payment: { icon: 'card-outline', color: '#9A6700', background: '#FFF1C2' },
   cook: { icon: 'restaurant-outline', color: '#237A3B', background: '#E8F7ED' },
   user: { icon: 'person-outline', color: '#475467', background: '#EEF0F3' },
 };
@@ -43,15 +44,17 @@ interface AdminNotificationFeedProps {
   items: AdminActivityItem[];
   readIds: Set<string>;
   loading: boolean;
+  markingAllRead?: boolean;
   width: number;
   onPress: (item: AdminActivityItem) => void;
-  onMarkAllRead: () => void;
+  onMarkAllRead: () => void | Promise<void>;
 }
 
 export default function AdminNotificationFeed({
   items,
   readIds,
   loading,
+  markingAllRead = false,
   width,
   onPress,
   onMarkAllRead,
@@ -67,18 +70,23 @@ export default function AdminNotificationFeed({
         </View>
         <TouchableOpacity
           onPress={onMarkAllRead}
-          disabled={!hasUnread}
+          disabled={!hasUnread || markingAllRead}
           style={styles.markAllButton}
           accessibilityRole="button"
+          accessibilityState={{ disabled: !hasUnread || markingAllRead, busy: markingAllRead }}
         >
           <Text style={[styles.markAllText, !hasUnread && styles.markAllTextDisabled]}>
-            Mark all read
+            {markingAllRead ? 'Saving…' : 'Mark all read'}
           </Text>
-          <Ionicons
-            name="checkmark-circle-outline"
-            size={17}
-            color={hasUnread ? '#258B50' : '#AAB2AD'}
-          />
+          {markingAllRead ? (
+            <ActivityIndicator size="small" color="#258B50" />
+          ) : (
+            <Ionicons
+              name="checkmark-circle-outline"
+              size={17}
+              color={hasUnread ? '#258B50' : '#AAB2AD'}
+            />
+          )}
         </TouchableOpacity>
       </View>
 

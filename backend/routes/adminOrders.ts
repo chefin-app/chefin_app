@@ -23,6 +23,8 @@ import {
   notifyCookDeliveryPayout,
 } from '../notifications';
 import { supabase } from '../supabaseClient';
+import { completePickupCheckout } from '../pickupHandoff';
+import { queueCancelledCheckoutRefund } from '../paymentService';
 
 const router = express.Router();
 const UUID_PATTERN = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
@@ -717,6 +719,12 @@ router.post('/:id/cancel', async (req: AdminRequest, res) => {
     const reconciliation = await Promise.allSettled([
       ...orderIds.map(orderId => releaseListingCapacityForOrder(orderId)),
       cancelDeliveryJobWhenUnused(checkout.representative.delivery_job_id),
+      queueCancelledCheckoutRefund({
+        checkoutId: checkout.checkoutId,
+        requestedBy: req.admin!.userId,
+        source: 'admin',
+        reason: `Administrator cancelled the checkout: ${reason}`,
+      }),
     ]);
     const reconciliationWarnings = reconciliation.filter(
       result => result.status === 'rejected'

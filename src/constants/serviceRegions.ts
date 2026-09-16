@@ -114,6 +114,11 @@ export const findServiceRegion = (latitude: number, longitude: number): ServiceR
       longitude <= region.bounds.east
   ) ?? null;
 
+export const isRestaurantAvailableInRegion = (
+  restaurantRegionId: ServiceRegionId | null | undefined,
+  selectedRegionId: ServiceRegionId
+): boolean => restaurantRegionId === undefined || restaurantRegionId === selectedRegionId;
+
 export const getRegionSearchViewbox = (id: ServiceRegionId): string => {
   const { bounds } = getServiceRegion(id);
   return `${bounds.west},${bounds.north},${bounds.east},${bounds.south}`;

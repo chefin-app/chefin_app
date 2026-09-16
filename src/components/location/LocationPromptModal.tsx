@@ -335,6 +335,12 @@ export default function LocationPromptModal({
           <Ionicons name="chevron-forward" size={20} color="#8E9891" />
         </TouchableOpacity>
       </View>
+      {fulfillmentPreference === 'delivery' ? (
+        <Text style={styles.approximateNote}>
+          This is an approximate discovery area. You&apos;ll enter the exact delivery address at
+          checkout.
+        </Text>
+      ) : null}
 
       {!region.deliveryAvailable ? (
         <View style={styles.warningCard}>
@@ -581,9 +587,7 @@ export default function LocationPromptModal({
         })}
         <View style={styles.comingSoonCard}>
           <Ionicons name="megaphone-outline" size={20} color="#7A641E" />
-          <Text style={styles.comingSoonText}>
-            More Malaysian regions are coming soon!
-          </Text>
+          <Text style={styles.comingSoonText}>More Malaysian regions are coming soon!</Text>
         </View>
       </ScrollView>
     </SafeAreaView>

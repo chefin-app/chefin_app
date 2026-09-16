@@ -25,6 +25,11 @@ import type {
   OrderMonitoringFilter,
   OrderMonitoringResponse,
   OrderMonitoringSort,
+  ManagedPaymentDetails,
+  ManagedRefundRequest,
+  PaymentManagementFilter,
+  PaymentManagementResponse,
+  PaymentManagementSort,
 } from './types';
 
 export class AdminApiError extends Error {
@@ -82,6 +87,15 @@ export const fetchAdminActivity = async (accessToken: string): Promise<AdminActi
   const response = await adminRequest<{ activity: AdminActivityItem[] }>('/activity', accessToken);
   return response.activity;
 };
+
+export const markAdminActivityRead = (
+  accessToken: string,
+  activityIds: string[]
+): Promise<{ success: true }> =>
+  adminRequest('/activity/read', accessToken, {
+    method: 'POST',
+    body: { activityIds },
+  });
 
 export const fetchManagedUsers = (
   accessToken: string,
@@ -400,3 +414,81 @@ export const runManagedDishAction = (
     accessToken,
     { method: 'POST', body: { action, reason } }
   );
+
+export const fetchManagedPayments = (
+  accessToken: string,
+  options: {
+    search: string;
+    filter: PaymentManagementFilter;
+    sort: PaymentManagementSort;
+    dateRange: DishManagementDateRange;
+    exactDate?: string | null;
+    page: number;
+    pageSize: number;
+  }
+): Promise<PaymentManagementResponse> => {
+  const params = new URLSearchParams({
+    search: options.search,
+    filter: options.filter,
+    sort: options.sort,
+    dateRange: options.dateRange,
+    page: String(options.page),
+    pageSize: String(options.pageSize),
+  });
+  if (options.exactDate) params.set('date', options.exactDate);
+  return adminRequest(`/payments?${params.toString()}`, accessToken);
+};
+
+export const fetchManagedPaymentDetails = (
+  accessToken: string,
+  paymentId: string
+): Promise<ManagedPaymentDetails> => adminRequest(`/payments/${paymentId}`, accessToken);
+
+export const runManagedPayoutAction = (
+  accessToken: string,
+  paymentId: string,
+  action: 'hold' | 'release',
+  reason: string
+) =>
+  adminRequest<{ success: true }>(`/payments/${paymentId}/${action}`, accessToken, {
+    method: 'POST',
+    body: { reason },
+  });
+
+export const createManagedRefundCase = (
+  accessToken: string,
+  paymentId: string,
+  input: { reasonCode: string; reasonDetails: string }
+) =>
+  adminRequest<{ success: true; refund: ManagedRefundRequest }>(
+    `/payments/${paymentId}/refunds`,
+    accessToken,
+    { method: 'POST', body: input }
+  );
+
+export const reviewManagedRefund = (
+  accessToken: string,
+  refundId: string,
+  input: {
+    action: 'review' | 'approve' | 'reject' | 'processing' | 'complete' | 'fail';
+    note?: string;
+    gatewayReference?: string;
+  }
+) =>
+  adminRequest<{ success: true; refund: ManagedRefundRequest }>(
+    `/payments/refunds/${refundId}`,
+    accessToken,
+    { method: 'PATCH', body: input }
+  );
+
+export const fetchManagedRefundEvidence = async (
+  accessToken: string,
+  refundId: string,
+  index: number
+): Promise<string> => {
+  const response = await adminRequest<{ fileUrl: string }>(
+    `/payments/refunds/${refundId}/evidence/${index}`,
+    accessToken
+  );
+  return response.fileUrl;
+};

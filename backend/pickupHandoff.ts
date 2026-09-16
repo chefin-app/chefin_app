@@ -14,6 +14,7 @@ import {
   notifyBuyerPickupCode,
 } from './notifications';
 import { supabase } from './supabaseClient';
+import { scheduleCheckoutPayout } from './paymentService';
 
 const PIN_PATTERN = /^\d{4}$/;
 
@@ -335,6 +336,7 @@ async function completePickupCheckout(checkoutId: string, actorUserId: string) {
     .eq('fulfillment_type', 'pickup')
     .in('status', ['ready']);
   if (completionError) throw completionError;
+  await scheduleCheckoutPayout(checkoutId, now);
   await supabase
     .from('order_alerts')
     .update({ status: 'resolved', resolved_at: now, updated_at: now })

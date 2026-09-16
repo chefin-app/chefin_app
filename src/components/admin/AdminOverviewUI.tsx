@@ -242,6 +242,12 @@ const STATUS_META: Record<string, { label: string; color: string; background: st
   refund_required: { label: 'Refund required', color: '#B42318', background: '#FEE4E2' },
   refunded: { label: 'Refunded', color: '#237A3B', background: '#DDF6E5' },
   refund_failed: { label: 'Refund failed', color: '#B42318', background: '#FEE4E2' },
+  succeeded: { label: 'Succeeded', color: '#237A3B', background: '#DDF6E5' },
+  processing: { label: 'Processing', color: '#175CD3', background: '#E8F1FF' },
+  refund_pending: { label: 'Refund pending', color: '#8B6508', background: '#FFF1C2' },
+  failed: { label: 'Failed', color: '#B42318', background: '#FEE4E2' },
+  held: { label: 'Held', color: '#9A6700', background: '#FFF1C2' },
+  paid: { label: 'Paid', color: '#237A3B', background: '#DDF6E5' },
   reverification_required: {
     label: 'Reverification required',
     color: '#9A6700',

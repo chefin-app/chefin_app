@@ -277,7 +277,7 @@ export function notifyCookPayoutSent(cookUserId: string, o: OrderContext) {
   return createNotification(cookUserId, {
     type: 'payout_sent',
     title: 'Order fulfilled',
-    body: `${formatRM(o.totalPrice)} for ${o.quantity}× ${o.listingTitle} will be credited to your account.`,
+    body: `${formatRM(o.totalPrice)} for ${o.quantity}× ${o.listingTitle} will become payable after the customer refund window closes.`,
     data: { order_id: o.orderId, credited_amount: Number(o.totalPrice) },
   });
 }
@@ -293,7 +293,7 @@ export function notifyCookCheckoutFulfilled(
   return createNotification(cookUserId, {
     type: 'payout_sent',
     title: 'Order fulfilled',
-    body: `${formatRM(checkout.creditedAmount)} will be credited to your account.`,
+    body: `${formatRM(checkout.creditedAmount)} will become payable after the customer refund window closes.`,
     data: {
       order_id: checkout.orderIds[0],
       order_ids: checkout.orderIds,
@@ -315,8 +315,8 @@ export function notifyCookDeliveryPayout(
     title: 'Order fulfilled',
     body:
       deliveryDeduction > 0
-        ? `${formatRM(net)} will be credited to your account after the ${formatRM(deliveryDeduction)} Lalamove fee you covered.`
-        : `${formatRM(foodTotal)} will be credited to your account for this delivery.`,
+        ? `${formatRM(net)} will become payable after the refund window, after the ${formatRM(deliveryDeduction)} Lalamove fee you covered.`
+        : `${formatRM(foodTotal)} will become payable after the customer refund window closes.`,
     data: {
       order_id: orderIds[0],
       order_ids: orderIds,
