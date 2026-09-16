@@ -1,8 +1,9 @@
-import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { Alert } from 'react-native';
 import { supabase } from '@/src/utils/supabaseClient';
 import { useAuth } from '@/src/services/auth-context';
 import { formatPersistedRating, formatRating, getRatingSummary } from '@/src/utils/ratings';
+import type { ServiceRegionId } from '@/src/constants/serviceRegions';
 
 export interface FavouriteRestaurant {
   profileId: string;
@@ -11,6 +12,7 @@ export interface FavouriteRestaurant {
   fullChefName?: string;
   rating: string;
   reviewCount: number;
+  regionId?: ServiceRegionId | null;
 }
 
 interface FavouritesContextType {
@@ -38,9 +40,17 @@ const rowToFavourite = (row: any): FavouriteRestaurant => ({
  * a dish or new pickup slots). Guests keep session-only favourites.
  */
 export const FavouritesProvider = ({ children }: { children: React.ReactNode }) => {
-  const { user, canMutate, accountStatus } = useAuth();
+  const { user, session, canMutate, accountStatus } = useAuth();
   const userId = user?.id ?? null;
   const [favourites, setFavourites] = useState<FavouriteRestaurant[]>([]);
+  const favouriteCookIds = useMemo(
+    () =>
+      favourites
+        .map(item => item.profileId)
+        .sort()
+        .join(','),
+    [favourites]
+  );
 
   useEffect(() => {
     if (!userId) {
@@ -99,6 +109,37 @@ export const FavouritesProvider = ({ children }: { children: React.ReactNode }) 
       cancelled = true;
     };
   }, [userId]);
+
+  useEffect(() => {
+    if (!session?.access_token || !favouriteCookIds) return;
+    let cancelled = false;
+    fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/account/favourites/availability`, {
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    })
+      .then(async response => {
+        const payload = (await response.json().catch(() => ({}))) as {
+          restaurants?: Array<{ cookProfileId: string; regionId: ServiceRegionId | null }>;
+          error?: string;
+        };
+        if (!response.ok || !Array.isArray(payload.restaurants)) {
+          throw new Error(payload.error ?? 'Favourite availability could not be loaded.');
+        }
+        if (cancelled) return;
+        const regionByCook = new Map(
+          payload.restaurants.map(item => [item.cookProfileId, item.regionId])
+        );
+        setFavourites(current =>
+          current.map(item => ({
+            ...item,
+            regionId: regionByCook.get(item.profileId) ?? null,
+          }))
+        );
+      })
+      .catch(error => console.warn('Could not load favourite availability', error));
+    return () => {
+      cancelled = true;
+    };
+  }, [favouriteCookIds, session?.access_token]);
 
   const toggleFavourite = useCallback(
     (item: FavouriteRestaurant) => {

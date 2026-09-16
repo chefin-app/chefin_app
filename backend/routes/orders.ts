@@ -43,6 +43,7 @@ import {
 import { notifyAdminsOfCriticalOrderAlert } from '../orderAlerts';
 import { queueCancelledCheckoutRefund, recordCheckoutPayment } from '../paymentService';
 import { getRefundWindowMinutes, validateRefundRequest } from '../paymentPolicy';
+import { findServiceRegion } from '../serviceRegions';
 
 const router = express.Router();
 
@@ -370,6 +371,46 @@ router.post('/', requireActiveAccount, async (req: AccountRequest, res) => {
         error:
           'Checkout supports one home restaurant at a time. Open a restaurant basket separately.',
       });
+    }
+    const [customerLocationResult, restaurantLocationsResult] = await Promise.all([
+      supabase
+        .from('customer_location_preferences')
+        .select('latitude, longitude')
+        .eq('user_id', req.account!.userId)
+        .maybeSingle(),
+      supabase
+        .from('restaurant_discovery_locations')
+        .select('cook_profile_id, latitude, longitude')
+        .in('cook_profile_id', cookIds),
+    ]);
+    if (customerLocationResult.error) throw customerLocationResult.error;
+    if (restaurantLocationsResult.error) throw restaurantLocationsResult.error;
+    const customerLocation = customerLocationResult.data;
+    const customerRegion = customerLocation
+      ? findServiceRegion(Number(customerLocation.latitude), Number(customerLocation.longitude))
+      : null;
+    if (!customerRegion) {
+      return res.status(409).json({
+        error: 'Choose your location before purchasing from a home restaurant.',
+      });
+    }
+    const restaurantLocationByCook = new Map(
+      (restaurantLocationsResult.data ?? []).map(location => [location.cook_profile_id, location])
+    );
+    for (const cookId of cookIds) {
+      const restaurantLocation = restaurantLocationByCook.get(cookId);
+      const restaurantRegion = restaurantLocation
+        ? findServiceRegion(
+            Number(restaurantLocation.latitude),
+            Number(restaurantLocation.longitude)
+          )
+        : null;
+      if (!restaurantRegion || restaurantRegion.id !== customerRegion.id) {
+        return res.status(409).json({
+          error:
+            'This home restaurant is outside your selected region. Change your location to order from it.',
+        });
+      }
     }
     const { data: cookStores, error: cookStoresError } = await supabase
       .from('profiles')

@@ -518,9 +518,14 @@ router.get('/activity', async (req: AdminRequest, res) => {
 });
 
 router.post('/activity/read', async (req: AdminRequest, res) => {
-  const activityIds = Array.isArray(req.body?.activityIds)
-    ? [...new Set(req.body.activityIds.filter((id: unknown) => typeof id === 'string'))]
+  const requestedActivityIds: unknown[] = Array.isArray(req.body?.activityIds)
+    ? req.body.activityIds
     : [];
+  const activityIds = [
+    ...new Set<string>(
+      requestedActivityIds.filter((id: unknown): id is string => typeof id === 'string')
+    ),
+  ];
   if (
     activityIds.length === 0 ||
     activityIds.length > 100 ||

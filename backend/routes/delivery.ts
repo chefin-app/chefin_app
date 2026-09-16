@@ -29,6 +29,7 @@ import {
 } from '../notifications';
 import { supabase } from '../supabaseClient';
 import { scheduleCheckoutPayout } from '../paymentService';
+import { findServiceRegion } from '../serviceRegions';
 
 const router = express.Router();
 const UUID_PATTERN = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
@@ -80,38 +81,67 @@ const parseAddress = (value: unknown): DeliveryAddressSnapshot | null => {
 
 router.get('/address', requireReadableAccount, async (req: AccountRequest, res) => {
   try {
-    const [{ data: saved, error: savedError }, { data: profile, error: profileError }] =
-      await Promise.all([
-        supabase
-          .from('customer_delivery_addresses')
-          .select('*')
-          .eq('user_id', req.account!.userId)
-          .maybeSingle(),
-        supabase
-          .from('profiles')
-          .select('full_name, phone_number')
-          .eq('id', req.account!.profileId)
-          .single(),
-      ]);
+    const [
+      { data: saved, error: savedError },
+      { data: profile, error: profileError },
+      { data: preference, error: preferenceError },
+    ] = await Promise.all([
+      supabase
+        .from('customer_delivery_addresses')
+        .select('*')
+        .eq('user_id', req.account!.userId)
+        .maybeSingle(),
+      supabase
+        .from('profiles')
+        .select('full_name, phone_number')
+        .eq('id', req.account!.profileId)
+        .single(),
+      supabase
+        .from('customer_location_preferences')
+        .select('latitude, longitude, updated_at')
+        .eq('user_id', req.account!.userId)
+        .maybeSingle(),
+    ]);
     if (savedError) throw savedError;
     if (profileError) throw profileError;
+    if (preferenceError) throw preferenceError;
+    const savedRegion = saved
+      ? findServiceRegion(Number(saved.latitude), Number(saved.longitude))
+      : null;
+    const selectedRegion = preference
+      ? findServiceRegion(Number(preference.latitude), Number(preference.longitude))
+      : savedRegion;
+    const addressIsCurrent = Boolean(
+      saved &&
+        (!preference ||
+          new Date(saved.updated_at).getTime() >= new Date(preference.updated_at).getTime())
+    );
+    const addressMatchesSelectedRegion = Boolean(
+      saved &&
+        addressIsCurrent &&
+        savedRegion &&
+        selectedRegion &&
+        savedRegion.id === selectedRegion.id
+    );
     res.json({
-      address: saved
-        ? {
-            recipientName: saved.recipient_name,
-            phoneNumber: saved.phone_number,
-            addressLine1: saved.address_line_1,
-            addressLine2: saved.address_line_2,
-            locality: saved.locality,
-            city: saved.city,
-            state: saved.state,
-            postcode: saved.postcode,
-            countryCode: saved.country_code,
-            latitude: Number(saved.latitude),
-            longitude: Number(saved.longitude),
-            deliveryInstructions: saved.delivery_instructions,
-          }
-        : null,
+      address:
+        saved && addressMatchesSelectedRegion
+          ? {
+              recipientName: saved.recipient_name,
+              phoneNumber: saved.phone_number,
+              addressLine1: saved.address_line_1,
+              addressLine2: saved.address_line_2,
+              locality: saved.locality,
+              city: saved.city,
+              state: saved.state,
+              postcode: saved.postcode,
+              countryCode: saved.country_code,
+              latitude: Number(saved.latitude),
+              longitude: Number(saved.longitude),
+              deliveryInstructions: saved.delivery_instructions,
+              updatedAt: saved.updated_at,
+            }
+          : null,
       defaults: { recipientName: profile.full_name, phoneNumber: profile.phone_number },
     });
   } catch (error: unknown) {
@@ -263,6 +293,7 @@ router.post('/quote', requireActiveAccount, async (req: AccountRequest, res) => 
       .eq('customer_id', req.account!.profileId)
       .eq('status', 'quoted')
       .lt('quote_expires_at', new Date().toISOString());
+    const addressSavedAt = new Date().toISOString();
     const { error: addressError } = await supabase.from('customer_delivery_addresses').upsert({
       user_id: req.account!.userId,
       recipient_name: address.recipientName,
@@ -277,9 +308,31 @@ router.post('/quote', requireActiveAccount, async (req: AccountRequest, res) => 
       latitude: address.latitude,
       longitude: address.longitude,
       delivery_instructions: address.deliveryInstructions,
-      updated_at: new Date().toISOString(),
+      updated_at: addressSavedAt,
     });
     if (addressError) throw addressError;
+    const { error: preferenceError } = await supabase.from('customer_location_preferences').upsert(
+      {
+        user_id: req.account!.userId,
+        label: [
+          address.addressLine1,
+          address.addressLine2,
+          address.postcode,
+          address.city,
+          address.state,
+        ]
+          .filter(Boolean)
+          .join(', '),
+        latitude: Number(address.latitude.toFixed(6)),
+        longitude: Number(address.longitude.toFixed(6)),
+        source: 'manual',
+        prompted_at: addressSavedAt,
+        consented_at: addressSavedAt,
+        updated_at: addressSavedAt,
+      },
+      { onConflict: 'user_id' }
+    );
+    if (preferenceError) throw preferenceError;
 
     const quotes: Array<Record<string, string | number | boolean | null>> = [];
     for (const cookId of cookIds) {

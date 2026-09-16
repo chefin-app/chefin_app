@@ -749,6 +749,19 @@ model notifications {
   @@schema("public")
 }
 
+/// Per-administrator read receipts for the generated admin activity feed.
+/// Activity rows are assembled from operational records, so their stable
+/// generated IDs are stored instead of duplicating the notification content.
+model admin_activity_reads {
+  admin_user_id String   @db.Uuid
+  activity_id   String   @db.VarChar(160)
+  read_at       DateTime @default(now()) @db.Timestamptz(6)
+
+  @@id([admin_user_id, activity_id])
+  @@index([admin_user_id, read_at(sort: Desc)])
+  @@schema("public")
+}
+
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model verification_documents {
   id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid

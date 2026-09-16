@@ -43,4 +43,24 @@ describe('AdminNotificationFeed deep links', () => {
       params: { reportId: 'report-id' },
     });
   });
+
+  it('invokes the mark-all persistence callback without removing the item', () => {
+    const onMarkAllRead = jest.fn();
+
+    render(
+      <AdminNotificationFeed
+        items={[reportNotification]}
+        readIds={new Set()}
+        loading={false}
+        width={400}
+        onPress={jest.fn()}
+        onMarkAllRead={onMarkAllRead}
+      />
+    );
+
+    fireEvent.press(screen.getByText('Mark all read'));
+
+    expect(onMarkAllRead).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('Nasi Lemak was reported')).toBeTruthy();
+  });
 });

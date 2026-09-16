@@ -73,6 +73,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   const [activity, setActivity] = useState<AdminActivityItem[]>([]);
   const [activityLoading, setActivityLoading] = useState(false);
   const [readIds, setReadIds] = useState<Set<string>>(new Set());
+  const [markingAllRead, setMarkingAllRead] = useState(false);
   const [comingSoon, setComingSoon] = useState<string | null>(null);
 
   const loadActivity = useCallback(async () => {
@@ -104,12 +105,14 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   );
 
   const persistReadIds = useCallback(
-    async (ids: string[]) => {
-      if (!session?.access_token || ids.length === 0) return;
+    async (ids: string[]): Promise<boolean> => {
+      if (!session?.access_token || ids.length === 0) return false;
       try {
         await markAdminActivityRead(session.access_token, ids);
+        return true;
       } catch (error: unknown) {
         console.warn('Could not persist admin notification read state', error);
+        return false;
       }
     },
     [session?.access_token]
@@ -117,15 +120,26 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
 
   const openNotification = (item: AdminActivityItem) => {
     setReadIds(current => new Set(current).add(item.id));
-    void persistReadIds([item.id]);
+    persistReadIds([item.id]);
     setNotificationsOpen(false);
     router.push({ pathname: item.deepLink.pathname, params: item.deepLink.params });
   };
 
-  const markAllNotificationsRead = () => {
+  const markAllNotificationsRead = async () => {
     const ids = activity.filter(item => item.unread && !readIds.has(item.id)).map(item => item.id);
-    setReadIds(current => new Set([...current, ...ids]));
-    void persistReadIds(ids);
+    if (ids.length === 0 || markingAllRead) return;
+    setMarkingAllRead(true);
+    const persisted = await persistReadIds(ids);
+    if (persisted) {
+      setReadIds(current => new Set([...current, ...ids]));
+    } else {
+      showAdminFailure(
+        new Error('Notification read state could not be saved.'),
+        'The notifications are still unread. Please try again.',
+        'Could not mark notifications as read'
+      );
+    }
+    setMarkingAllRead(false);
   };
 
   const selectNav = (item: NavItem) => {
@@ -266,6 +280,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
                 items={activity}
                 readIds={readIds}
                 loading={activityLoading}
+                markingAllRead={markingAllRead}
                 width={Math.min(410, width - 24)}
                 onPress={openNotification}
                 onMarkAllRead={markAllNotificationsRead}

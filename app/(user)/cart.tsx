@@ -28,6 +28,7 @@ import {
 import GlobalCartOverview from '@/src/components/cart/GlobalCartOverview';
 import { checkCartAvailability, type BasketAvailability } from '@/src/utils/cartAvailability';
 import { formatArrivalWindow, formatScheduledWindow } from '@/src/utils/orderStatus';
+import { findServiceRegion } from '@/src/constants/serviceRegions';
 import {
   loadCheckoutDraft,
   removeCheckoutDraft,
@@ -55,7 +56,8 @@ export default function CartScreen() {
 function RestaurantCartScreen({ cookId }: { cookId: string }) {
   const router = useRouter();
   const { user, session, canMutate, accountStatus } = useAuth();
-  const { fulfillmentPreference, region, setFulfillmentPreference } = useCustomerLocation();
+  const { fulfillmentPreference, location, region, selectLocation, setFulfillmentPreference } =
+    useCustomerLocation();
   const {
     cartItems: allCartItems,
     removeFromCart,
@@ -192,6 +194,18 @@ function RestaurantCartScreen({ cookId }: { cookId: string }) {
     }, remaining + 100);
     return () => clearTimeout(timeout);
   }, [quoteExpiresAt]);
+
+  useEffect(() => {
+    if (!address || !location) return;
+    const addressRegion = findServiceRegion(address.latitude, address.longitude);
+    const sameCoordinates =
+      Math.abs(address.latitude - location.latitude) < 0.0001 &&
+      Math.abs(address.longitude - location.longitude) < 0.0001;
+    if (addressRegion?.id === region.id && sameCoordinates) return;
+    setAddress(null);
+    setQuotes([]);
+    setQuoteExpiresAt(null);
+  }, [address, location, region.id]);
 
   useEffect(() => {
     if (!session?.access_token || !checkoutDraftLoaded) return;
@@ -687,12 +701,37 @@ function RestaurantCartScreen({ cookId }: { cookId: string }) {
       <DeliveryAddressModal
         visible={addressOpen}
         initialAddress={address}
-        defaults={addressDefaults}
+        defaults={{
+          ...addressDefaults,
+          latitude: location?.latitude,
+          longitude: location?.longitude,
+        }}
         onClose={() => setAddressOpen(false)}
-        onSave={nextAddress => {
+        onSave={async nextAddress => {
+          const synced = await selectLocation({
+            latitude: nextAddress.latitude,
+            longitude: nextAddress.longitude,
+            label: [
+              nextAddress.addressLine1,
+              nextAddress.addressLine2,
+              nextAddress.postcode,
+              nextAddress.city,
+              nextAddress.state,
+            ]
+              .filter(Boolean)
+              .join(', '),
+            source: 'manual',
+          });
+          if (!synced) {
+            Alert.alert(
+              'Address outside your region',
+              'Choose an address in Klang Valley or change your selected region.'
+            );
+            return;
+          }
           setAddress(nextAddress);
           setAddressOpen(false);
-          requestQuote(nextAddress);
+          await requestQuote(nextAddress);
         }}
       />
     </SafeAreaView>

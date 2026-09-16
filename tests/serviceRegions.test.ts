@@ -2,6 +2,7 @@ import {
   findServiceRegion,
   getRegionSearchViewbox,
   getServiceRegion,
+  isRestaurantAvailableInRegion,
 } from '@/src/constants/serviceRegions';
 import { findServiceRegion as findBackendServiceRegion } from '@/backend/serviceRegions';
 
@@ -26,5 +27,11 @@ describe('service regions', () => {
   it('provides a bounded search viewbox for each region', () => {
     expect(getRegionSearchViewbox('klang-valley')).toBe('101.2,3.55,102,2.75');
     expect(getRegionSearchViewbox('sandakan')).toBe('117.7,6.2,118.6,5.45');
+  });
+
+  it('marks restaurants outside the selected region unavailable', () => {
+    expect(isRestaurantAvailableInRegion('klang-valley', 'klang-valley')).toBe(true);
+    expect(isRestaurantAvailableInRegion('sandakan', 'klang-valley')).toBe(false);
+    expect(isRestaurantAvailableInRegion(null, 'sandakan')).toBe(false);
   });
 });

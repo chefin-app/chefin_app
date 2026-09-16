@@ -11,10 +11,13 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useFavourites } from '@/src/context/FavouritesContext';
+import { useCustomerLocation } from '@/src/context/CustomerLocationContext';
+import { isRestaurantAvailableInRegion } from '@/src/constants/serviceRegions';
 
 const FavouritesScreen = () => {
   const router = useRouter();
   const { favourites, toggleFavourite } = useFavourites();
+  const { region } = useCustomerLocation();
 
   if (favourites.length === 0) {
     return (
@@ -57,24 +60,37 @@ const FavouritesScreen = () => {
       <FlatList
         data={favourites}
         keyExtractor={item => item.profileId}
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            style={styles.card}
-            onPress={() => router.push(`/restaurant/${item.profileId}`)}
-          >
-            <Image source={{ uri: item.imageUrl }} style={styles.cardImage} />
-            <TouchableOpacity style={styles.heartIcon} onPress={() => toggleFavourite(item)}>
-              <Ionicons name="heart" size={24} color="#FF5252" />
-            </TouchableOpacity>
-            <View style={styles.cardFooter}>
-              <Text style={styles.rating}>
-                ★ {item.rating} ({item.reviewCount})
-              </Text>
-              <Text style={styles.cardTitle}>{item.restaurantName}</Text>
-              <Text style={styles.cardSub}>By {item.fullChefName}</Text>
+        renderItem={({ item }) => {
+          const available = isRestaurantAvailableInRegion(item.regionId, region.id);
+          return (
+            <View style={[styles.card, !available && styles.cardUnavailable]}>
+              <TouchableOpacity
+                disabled={!available}
+                onPress={() => router.push(`/restaurant/${item.profileId}`)}
+                accessibilityState={{ disabled: !available }}
+                accessibilityLabel={`${item.restaurantName}${available ? '' : `, unavailable in ${region.name}`}`}
+              >
+                <Image source={{ uri: item.imageUrl }} style={styles.cardImage} />
+                {!available ? (
+                  <View style={styles.unavailableOverlay}>
+                    <Ionicons name="location-outline" size={20} color="#FFFFFF" />
+                    <Text style={styles.unavailableText}>Unavailable in {region.name}</Text>
+                  </View>
+                ) : null}
+                <View style={styles.cardFooter}>
+                  <Text style={styles.rating}>
+                    ★ {item.rating} ({item.reviewCount})
+                  </Text>
+                  <Text style={styles.cardTitle}>{item.restaurantName}</Text>
+                  <Text style={styles.cardSub}>By {item.fullChefName}</Text>
+                </View>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.heartIcon} onPress={() => toggleFavourite(item)}>
+                <Ionicons name="heart" size={24} color="#FF5252" />
+              </TouchableOpacity>
             </View>
-          </TouchableOpacity>
-        )}
+          );
+        }}
         contentContainerStyle={{ padding: 20 }}
       />
     </SafeAreaView>
@@ -117,6 +133,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#f0f0f0',
   },
+  cardUnavailable: { opacity: 0.68 },
   cardImage: { width: '100%', height: 200 },
   heartIcon: {
     position: 'absolute',
@@ -125,7 +142,21 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     padding: 8,
     borderRadius: 20,
+    zIndex: 2,
   },
+  unavailableOverlay: {
+    position: 'absolute',
+    left: 14,
+    top: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 11,
+    paddingVertical: 8,
+    borderRadius: 999,
+    backgroundColor: 'rgba(35, 45, 39, 0.88)',
+  },
+  unavailableText: { color: '#FFFFFF', fontSize: 12, fontWeight: '700' },
   cardFooter: { padding: 15 },
   rating: { fontWeight: '600', color: '#FFB800', marginBottom: 5 },
   cardTitle: { fontSize: 18, fontWeight: '700', marginBottom: 5 },

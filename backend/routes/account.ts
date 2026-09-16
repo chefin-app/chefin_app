@@ -28,24 +28,62 @@ const cleanLabel = (value: unknown): string | null => {
 // the authenticated owner and are never embedded in public discovery payloads.
 router.get('/location', requireReadableAccount, async (req: AccountRequest, res) => {
   try {
-    const { data, error } = await supabase
-      .from('customer_location_preferences')
-      .select('label, latitude, longitude, source, prompted_at, consented_at, updated_at')
-      .eq('user_id', req.account!.userId)
-      .maybeSingle();
-    if (error) throw error;
+    const [preferenceResult, addressResult] = await Promise.all([
+      supabase
+        .from('customer_location_preferences')
+        .select('label, latitude, longitude, source, prompted_at, consented_at, updated_at')
+        .eq('user_id', req.account!.userId)
+        .maybeSingle(),
+      supabase
+        .from('customer_delivery_addresses')
+        .select(
+          'address_line_1, address_line_2, city, state, postcode, latitude, longitude, updated_at'
+        )
+        .eq('user_id', req.account!.userId)
+        .maybeSingle(),
+    ]);
+    if (preferenceResult.error) throw preferenceResult.error;
+    if (addressResult.error) throw addressResult.error;
+
+    const storedPreference = preferenceResult.data;
+    const deliveryAddress = addressResult.data;
+    const addressIsNewer = Boolean(
+      deliveryAddress &&
+        (!storedPreference ||
+          new Date(deliveryAddress.updated_at).getTime() >
+            new Date(storedPreference.updated_at).getTime())
+    );
+    const preference = addressIsNewer
+      ? {
+          label: [
+            deliveryAddress!.address_line_1,
+            deliveryAddress!.address_line_2,
+            deliveryAddress!.postcode,
+            deliveryAddress!.city,
+            deliveryAddress!.state,
+          ]
+            .filter(Boolean)
+            .join(', '),
+          latitude: deliveryAddress!.latitude,
+          longitude: deliveryAddress!.longitude,
+          source: 'manual',
+          prompted_at: deliveryAddress!.updated_at,
+          consented_at: deliveryAddress!.updated_at,
+          updated_at: deliveryAddress!.updated_at,
+        }
+      : storedPreference;
 
     res.set('Cache-Control', 'no-store');
     res.json({
-      preference: data
+      preference: preference
         ? {
-            label: data.label,
-            latitude: data.latitude == null ? null : Number(data.latitude),
-            longitude: data.longitude == null ? null : Number(data.longitude),
-            source: data.source,
-            promptedAt: data.prompted_at,
-            consentedAt: data.consented_at,
-            updatedAt: data.updated_at,
+            label: preference.label,
+            latitude: preference.latitude == null ? null : Number(preference.latitude),
+            longitude: preference.longitude == null ? null : Number(preference.longitude),
+            source: preference.source,
+            promptedAt: preference.prompted_at,
+            consentedAt: preference.consented_at,
+            updatedAt: preference.updated_at,
           }
         : null,
     });
@@ -146,6 +184,44 @@ const clearCustomerLocation = async (req: AccountRequest, res: express.Response)
 // respected and the first-run prompt is not shown on every launch.
 router.post('/location/dismiss', requireActiveAccount, clearCustomerLocation);
 router.delete('/location', requireActiveAccount, clearCustomerLocation);
+
+// Return only region IDs for the signed-in customer's favourites. Exact home
+// restaurant coordinates remain private while the client can still disable
+// restaurants outside the currently selected service region.
+router.get('/favourites/availability', requireReadableAccount, async (req: AccountRequest, res) => {
+  try {
+    const { data: favourites, error: favouritesError } = await supabase
+      .from('favourites')
+      .select('cook_profile_id')
+      .eq('user_id', req.account!.userId);
+    if (favouritesError) throw favouritesError;
+    const cookIds = [...new Set((favourites ?? []).map(item => item.cook_profile_id))];
+    if (cookIds.length === 0) {
+      res.set('Cache-Control', 'no-store');
+      return res.json({ restaurants: [] });
+    }
+    const { data: locations, error: locationsError } = await supabase
+      .from('restaurant_discovery_locations')
+      .select('cook_profile_id, latitude, longitude')
+      .in('cook_profile_id', cookIds);
+    if (locationsError) throw locationsError;
+    const locationByCook = new Map((locations ?? []).map(item => [item.cook_profile_id, item]));
+    res.set('Cache-Control', 'no-store');
+    res.json({
+      restaurants: cookIds.map(cookProfileId => {
+        const location = locationByCook.get(cookProfileId);
+        const serviceRegion = location
+          ? findServiceRegion(Number(location.latitude), Number(location.longitude))
+          : null;
+        return { cookProfileId, regionId: serviceRegion?.id ?? null };
+      }),
+    });
+  } catch (error: unknown) {
+    res.status(400).json({
+      error: error instanceof Error ? error.message : 'Favourite availability is unavailable.',
+    });
+  }
+});
 
 router.get(
   '/restaurant-discovery-location',
