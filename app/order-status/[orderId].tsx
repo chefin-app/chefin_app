@@ -17,6 +17,7 @@ import { supabase } from '@/src/utils/supabaseClient';
 import { useAuth } from '@/src/services/auth-context';
 import PickupCoordinationCard from '@/src/components/orders/PickupCoordinationCard';
 import BuyerPickupCodeCard from '@/src/components/orders/BuyerPickupCodeCard';
+import CustomerRefundRequestCard from '@/src/components/orders/CustomerRefundRequestCard';
 import {
   formatScheduledWindow,
   getBuyerOrderTimingLabel,
@@ -387,6 +388,11 @@ export default function OrderStatusScreen() {
               <Text style={styles.reviewButtonText}>Rate your order</Text>
             </TouchableOpacity>
           ) : null}
+          <CustomerRefundRequestCard
+            orderId={order.id}
+            accessToken={session?.access_token}
+            completed={isCompleted}
+          />
         </ScrollView>
       )}
     </SafeAreaView>

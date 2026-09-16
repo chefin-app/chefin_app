@@ -28,6 +28,7 @@ import {
   notifyCookDeliveryPayout,
 } from '../notifications';
 import { supabase } from '../supabaseClient';
+import { scheduleCheckoutPayout } from '../paymentService';
 
 const router = express.Router();
 const UUID_PATTERN = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
@@ -509,6 +510,9 @@ router.post('/lalamove/webhook', async (req, res) => {
           'id, checkout_id, listing_id, quantity, total_price, scheduled_date, pickup_time, listings(title)'
         );
       if (orderError) throw orderError;
+      if (orders?.[0]?.checkout_id) {
+        await scheduleCheckoutPayout(orders[0].checkout_id, now);
+      }
       await supabase
         .from('cook_payout_ledger')
         .update({ status: 'applied', updated_at: now })

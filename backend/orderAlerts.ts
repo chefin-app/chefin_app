@@ -5,6 +5,7 @@ import {
   getOverdueStage,
 } from './orderAlertPolicy';
 import { sendAdminEmail } from './email';
+import { releaseEligiblePayouts } from './paymentService';
 
 export async function notifyAdminsOfCriticalOrderAlert(input: {
   checkoutId: string;
@@ -228,6 +229,7 @@ export async function runOverdueOrderSweep(now = new Date()): Promise<void> {
       .eq('status', 'open');
     if (resolveError) throw resolveError;
   }
+  await releaseEligiblePayouts(now);
 }
 
 let monitor: ReturnType<typeof setInterval> | null = null;

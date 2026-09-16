@@ -7,6 +7,7 @@ import adminModerationRoutes from './adminModeration';
 import adminCooksRoutes from './adminCooks';
 import adminDishesRoutes from './adminDishes';
 import adminOrdersRoutes from './adminOrders';
+import adminPaymentsRoutes from './adminPayments';
 
 const router = express.Router();
 
@@ -119,6 +120,7 @@ router.use('/moderation', adminModerationRoutes);
 router.use('/cooks', adminCooksRoutes);
 router.use('/dishes', adminDishesRoutes);
 router.use('/orders', adminOrdersRoutes);
+router.use('/payments', adminPaymentsRoutes);
 
 router.get('/session', (req: AdminRequest, res) => {
   res.json({ admin: req.admin });
@@ -333,39 +335,56 @@ router.get('/overview', async (req, res) => {
   }
 });
 
-router.get('/activity', async (_req, res) => {
+router.get('/activity', async (req: AdminRequest, res) => {
   try {
-    const [alertsResult, reportsResult, documentsResult, ordersResult, profilesResult] =
-      await Promise.all([
-        supabase
-          .from('order_alerts')
-          .select('id, checkout_id, representative_order_id, alert_type, severity, triggered_at')
-          .eq('status', 'open')
-          .order('triggered_at', { ascending: false })
-          .limit(8),
-        supabase
-          .from('content_reports')
-          .select('id, target_label, reason, created_at')
-          .in('status', ['pending', 'reviewing'])
-          .order('created_at', { ascending: false })
-          .limit(5),
-        supabase
-          .from('verification_documents')
-          .select('id, user_id, submitted_at, profiles(full_name, profile_image)')
-          .eq('status', 'pending')
-          .order('submitted_at', { ascending: false })
-          .limit(5),
-        supabase
-          .from('orders')
-          .select('id, created_at, listings(title)')
-          .order('created_at', { ascending: false })
-          .limit(4),
-        supabase
-          .from('profiles')
-          .select('id, user_id, full_name, profile_image, restaurant_name, created_at')
-          .order('created_at', { ascending: false })
-          .limit(5),
-      ]);
+    const [
+      alertsResult,
+      reportsResult,
+      documentsResult,
+      ordersResult,
+      profilesResult,
+      refundsResult,
+      readResult,
+    ] = await Promise.all([
+      supabase
+        .from('order_alerts')
+        .select('id, checkout_id, representative_order_id, alert_type, severity, triggered_at')
+        .eq('status', 'open')
+        .order('triggered_at', { ascending: false })
+        .limit(8),
+      supabase
+        .from('content_reports')
+        .select('id, target_label, reason, created_at')
+        .in('status', ['pending', 'reviewing'])
+        .order('created_at', { ascending: false })
+        .limit(5),
+      supabase
+        .from('verification_documents')
+        .select('id, user_id, submitted_at, profiles(full_name, profile_image)')
+        .eq('status', 'pending')
+        .order('submitted_at', { ascending: false })
+        .limit(5),
+      supabase
+        .from('orders')
+        .select('id, created_at, listings(title)')
+        .order('created_at', { ascending: false })
+        .limit(4),
+      supabase
+        .from('profiles')
+        .select('id, user_id, full_name, profile_image, restaurant_name, created_at')
+        .order('created_at', { ascending: false })
+        .limit(5),
+      supabase
+        .from('refund_requests')
+        .select('id, reason_code, status, created_at, payment_transactions(id, transaction_code)')
+        .in('status', ['pending', 'reviewing'])
+        .order('created_at', { ascending: false })
+        .limit(8),
+      supabase
+        .from('admin_activity_reads')
+        .select('activity_id')
+        .eq('admin_user_id', req.admin!.userId),
+    ]);
 
     const firstError = [
       alertsResult.error,
@@ -373,6 +392,8 @@ router.get('/activity', async (_req, res) => {
       documentsResult.error,
       ordersResult.error,
       profilesResult.error,
+      refundsResult.error,
+      readResult.error,
     ].find(Boolean);
     if (firstError) throw firstError;
 
@@ -455,22 +476,74 @@ router.get('/activity', async (_req, res) => {
         ? { pathname: '/admin/cooks' as const, params: { userId: profile.user_id } }
         : { pathname: '/admin/users' as const, params: { userId: profile.user_id } },
     }));
+    const refundActivity = (refundsResult.data ?? []).map(refund => {
+      const payment = relation(
+        refund.payment_transactions as unknown as
+          | { id: string; transaction_code: string }
+          | Array<{ id: string; transaction_code: string }>
+      );
+      return {
+        id: `refund-${refund.id}`,
+        type: 'payment' as const,
+        title: refund.status === 'reviewing' ? 'Refund under review' : 'New refund request',
+        body: `${payment?.transaction_code ?? 'Transaction'} · ${String(refund.reason_code).replace(/_/g, ' ')}`,
+        createdAt: refund.created_at,
+        unread: true,
+        deepLink: {
+          pathname: '/admin/payments' as const,
+          params: { paymentId: payment?.id ?? '' },
+        },
+      };
+    });
 
+    const readIds = new Set((readResult.data ?? []).map(item => item.activity_id));
     const activity = [
       ...alertActivity,
       ...reportActivity,
       ...documentActivity,
       ...orderActivity,
+      ...refundActivity,
       ...profileActivity,
     ]
       .filter(item => item.createdAt)
       .sort((a, b) => new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime())
-      .slice(0, 8);
+      .slice(0, 8)
+      .map(item => ({ ...item, unread: item.unread && !readIds.has(item.id) }));
 
     res.json({ activity });
   } catch (error: unknown) {
     console.error('Could not load admin activity:', error);
     res.status(500).json({ error: 'Admin activity could not be loaded.' });
+  }
+});
+
+router.post('/activity/read', async (req: AdminRequest, res) => {
+  const activityIds = Array.isArray(req.body?.activityIds)
+    ? [...new Set(req.body.activityIds.filter((id: unknown) => typeof id === 'string'))]
+    : [];
+  if (
+    activityIds.length === 0 ||
+    activityIds.length > 100 ||
+    activityIds.some(id => id.length > 160 || !/^[a-z0-9-]+$/i.test(id))
+  ) {
+    return res.status(400).json({ error: 'Notification IDs are invalid.' });
+  }
+
+  try {
+    const readAt = new Date().toISOString();
+    const { error } = await supabase.from('admin_activity_reads').upsert(
+      activityIds.map(activityId => ({
+        admin_user_id: req.admin!.userId,
+        activity_id: activityId,
+        read_at: readAt,
+      })),
+      { onConflict: 'admin_user_id,activity_id' }
+    );
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (error: unknown) {
+    console.error('Could not mark admin activity as read:', error);
+    res.status(500).json({ error: 'Notification read state could not be saved.' });
   }
 });
 

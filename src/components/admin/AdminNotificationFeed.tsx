@@ -19,6 +19,7 @@ const ACTIVITY_META: Record<
   report: { icon: 'flag-outline', color: '#B42318', background: '#FEE4E2' },
   verification: { icon: 'shield-checkmark-outline', color: '#9A6700', background: '#FFF1C2' },
   order: { icon: 'receipt-outline', color: '#175CD3', background: '#E8F1FF' },
+  payment: { icon: 'card-outline', color: '#9A6700', background: '#FFF1C2' },
   cook: { icon: 'restaurant-outline', color: '#237A3B', background: '#E8F7ED' },
   user: { icon: 'person-outline', color: '#475467', background: '#EEF0F3' },
 };

@@ -11,7 +11,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { usePathname, useRouter } from 'expo-router';
 
-import { fetchAdminActivity } from '@/src/admin/api';
+import { fetchAdminActivity, markAdminActivityRead } from '@/src/admin/api';
 import { showAdminFailure, showAdminSuccess } from '@/src/admin/feedback';
 import type { AdminActivityItem } from '@/src/admin/types';
 import { useAdminAuth } from '@/src/admin/AdminAuthContext';
@@ -28,7 +28,8 @@ type NavItem = {
     | '/admin/cooks'
     | '/admin/dishes'
     | '/admin/moderation'
-    | '/admin/orders';
+    | '/admin/orders'
+    | '/admin/payments';
 };
 
 const WORKSPACE_NAV_ITEMS: NavItem[] = [
@@ -48,7 +49,7 @@ const WORKSPACE_NAV_ITEMS: NavItem[] = [
     route: '/admin/moderation',
   },
   { key: 'orders', label: 'Order Monitoring', icon: 'receipt-outline', route: '/admin/orders' },
-  { key: 'payments', label: 'Payments', icon: 'card-outline' },
+  { key: 'payments', label: 'Payments', icon: 'card-outline', route: '/admin/payments' },
 ];
 const SETTINGS_ITEM: NavItem = { key: 'settings', label: 'Settings', icon: 'settings-outline' };
 
@@ -102,10 +103,29 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
     [activity, readIds]
   );
 
+  const persistReadIds = useCallback(
+    async (ids: string[]) => {
+      if (!session?.access_token || ids.length === 0) return;
+      try {
+        await markAdminActivityRead(session.access_token, ids);
+      } catch (error: unknown) {
+        console.warn('Could not persist admin notification read state', error);
+      }
+    },
+    [session?.access_token]
+  );
+
   const openNotification = (item: AdminActivityItem) => {
     setReadIds(current => new Set(current).add(item.id));
+    void persistReadIds([item.id]);
     setNotificationsOpen(false);
     router.push({ pathname: item.deepLink.pathname, params: item.deepLink.params });
+  };
+
+  const markAllNotificationsRead = () => {
+    const ids = activity.filter(item => item.unread && !readIds.has(item.id)).map(item => item.id);
+    setReadIds(current => new Set([...current, ...ids]));
+    void persistReadIds(ids);
   };
 
   const selectNav = (item: NavItem) => {
@@ -248,7 +268,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
                 loading={activityLoading}
                 width={Math.min(410, width - 24)}
                 onPress={openNotification}
-                onMarkAllRead={() => setReadIds(new Set(activity.map(item => item.id)))}
+                onMarkAllRead={markAllNotificationsRead}
               />
             </View>
           )}

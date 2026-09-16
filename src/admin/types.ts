@@ -18,7 +18,7 @@ export type OverviewPeriod = '7d' | '30d' | '90d' | '1y';
 
 export interface AdminActivityItem {
   id: string;
-  type: 'alert' | 'report' | 'verification' | 'order' | 'cook' | 'user';
+  type: 'alert' | 'report' | 'verification' | 'order' | 'payment' | 'cook' | 'user';
   title: string;
   body: string;
   imageUrl?: string | null;
@@ -28,7 +28,137 @@ export interface AdminActivityItem {
     | { pathname: '/admin/moderation'; params: { reportId: string } }
     | { pathname: '/admin/cooks'; params: { userId: string; documentId?: string } }
     | { pathname: '/admin/orders'; params: { orderId: string } }
+    | { pathname: '/admin/payments'; params: { paymentId: string } }
     | { pathname: '/admin/users'; params: { userId: string } };
+}
+
+export type PaymentManagementFilter = 'all' | 'payouts' | 'refunds' | 'failed' | 'held';
+export type PaymentManagementSort = 'newest' | 'oldest' | 'amount_desc' | 'amount_asc';
+
+export interface ManagedPayment {
+  id: string;
+  transactionCode: string;
+  checkoutId: string;
+  representativeOrderId: string;
+  orderDisplayId: string;
+  customerId: string;
+  customerName: string;
+  customerAvatarUrl: string | null;
+  cookId: string;
+  cookName: string;
+  cookAvatarUrl: string | null;
+  grossAmount: number;
+  cookPayout: number;
+  paymentMethod: string;
+  paymentStatus: string;
+  payoutStatus: string;
+  payoutAvailableAt: string | null;
+  payoutHoldReason: string | null;
+  refundStatus: string | null;
+  refundId: string | null;
+  createdAt: string;
+}
+
+export interface PaymentManagementResponse {
+  payments: ManagedPayment[];
+  stats: {
+    grossRevenue: number;
+    cookPayoutsDue: number;
+    heldFunds: number;
+    failedPayments: number;
+    pendingRefunds: number;
+  };
+  counts: Record<PaymentManagementFilter, number>;
+  pagination: { page: number; pageSize: number; total: number; totalPages: number };
+  generatedAt: string;
+}
+
+export interface ManagedRefundRequest {
+  id: string;
+  transaction_id: string;
+  checkout_id: string;
+  representative_order_id: string;
+  customer_id: string;
+  requested_by: string;
+  source: 'customer' | 'admin' | 'system';
+  reason_code: string;
+  reason_details: string;
+  evidence_paths: string[];
+  requested_amount: number;
+  eligibility_deadline: string;
+  status: string;
+  decision_note: string | null;
+  gateway_refund_reference: string | null;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  completed_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ManagedPaymentDetails {
+  payment: ManagedPayment;
+  breakdown: {
+    foodSubtotal: number;
+    deliveryFee: number;
+    grossAmount: number;
+    processingFee: number;
+    cookPayout: number;
+  };
+  transaction: {
+    id: string;
+    transaction_code: string;
+    gateway: string;
+    gateway_reference: string | null;
+    payment_method: string;
+    status: string;
+    payout_status: string;
+    payout_available_at: string | null;
+    payout_hold_reason: string | null;
+    created_at: string;
+  };
+  customer: {
+    id: string;
+    user_id: string;
+    full_name: string | null;
+    profile_image: string | null;
+  } | null;
+  cook: {
+    id: string;
+    user_id: string;
+    full_name: string | null;
+    restaurant_name: string | null;
+    profile_image: string | null;
+  } | null;
+  orders: Array<{
+    id: string;
+    title: string;
+    imageUrl: string | null;
+    quantity: number;
+    totalPrice: number;
+    status: string | null;
+  }>;
+  fulfillmentType: string;
+  completedAt: string | null;
+  delivery: {
+    id: string;
+    provider: string;
+    provider_order_id: string | null;
+    provider_status: string | null;
+    status: string;
+    proof_of_delivery_url: string | null;
+    delivered_at: string | null;
+    driver_name: string | null;
+    driver_plate_number: string | null;
+  } | null;
+  pickupHandoff: {
+    checkout_id: string;
+    verified_at: string | null;
+    verified_by: string | null;
+    created_at: string;
+  } | null;
+  refunds: ManagedRefundRequest[];
+  policy: { refundWindowMinutes: number };
 }
 
 export interface AdminOverviewData {

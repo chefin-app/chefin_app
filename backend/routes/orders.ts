@@ -41,6 +41,8 @@ import {
   verifyPickupCode,
 } from '../pickupHandoff';
 import { notifyAdminsOfCriticalOrderAlert } from '../orderAlerts';
+import { queueCancelledCheckoutRefund, recordCheckoutPayment } from '../paymentService';
+import { getRefundWindowMinutes, validateRefundRequest } from '../paymentPolicy';
 
 const router = express.Router();
 
@@ -138,9 +140,7 @@ router.post('/cart-status', async (req, res) => {
           .in('id', listingIds),
         supabase
           .from('profiles')
-          .select(
-            'id, full_name, restaurant_name, profile_image, store_status, store_paused_until'
-          )
+          .select('id, full_name, restaurant_name, profile_image, store_status, store_paused_until')
           .in('id', cookIds),
       ]);
     if (listingsError) throw listingsError;
@@ -373,9 +373,7 @@ router.post('/', requireActiveAccount, async (req: AccountRequest, res) => {
     }
     const { data: cookStores, error: cookStoresError } = await supabase
       .from('profiles')
-      .select(
-        'id, restaurant_name, store_status, store_busy_prep_minutes, store_paused_until'
-      )
+      .select('id, restaurant_name, store_status, store_busy_prep_minutes, store_paused_until')
       .in('id', cookIds);
     if (cookStoresError) throw cookStoresError;
     const storeByCook = new Map((cookStores ?? []).map(store => [store.id, store]));
@@ -435,7 +433,11 @@ router.post('/', requireActiveAccount, async (req: AccountRequest, res) => {
 
     const deliveryJobByCook = new Map<
       string,
-      { id: string; customer_delivery_fee: number | string }
+      {
+        id: string;
+        customer_delivery_fee: number | string;
+        cook_delivery_charge: number | string;
+      }
     >();
     if ((fulfillmentType ?? 'pickup') === 'delivery') {
       const uniqueJobIds = [...new Set(deliveryJobIds ?? [])];
@@ -447,7 +449,7 @@ router.post('/', requireActiveAccount, async (req: AccountRequest, res) => {
       const { data: jobs, error: jobsError } = await supabase
         .from('delivery_jobs')
         .select(
-          'id, customer_id, cook_id, status, scheduled_at, quote_expires_at, customer_delivery_fee'
+          'id, customer_id, cook_id, status, scheduled_at, quote_expires_at, customer_delivery_fee, cook_delivery_charge'
         )
         .in('id', uniqueJobIds);
       if (jobsError) throw jobsError;
@@ -582,6 +584,40 @@ router.post('/', requireActiveAccount, async (req: AccountRequest, res) => {
         });
       }
     }
+
+    const createdOrders = data ?? [];
+    const foodTotal = createdOrders.reduce((sum, order) => sum + Number(order.total_price), 0);
+    const deliveryTotal = [...deliveryJobByCook.values()].reduce(
+      (sum, job) => sum + Number(job.customer_delivery_fee),
+      0
+    );
+    const cookDeliveryCharge = [...deliveryJobByCook.values()].reduce(
+      (sum, job) => sum + Number(job.cook_delivery_charge),
+      0
+    );
+    try {
+      if (!createdOrders[0]) throw new Error('The checkout did not create any order rows.');
+      await recordCheckoutPayment({
+        checkoutId,
+        representativeOrderId: createdOrders[0].id,
+        customerId: profile.id,
+        cookId: cookIds[0],
+        foodSubtotal: foodTotal,
+        deliveryFee: deliveryTotal,
+        cookDeliveryCharge,
+        createdAt: createdOrders[0].created_at,
+      });
+    } catch (paymentRecordError) {
+      for (const order of createdOrders) {
+        await releaseListingCapacityForOrder(order.id).catch(() => undefined);
+      }
+      await supabase.from('orders').delete().eq('checkout_id', checkoutId);
+      await Promise.allSettled(
+        [...deliveryJobByCook.values()].map(job => cancelDeliveryJob(job.id))
+      );
+      reservations.splice(0, reservations.length);
+      throw paymentRecordError;
+    }
     // The order rows now own these reservations.
     reservations.splice(0, reservations.length);
 
@@ -589,12 +625,6 @@ router.post('/', requireActiveAccount, async (req: AccountRequest, res) => {
     // Buyer gets one payment-received summary; each cook gets one
     // notification per order row so they can act on it from Today.
     try {
-      const createdOrders = data ?? [];
-      const foodTotal = createdOrders.reduce((sum, o) => sum + Number(o.total_price), 0);
-      const deliveryTotal = [...deliveryJobByCook.values()].reduce(
-        (sum, job) => sum + Number(job.customer_delivery_fee),
-        0
-      );
       const total = foodTotal + deliveryTotal;
       await notifyBuyerOrderPlaced(
         req.account!.userId,
@@ -839,7 +869,7 @@ router.patch('/:id/status', requireActiveAccount, async (req: AccountRequest, re
     const { data: order, error: orderErr } = await supabase
       .from('orders')
       .select(
-        'id, quantity, total_price, scheduled_date, pickup_time, customer_id, listing_id, fulfillment_type, delivery_job_id, status, completed_at, cancelled_at, cancellation_reason, listings(cook_id, title)'
+        'id, checkout_id, quantity, total_price, scheduled_date, pickup_time, customer_id, listing_id, fulfillment_type, delivery_job_id, status, completed_at, cancelled_at, cancellation_reason, listings(cook_id, title)'
       )
       .eq('id', id)
       .single();
@@ -951,6 +981,14 @@ router.patch('/:id/status', requireActiveAccount, async (req: AccountRequest, re
       await cancelDeliveryJobWhenUnused(order.delivery_job_id).catch(deliveryError =>
         console.error('Cancelled-order delivery reconciliation failed:', deliveryError)
       );
+      await queueCancelledCheckoutRefund({
+        checkoutId: order.checkout_id,
+        requestedBy: req.account!.userId,
+        source: 'system',
+        reason: `Cook cancelled the checkout: ${cancellationReason?.trim() || 'No additional reason supplied.'}`,
+      }).catch(refundError =>
+        console.error('Cancelled-order refund queue reconciliation failed:', refundError)
+      );
     }
 
     if (requestedStatus === 'ready' && order.fulfillment_type === 'pickup') {
@@ -1009,10 +1047,207 @@ router.patch('/:id/status', requireActiveAccount, async (req: AccountRequest, re
 
 const PROOF_BUCKET = 'order-proofs';
 const HANDOFF_EVIDENCE_BUCKET = 'pickup-handoff-evidence';
+const REFUND_EVIDENCE_BUCKET = 'refund-evidence';
 const PROOF_MAX_BYTES = 5 * 1024 * 1024;
 const PROOF_CONTENT_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 let proofBucketReady = false;
 let handoffEvidenceBucketReady = false;
+let refundEvidenceBucketReady = false;
+
+type RefundCheckoutLine = {
+  id: string;
+  checkout_id: string;
+  customer_id: string;
+  fulfillment_type: string;
+  status: string | null;
+  completed_at: string | null;
+};
+
+async function loadCustomerRefundContext(orderId: string, customerProfileId: string) {
+  const { data: anchor, error: anchorError } = await supabase
+    .from('orders')
+    .select('id, checkout_id, customer_id')
+    .eq('id', orderId)
+    .maybeSingle();
+  if (anchorError) throw anchorError;
+  if (!anchor) return { error: 'Order not found.', status: 404 } as const;
+  if (anchor.customer_id !== customerProfileId) {
+    return { error: 'You do not have access to this order.', status: 403 } as const;
+  }
+  const [{ data: lines, error: linesError }, { data: transaction, error: transactionError }] =
+    await Promise.all([
+      supabase
+        .from('orders')
+        .select('id, checkout_id, customer_id, fulfillment_type, status, completed_at')
+        .eq('checkout_id', anchor.checkout_id)
+        .order('created_at', { ascending: true }),
+      supabase
+        .from('payment_transactions')
+        .select('*')
+        .eq('checkout_id', anchor.checkout_id)
+        .maybeSingle(),
+    ]);
+  if (linesError) throw linesError;
+  if (transactionError) throw transactionError;
+  const checkoutLines = (lines ?? []) as RefundCheckoutLine[];
+  if (!transaction || checkoutLines.length === 0) {
+    return { error: 'Payment information is unavailable for this order.', status: 409 } as const;
+  }
+  return { anchor, lines: checkoutLines, transaction } as const;
+}
+
+router.get('/:id/refund-request', requireReadableAccount, async (req: AccountRequest, res) => {
+  if (!ORDER_ID_PATTERN.test(req.params.id)) {
+    return res.status(400).json({ error: 'Order ID is invalid.' });
+  }
+  try {
+    const context = await loadCustomerRefundContext(req.params.id, req.account!.profileId);
+    if ('error' in context) return res.status(context.status ?? 500).json({ error: context.error });
+    const { data: request, error } = await supabase
+      .from('refund_requests')
+      .select(
+        'id, reason_code, reason_details, status, decision_note, eligibility_deadline, created_at'
+      )
+      .eq('checkout_id', context.anchor.checkout_id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (error) throw error;
+    const completedAt =
+      context.lines
+        .map(line => line.completed_at)
+        .filter(Boolean)
+        .sort()
+        .at(-1) ?? null;
+    const deadline = completedAt
+      ? new Date(new Date(completedAt).getTime() + getRefundWindowMinutes() * 60_000).toISOString()
+      : null;
+    res.set('Cache-Control', 'no-store');
+    res.json({
+      request,
+      policy: {
+        windowMinutes: getRefundWindowMinutes(),
+        deadline,
+        eligible:
+          context.lines.every(line => line.status === 'completed') &&
+          Boolean(deadline) &&
+          Date.now() <= new Date(deadline!).getTime() &&
+          !request,
+        photoRequired: context.lines[0].fulfillment_type === 'pickup',
+      },
+    });
+  } catch (error: unknown) {
+    console.error('Could not load refund request:', error);
+    res.status(500).json({ error: 'Refund request information could not be loaded.' });
+  }
+});
+
+router.post('/:id/refund-request', requireActiveAccount, async (req: AccountRequest, res) => {
+  if (!ORDER_ID_PATTERN.test(req.params.id)) {
+    return res.status(400).json({ error: 'Order ID is invalid.' });
+  }
+  const reasonCode = String(req.body?.reasonCode ?? '').trim();
+  const reasonDetails = String(req.body?.reasonDetails ?? '').trim();
+  const imageBase64 = typeof req.body?.imageBase64 === 'string' ? req.body.imageBase64 : null;
+  const contentType = typeof req.body?.contentType === 'string' ? req.body.contentType : null;
+  try {
+    const context = await loadCustomerRefundContext(req.params.id, req.account!.profileId);
+    if ('error' in context) return res.status(context.status ?? 500).json({ error: context.error });
+    const completedAt =
+      context.lines
+        .map(line => line.completed_at)
+        .filter(Boolean)
+        .sort()
+        .at(-1) ?? null;
+    const validation = validateRefundRequest({
+      orderStatus: context.lines.every(line => line.status === 'completed') ? 'completed' : null,
+      completedAt,
+      fulfillmentType: context.lines[0].fulfillment_type,
+      reasonCode,
+      reasonDetails,
+      hasPhotoEvidence: Boolean(imageBase64),
+    });
+    if (validation.error || !validation.deadline) {
+      return res.status(409).json({ error: validation.error ?? 'This request is not eligible.' });
+    }
+
+    let evidencePath: string | null = null;
+    if (imageBase64) {
+      if (!contentType || !PROOF_CONTENT_TYPES.has(contentType)) {
+        return res.status(400).json({ error: 'Evidence must be a JPEG, PNG or WebP image.' });
+      }
+      const bytes = Buffer.from(imageBase64, 'base64');
+      if (bytes.length === 0 || bytes.length > PROOF_MAX_BYTES) {
+        return res.status(400).json({ error: 'Evidence must be no larger than 5 MB.' });
+      }
+      if (!refundEvidenceBucketReady) {
+        await supabase.storage
+          .createBucket(REFUND_EVIDENCE_BUCKET, { public: false, fileSizeLimit: PROOF_MAX_BYTES })
+          .catch(() => undefined);
+        refundEvidenceBucketReady = true;
+      }
+      const ext =
+        contentType === 'image/png' ? 'png' : contentType === 'image/webp' ? 'webp' : 'jpg';
+      evidencePath = `${context.anchor.checkout_id}/customer-${Date.now()}.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from(REFUND_EVIDENCE_BUCKET)
+        .upload(evidencePath, bytes, { contentType, upsert: false });
+      if (uploadError) throw uploadError;
+    }
+
+    const now = new Date().toISOString();
+    const { data: request, error: insertError } = await supabase
+      .from('refund_requests')
+      .insert({
+        transaction_id: context.transaction.id,
+        checkout_id: context.anchor.checkout_id,
+        representative_order_id: context.lines[0].id,
+        customer_id: req.account!.profileId,
+        requested_by: req.account!.userId,
+        source: 'customer',
+        reason_code: reasonCode,
+        reason_details: reasonDetails,
+        evidence_paths: evidencePath ? [evidencePath] : [],
+        requested_amount: context.transaction.gross_amount,
+        eligibility_deadline: validation.deadline.toISOString(),
+        status: 'pending',
+        created_at: now,
+        updated_at: now,
+      })
+      .select('id, status, created_at')
+      .single();
+    if (insertError) {
+      if (insertError.code === '23505') {
+        return res
+          .status(409)
+          .json({ error: 'This checkout already has an active refund request.' });
+      }
+      throw insertError;
+    }
+    await Promise.all([
+      supabase
+        .from('payment_transactions')
+        .update({
+          payout_status: 'held',
+          payout_hold_reason: 'Customer refund request under manual review',
+          updated_at: now,
+        })
+        .eq('id', context.transaction.id),
+      supabase
+        .from('orders')
+        .update({
+          refund_status: 'refund_required',
+          refund_required_at: now,
+          refund_note: 'Customer refund request is awaiting manual admin review.',
+        })
+        .eq('checkout_id', context.anchor.checkout_id),
+    ]);
+    res.status(201).json({ success: true, request });
+  } catch (error: unknown) {
+    console.error('Refund request failed:', error);
+    res.status(500).json({ error: 'The refund request could not be submitted.' });
+  }
+});
 
 // POST /:id/pickup-handoff/exception - A failed handoff never completes an
 // order. It creates a critical, audited admin case with optional photo proof.

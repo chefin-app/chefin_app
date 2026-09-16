@@ -53,43 +53,45 @@ model listings {
 }
 
 model orders {
-  id                       String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  customer_id              String            @db.Uuid
-  listing_id               String            @db.Uuid
+  id                       String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  customer_id              String                @db.Uuid
+  listing_id               String                @db.Uuid
   quantity                 Int
-  total_price              Decimal           @db.Decimal(10, 2)
-  scheduled_date           DateTime          @db.Date
-  pickup_time              DateTime?         @db.Timestamptz(6)
-  pickup_window_end        DateTime?         @db.Timestamptz(6)
-  customer_note            String?           @db.VarChar(500)
-  selected_options         Json              @default("[]")
-  fulfillment_type         String            @default("pickup")
+  total_price              Decimal               @db.Decimal(10, 2)
+  scheduled_date           DateTime              @db.Date
+  pickup_time              DateTime?             @db.Timestamptz(6)
+  pickup_window_end        DateTime?             @db.Timestamptz(6)
+  customer_note            String?               @db.VarChar(500)
+  selected_options         Json                  @default("[]")
+  fulfillment_type         String                @default("pickup")
   status                   String?
   payment_status           String?
-  cancelled_by             String?           @db.VarChar(20)
-  cancelled_at             DateTime?         @db.Timestamptz(6)
-  cancellation_reason      String?           @db.VarChar(500)
-  completed_at             DateTime?         @db.Timestamptz(6)
-  capacity_source          String?           @db.VarChar(20)
-  capacity_service_date    DateTime?         @db.Date
-  capacity_window_start    DateTime?         @db.Time(0)
-  capacity_availability_id String?           @db.Uuid
+  cancelled_by             String?               @db.VarChar(20)
+  cancelled_at             DateTime?             @db.Timestamptz(6)
+  cancellation_reason      String?               @db.VarChar(500)
+  completed_at             DateTime?             @db.Timestamptz(6)
+  capacity_source          String?               @db.VarChar(20)
+  capacity_service_date    DateTime?             @db.Date
+  capacity_window_start    DateTime?             @db.Time(0)
+  capacity_availability_id String?               @db.Uuid
   capacity_quantity        Int?
-  capacity_released_at     DateTime?         @db.Timestamptz(6)
+  capacity_released_at     DateTime?             @db.Timestamptz(6)
   proof_of_prep_url        String?
-  delivery_job_id          String?           @db.Uuid
-  checkout_id              String            @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  refund_status            String            @default("not_required") @db.VarChar(30)
-  refund_required_at       DateTime?         @db.Timestamptz(6)
-  refund_note              String?           @db.VarChar(500)
-  created_at               DateTime?         @default(now()) @db.Timestamptz(6)
-  profiles                 profiles          @relation(fields: [customer_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  listings                 listings          @relation(fields: [listing_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  delivery_job_id          String?               @db.Uuid
+  checkout_id              String                @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  refund_status            String                @default("not_required") @db.VarChar(30)
+  refund_required_at       DateTime?             @db.Timestamptz(6)
+  refund_note              String?               @db.VarChar(500)
+  created_at               DateTime?             @default(now()) @db.Timestamptz(6)
+  profiles                 profiles              @relation(fields: [customer_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  listings                 listings              @relation(fields: [listing_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   reviews                  reviews?
   customer_reviews         customer_reviews?
-  delivery_job             delivery_jobs?    @relation(fields: [delivery_job_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  delivery_job             delivery_jobs?        @relation(fields: [delivery_job_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
   order_disputes           order_disputes[]
-  representative_alerts    order_alerts[]    @relation("order_alert_representative")
+  representative_alerts    order_alerts[]        @relation("order_alert_representative")
+  payment_transaction      payment_transactions? @relation("payment_representative")
+  refund_requests          refund_requests[]     @relation("refund_representative")
 
   @@schema("public")
 }
@@ -242,6 +244,9 @@ model profiles {
   delivery_jobs_as_customer     delivery_jobs[]                   @relation("delivery_customer")
   delivery_jobs_as_cook         delivery_jobs[]                   @relation("delivery_cook")
   cook_payout_ledger            cook_payout_ledger[]
+  payment_transactions_customer payment_transactions[]            @relation("payment_customer")
+  payment_transactions_cook     payment_transactions[]            @relation("payment_cook")
+  refund_requests_customer      refund_requests[]                 @relation("refund_customer")
 
   @@schema("public")
 }
@@ -330,6 +335,75 @@ model cook_payout_ledger {
   delivery_job    delivery_jobs @relation(fields: [delivery_job_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
 
   @@index([cook_id, created_at(sort: Desc)])
+  @@schema("public")
+}
+
+/// Checkout-level money record. Gateway settlement and cook payout are kept
+/// separate so a customer refund can hold earnings without pretending that a
+/// gateway refund has already completed.
+model payment_transactions {
+  id                      String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  transaction_code        String            @unique @db.VarChar(30)
+  checkout_id             String            @unique @db.Uuid
+  representative_order_id String            @unique @db.Uuid
+  customer_id             String            @db.Uuid
+  cook_id                 String            @db.Uuid
+  food_subtotal           Decimal           @db.Decimal(10, 2)
+  delivery_fee            Decimal           @default(0) @db.Decimal(10, 2)
+  gross_amount            Decimal           @db.Decimal(10, 2)
+  processing_fee          Decimal           @default(0) @db.Decimal(10, 2)
+  cook_payout             Decimal           @db.Decimal(10, 2)
+  currency                String            @default("MYR") @db.Char(3)
+  payment_method          String            @default("demo_card") @db.VarChar(40)
+  gateway                 String            @default("demo") @db.VarChar(40)
+  gateway_reference       String?           @db.VarChar(120)
+  status                  String            @default("succeeded") @db.VarChar(30)
+  payout_status           String            @default("held") @db.VarChar(30)
+  payout_available_at     DateTime?         @db.Timestamptz(6)
+  payout_hold_reason      String?           @db.VarChar(500)
+  payout_released_at      DateTime?         @db.Timestamptz(6)
+  payout_paid_at          DateTime?         @db.Timestamptz(6)
+  created_at              DateTime          @default(now()) @db.Timestamptz(6)
+  updated_at              DateTime          @default(now()) @db.Timestamptz(6)
+  representative_order    orders            @relation("payment_representative", fields: [representative_order_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  customer                profiles          @relation("payment_customer", fields: [customer_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  cook                    profiles          @relation("payment_cook", fields: [cook_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  refund_requests         refund_requests[]
+
+  @@index([status, created_at(sort: Desc)])
+  @@index([payout_status, payout_available_at])
+  @@schema("public")
+}
+
+/// Manual refund review queue. Evidence paths point to a private bucket and
+/// are exposed only through short-lived admin URLs.
+model refund_requests {
+  id                       String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  transaction_id           String               @db.Uuid
+  checkout_id              String               @db.Uuid
+  representative_order_id  String               @db.Uuid
+  customer_id              String               @db.Uuid
+  requested_by             String               @db.Uuid
+  source                   String               @default("customer") @db.VarChar(20)
+  reason_code              String               @db.VarChar(50)
+  reason_details           String               @db.VarChar(2000)
+  evidence_paths           String[]             @default([])
+  requested_amount         Decimal              @db.Decimal(10, 2)
+  eligibility_deadline     DateTime             @db.Timestamptz(6)
+  status                   String               @default("pending") @db.VarChar(30)
+  decision_note            String?              @db.VarChar(2000)
+  gateway_refund_reference String?              @db.VarChar(120)
+  reviewed_by              String?              @db.Uuid
+  reviewed_at              DateTime?            @db.Timestamptz(6)
+  completed_at             DateTime?            @db.Timestamptz(6)
+  created_at               DateTime             @default(now()) @db.Timestamptz(6)
+  updated_at               DateTime             @default(now()) @db.Timestamptz(6)
+  transaction              payment_transactions @relation(fields: [transaction_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  representative_order     orders               @relation("refund_representative", fields: [representative_order_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  customer                 profiles             @relation("refund_customer", fields: [customer_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+
+  @@index([status, created_at(sort: Desc)])
+  @@index([checkout_id, created_at(sort: Desc)])
   @@schema("public")
 }
 
