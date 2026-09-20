@@ -15,24 +15,17 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCart, CartItem } from '@/src/context/CartContext';
 import { useAuth } from '@/src/services/auth-context';
 import { useCustomerLocation } from '@/src/context/CustomerLocationContext';
-import {
-  getDefaultPaymentCard,
-  loadPaymentMethods,
-  type SavedPaymentCard,
-} from '@/src/utils/payment-method-storage';
 import { toRequestedOptionSelections } from '@/src/utils/menuOptions';
-import {
-  DeliveryAddressModal,
-  type DeliveryAddress,
-} from '@/src/components/delivery/DeliveryAddressModal';
+import { type DeliveryAddress } from '@/src/components/delivery/DeliveryAddressModal';
+import LocationPromptModal from '@/src/components/location/LocationPromptModal';
 import GlobalCartOverview from '@/src/components/cart/GlobalCartOverview';
+import PaymentMethodSelector from '@/src/components/cart/PaymentMethodSelector';
 import { checkCartAvailability, type BasketAvailability } from '@/src/utils/cartAvailability';
 import { formatArrivalWindow, formatScheduledWindow } from '@/src/utils/orderStatus';
 import { findServiceRegion } from '@/src/constants/serviceRegions';
 import {
   loadCheckoutDraft,
   removeCheckoutDraft,
-  saveCheckoutDraft,
   type CheckoutDeliveryQuote,
   type CheckoutFulfillmentType,
 } from '@/src/utils/checkout-state';
@@ -79,7 +72,72 @@ function RestaurantCartScreen({ cookId }: { cookId: string }) {
   );
   const clearCart = useCallback(() => clearCookCart(cookId), [clearCookCart, cookId]);
   const [placingOrder, setPlacingOrder] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<'cook_qr' | 'pay_on_collection'>('cook_qr');
+  const [paymentAcknowledged, setPaymentAcknowledged] = useState(false);
+  const [paymentOptions, setPaymentOptions] = useState<{
+    qr_enabled: boolean;
+    collection_enabled: boolean;
+  } | null>(null);
+  const [paymentOptionsError, setPaymentOptionsError] = useState('');
+  const [paymentOptionsLoading, setPaymentOptionsLoading] = useState(false);
+  const [paymentOptionsRetry, setPaymentOptionsRetry] = useState(0);
   const [fulfillmentType, setFulfillmentType] = useState<FulfillmentType>(fulfillmentPreference);
+  useEffect(() => {
+    setPaymentAcknowledged(false);
+    if (fulfillmentType === 'delivery') setPaymentMethod('cook_qr');
+  }, [fulfillmentType, cookId]);
+  useEffect(() => {
+    let active = true;
+    setPaymentOptions(null);
+    setPaymentOptionsError('');
+    setPaymentAcknowledged(false);
+    if (!cookId || !session?.access_token) {
+      setPaymentOptionsLoading(false);
+      setPaymentOptionsError('Sign in to load payment options.');
+      return;
+    }
+    setPaymentOptionsLoading(true);
+    void fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/direct-payments/settings/${cookId}`, {
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    })
+      .then(async response => {
+        const body = await response.json();
+        if (!response.ok) throw new Error(body.error);
+        return body;
+      })
+      .then(body => {
+        if (active) {
+          setPaymentOptions(body.settings);
+          if (body.settings?.qr_enabled) setPaymentMethod('cook_qr');
+          setPaymentOptionsError(
+            body.settings ? '' : 'This cook has not configured payment options yet.'
+          );
+          if (
+            !body.settings?.qr_enabled &&
+            body.settings?.collection_enabled &&
+            fulfillmentType === 'pickup'
+          )
+            setPaymentMethod('pay_on_collection');
+        }
+      })
+      .catch(() => {
+        if (active)
+          setPaymentOptionsError('We couldn’t load this cook’s payment options. Please try again.');
+      })
+      .finally(() => {
+        if (active) setPaymentOptionsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [cookId, session?.access_token, fulfillmentType, paymentOptionsRetry]);
+  const paymentReady =
+    !paymentOptionsLoading &&
+    !paymentOptionsError &&
+    paymentAcknowledged &&
+    (paymentMethod === 'cook_qr'
+      ? paymentOptions?.qr_enabled
+      : fulfillmentType === 'pickup' && paymentOptions?.collection_enabled);
   const [address, setAddress] = useState<DeliveryAddress | null>(null);
   const [addressDefaults, setAddressDefaults] = useState<Partial<DeliveryAddress>>({});
   const [addressOpen, setAddressOpen] = useState(false);
@@ -283,10 +341,10 @@ function RestaurantCartScreen({ cookId }: { cookId: string }) {
     }
     setFulfillmentType('delivery');
     if (!user) {
-      Alert.alert(
-        'Login required',
-        'Sign in to save an exact delivery address and request a Lalamove quote.'
-      );
+      Alert.alert('Login Required', 'Please login to place your order.', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Login', onPress: () => router.push('/(auth)/login') },
+      ]);
     } else if (!address) {
       setAddressOpen(true);
     } else if (!quoteIsCurrent) {
@@ -342,41 +400,17 @@ function RestaurantCartScreen({ cookId }: { cookId: string }) {
       return;
     }
 
-    // Require a saved payment method before allowing checkout. The storage
-    // helper also understands the original single-card format.
-    let savedCard: SavedPaymentCard | null = null;
-    try {
-      savedCard = getDefaultPaymentCard(await loadPaymentMethods(user.id));
-    } catch (error) {
-      console.warn('Failed to load payment methods', error);
-      Alert.alert('Could not load payment methods', 'Please try again before placing your order.');
-      return;
-    }
-    if (!savedCard) {
-      Alert.alert('Payment method needed', 'Add a card to place your order.', [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Add card',
-          onPress: async () => {
-            try {
-              await saveCheckoutDraft(user.id, cookId, {
-                cartFingerprint,
-                fulfillmentType,
-                address,
-                addressDefaults,
-                quotes,
-                quoteExpiresAt,
-              });
-            } catch (error) {
-              console.warn('Could not preserve checkout state', error);
-            }
-            router.push({
-              pathname: '/(user)/payment-methods',
-              params: { returnTo: `/(user)/cart?cookId=${encodeURIComponent(cookId)}` },
-            });
-          },
-        },
-      ]);
+    if (
+      !paymentAcknowledged ||
+      !paymentOptions ||
+      (paymentMethod === 'cook_qr'
+        ? !paymentOptions.qr_enabled
+        : fulfillmentType !== 'pickup' || !paymentOptions.collection_enabled)
+    ) {
+      Alert.alert(
+        'Choose payment',
+        'Choose an available payment option and acknowledge the direct payment notice.'
+      );
       return;
     }
 
@@ -391,6 +425,8 @@ function RestaurantCartScreen({ cookId }: { cookId: string }) {
         body: JSON.stringify({
           userId: user.id,
           fulfillmentType,
+          paymentMethod,
+          directPaymentAcknowledged: paymentAcknowledged,
           deliveryJobIds: fulfillmentType === 'delivery' ? quotes.map(quote => quote.jobId) : [],
           items: cartItems.map(item => ({
             listingId: item.listingId,
@@ -414,8 +450,17 @@ function RestaurantCartScreen({ cookId }: { cookId: string }) {
         clearCookCart(cookId);
         Alert.alert(
           'Order Placed!',
-          `Payment method: ${savedCard.brand} ending in ${savedCard.last4}. No real payment was processed in this demo.`,
-          [{ text: 'OK', onPress: () => router.replace('/(user)/(tabs)/home') }]
+          'Wait for the cook to accept. Open your order for payment instructions.',
+          [
+            {
+              text: 'View order',
+              onPress: () =>
+                router.replace({
+                  pathname: '/order-status/[orderId]',
+                  params: { orderId: body.orders[0].id },
+                }),
+            },
+          ]
         );
       } else {
         Alert.alert('Could not place order', body?.error ?? 'Please try again.');
@@ -485,7 +530,7 @@ function RestaurantCartScreen({ cookId }: { cookId: string }) {
       </View>
 
       <ScrollView
-        contentContainerStyle={{ paddingBottom: 200 }}
+        contentContainerStyle={{ paddingBottom: 16 }}
         showsVerticalScrollIndicator={false}
       >
         {basketAvailability && basketAvailability.status !== 'ready' ? (
@@ -570,168 +615,210 @@ function RestaurantCartScreen({ cookId }: { cookId: string }) {
             </View>
           </View>
         ))}
-      </ScrollView>
-
-      {/* Order Summary Footer */}
-      <View style={styles.footer}>
-        <View style={styles.fulfillmentToggle}>
-          <TouchableOpacity
-            style={[
-              styles.fulfillmentOption,
-              fulfillmentType === 'pickup' && styles.fulfillmentOptionActive,
-            ]}
-            onPress={() => {
-              setFulfillmentPreference('pickup');
-              setFulfillmentType('pickup');
-            }}
-          >
-            <Ionicons
-              name="bag-handle-outline"
-              size={18}
-              color={fulfillmentType === 'pickup' ? '#fff' : '#666'}
-            />
-            <Text
+        {/* Summary and payment details scroll together on smaller screens. */}
+        <View style={styles.checkoutDetails}>
+          <View style={styles.fulfillmentToggle}>
+            <TouchableOpacity
               style={[
-                styles.fulfillmentOptionText,
-                fulfillmentType === 'pickup' && styles.fulfillmentOptionTextActive,
+                styles.fulfillmentOption,
+                fulfillmentType === 'pickup' && styles.fulfillmentOptionActive,
               ]}
+              onPress={() => {
+                setFulfillmentPreference('pickup');
+                setFulfillmentType('pickup');
+              }}
             >
-              Pickup
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.fulfillmentOption,
-              fulfillmentType === 'delivery' && styles.fulfillmentOptionActive,
-            ]}
-            onPress={chooseDelivery}
-          >
-            <Ionicons
-              name="bicycle-outline"
-              size={18}
-              color={fulfillmentType === 'delivery' ? '#fff' : '#666'}
-            />
-            <Text
-              style={[
-                styles.fulfillmentOptionText,
-                fulfillmentType === 'delivery' && styles.fulfillmentOptionTextActive,
-              ]}
-            >
-              Delivery
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        {fulfillmentType === 'delivery' ? (
-          <TouchableOpacity style={styles.addressCard} onPress={() => setAddressOpen(true)}>
-            <Ionicons name="location-outline" size={21} color="#216E39" />
-            <View style={{ flex: 1 }}>
-              <Text style={styles.addressTitle}>
-                {address ? 'Deliver to' : 'Add exact delivery address'}
-              </Text>
-              {address ? (
-                <Text style={styles.addressText} numberOfLines={2}>
-                  {[address.addressLine2, address.addressLine1].filter(Boolean).join(', ')},{' '}
-                  {address.postcode} {address.city}
-                </Text>
-              ) : null}
-            </View>
-            <Text style={styles.addressEdit}>{address ? 'Edit' : 'Add'}</Text>
-          </TouchableOpacity>
-        ) : null}
-
-        <View style={styles.summaryRow}>
-          <Text style={styles.summaryLabel}>Subtotal</Text>
-          <Text style={styles.summaryValue}>RM {cartTotal.toFixed(2)}</Text>
-        </View>
-        {fulfillmentType === 'delivery' && quoteIsCurrent && (
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Live Lalamove fee</Text>
-            <Text style={styles.summaryValue}>
-              {deliveryFee === 0 ? 'FREE' : `RM ${deliveryFee.toFixed(2)}`}
-            </Text>
-          </View>
-        )}
-        {fulfillmentType === 'delivery' && quoting ? (
-          <View style={styles.quoteStatus}>
-            <ActivityIndicator size="small" color="#216E39" />
-            <Text style={styles.thresholdNote}>Getting live Lalamove price…</Text>
-          </View>
-        ) : null}
-        {fulfillmentType === 'delivery' && !quoting && !quoteIsCurrent ? (
-          <TouchableOpacity
-            style={styles.quoteButton}
-            onPress={() => (address ? requestQuote(address) : setAddressOpen(true))}
-          >
-            <Text style={styles.quoteButtonText}>
-              {address ? 'Get live Lalamove quote' : 'Add address for a delivery quote'}
-            </Text>
-          </TouchableOpacity>
-        ) : null}
-        {fulfillmentType === 'delivery' && quoteIsCurrent
-          ? quotes.map(quote => (
+              <Ionicons
+                name="bag-handle-outline"
+                size={18}
+                color={fulfillmentType === 'pickup' ? '#216E39' : '#666'}
+              />
               <Text
-                key={quote.jobId}
-                style={quote.freeDeliveryApplied ? styles.freeDeliveryNote : styles.thresholdNote}
+                style={[
+                  styles.fulfillmentOptionText,
+                  fulfillmentType === 'pickup' && styles.fulfillmentOptionTextActive,
+                ]}
               >
-                {quote.freeDeliveryApplied
-                  ? `${quote.cookName} covers the RM ${quote.quotedFee.toFixed(2)} delivery fee — you pay RM 0`
-                  : `RM ${quote.customerFee.toFixed(2)} based on the live Lalamove route`}
-                {` · Estimated arrival ${formatArrivalWindow(quote.estimatedArrivalStart, quote.estimatedArrivalEnd)}`}
+                Pickup
               </Text>
-            ))
-          : null}
-        <View style={[styles.summaryRow, styles.totalRow]}>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.fulfillmentOption,
+                fulfillmentType === 'delivery' && styles.fulfillmentOptionActive,
+              ]}
+              onPress={chooseDelivery}
+            >
+              <Ionicons
+                name="bicycle-outline"
+                size={18}
+                color={fulfillmentType === 'delivery' ? '#216E39' : '#666'}
+              />
+              <Text
+                style={[
+                  styles.fulfillmentOptionText,
+                  fulfillmentType === 'delivery' && styles.fulfillmentOptionTextActive,
+                ]}
+              >
+                Delivery
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {fulfillmentType === 'delivery' ? (
+            <TouchableOpacity style={styles.addressCard} onPress={() => setAddressOpen(true)}>
+              <Ionicons name="location-outline" size={21} color="#216E39" />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.addressTitle}>
+                  {address ? 'Deliver to' : 'Add exact delivery address'}
+                </Text>
+                {address ? (
+                  <Text style={styles.addressText} numberOfLines={2}>
+                    {[address.addressLine2, address.addressLine1].filter(Boolean).join(', ')},{' '}
+                    {address.postcode} {address.city}
+                  </Text>
+                ) : null}
+              </View>
+              <Text style={styles.addressEdit}>{address ? 'Edit' : 'Add'}</Text>
+            </TouchableOpacity>
+          ) : (
+            <View style={styles.pickupNotice}>
+              <Ionicons name="bag-handle-outline" size={26} color="#9A5B25" />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.addressTitle}>This is a pickup order</Text>
+                <Text style={styles.addressText}>
+                  Collect your food from {cartItems[0]?.cookName || 'the home restaurant'} when it’s
+                  ready. Your selected collection time is shown with each dish above.
+                </Text>
+              </View>
+            </View>
+          )}
+
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Subtotal</Text>
+            <Text style={styles.summaryValue}>RM {cartTotal.toFixed(2)}</Text>
+          </View>
+          {fulfillmentType === 'delivery' && quoteIsCurrent && (
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Live Lalamove fee</Text>
+              <Text style={styles.summaryValue}>
+                {deliveryFee === 0 ? 'FREE' : `RM ${deliveryFee.toFixed(2)}`}
+              </Text>
+            </View>
+          )}
+          {fulfillmentType === 'delivery' && quoting ? (
+            <View style={styles.quoteStatus}>
+              <ActivityIndicator size="small" color="#216E39" />
+              <Text style={styles.thresholdNote}>Getting live Lalamove price…</Text>
+            </View>
+          ) : null}
+          {fulfillmentType === 'delivery' && !quoting && !quoteIsCurrent ? (
+            <TouchableOpacity
+              style={styles.quoteButton}
+              onPress={() => (address ? requestQuote(address) : setAddressOpen(true))}
+            >
+              <Text style={styles.quoteButtonText}>
+                {address ? 'Get live Lalamove quote' : 'Add address for a delivery quote'}
+              </Text>
+            </TouchableOpacity>
+          ) : null}
+          {fulfillmentType === 'delivery' && quoteIsCurrent
+            ? quotes.map(quote => (
+                <Text
+                  key={quote.jobId}
+                  style={quote.freeDeliveryApplied ? styles.freeDeliveryNote : styles.thresholdNote}
+                >
+                  {quote.freeDeliveryApplied
+                    ? `${quote.cookName} covers the RM ${quote.quotedFee.toFixed(2)} delivery fee — you pay RM 0`
+                    : `RM ${quote.customerFee.toFixed(2)} based on the live Lalamove route`}
+                  {` · Estimated arrival ${formatArrivalWindow(quote.estimatedArrivalStart, quote.estimatedArrivalEnd)}`}
+                </Text>
+              ))
+            : null}
+          <View style={[styles.summaryRow, styles.totalRow]}>
+            <Text style={styles.totalLabel}>Total</Text>
+            <Text style={styles.totalValue}>RM {grandTotal.toFixed(2)}</Text>
+          </View>
+
+          <PaymentMethodSelector
+            qrAvailable={!!paymentOptions?.qr_enabled}
+            collectionAvailable={
+              fulfillmentType === 'pickup' && !!paymentOptions?.collection_enabled
+            }
+            loading={paymentOptionsLoading}
+            error={paymentOptionsError}
+            disabled={placingOrder}
+            value={paymentMethod}
+            acknowledged={paymentAcknowledged}
+            onSelect={method => {
+              if (method !== paymentMethod) {
+                setPaymentMethod(method);
+                setPaymentAcknowledged(false);
+              }
+            }}
+            onAcknowledge={() => setPaymentAcknowledged(value => !value)}
+            onRetry={() => setPaymentOptionsRetry(value => value + 1)}
+          />
+        </View>
+      </ScrollView>
+      <View style={styles.footer}>
+        <View style={styles.summaryRow}>
           <Text style={styles.totalLabel}>Total</Text>
           <Text style={styles.totalValue}>RM {grandTotal.toFixed(2)}</Text>
         </View>
-
         <TouchableOpacity
-          style={[styles.placeOrderBtn, placingOrder && { opacity: 0.7 }]}
+          style={[styles.placeOrderBtn, (placingOrder || !paymentReady) && { opacity: 0.5 }]}
           onPress={handlePlaceOrder}
-          disabled={placingOrder}
+          disabled={placingOrder || !paymentReady}
+          accessibilityRole="button"
+          accessibilityState={{ disabled: placingOrder || !paymentReady }}
         >
           {placingOrder ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={styles.placeOrderText}>Place Order · RM {grandTotal.toFixed(2)}</Text>
+            <Text style={styles.placeOrderText}>
+              {fulfillmentType === 'pickup' ? 'Place Order · Pickup' : 'Place Order · Delivery'}
+            </Text>
           )}
         </TouchableOpacity>
       </View>
-      <DeliveryAddressModal
+      <LocationPromptModal
         visible={addressOpen}
-        initialAddress={address}
-        defaults={{
-          ...addressDefaults,
-          latitude: location?.latitude,
-          longitude: location?.longitude,
-        }}
+        initialView="location"
         onClose={() => setAddressOpen(false)}
-        onSave={async nextAddress => {
-          const synced = await selectLocation({
-            latitude: nextAddress.latitude,
-            longitude: nextAddress.longitude,
-            label: [
-              nextAddress.addressLine1,
-              nextAddress.addressLine2,
-              nextAddress.postcode,
-              nextAddress.city,
-              nextAddress.state,
-            ]
-              .filter(Boolean)
-              .join(', '),
-            source: 'manual',
-          });
-          if (!synced) {
-            Alert.alert(
-              'Address outside your region',
-              'Choose an address in Klang Valley or change your selected region.'
-            );
-            return;
-          }
-          setAddress(nextAddress);
-          setAddressOpen(false);
-          await requestQuote(nextAddress);
+        delivery={{
+          initialAddress: address,
+          defaults: {
+            ...addressDefaults,
+            latitude: location?.latitude,
+            longitude: location?.longitude,
+          },
+          onSave: async nextAddress => {
+            const synced = await selectLocation({
+              latitude: nextAddress.latitude,
+              longitude: nextAddress.longitude,
+              label: [
+                nextAddress.addressLine1,
+                nextAddress.addressLine2,
+                nextAddress.postcode,
+                nextAddress.city,
+                nextAddress.state,
+              ]
+                .filter(Boolean)
+                .join(', '),
+              source: 'manual',
+            });
+            if (!synced) {
+              Alert.alert(
+                'Address outside your region',
+                'Choose an address in Klang Valley or change your selected region.'
+              );
+              return;
+            }
+            setAddress(nextAddress);
+            setAddressOpen(false);
+            await requestQuote(nextAddress);
+          },
         }}
       />
     </SafeAreaView>
@@ -935,10 +1022,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   footer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
     backgroundColor: '#fff',
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
@@ -949,9 +1032,18 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 10,
   },
-  fulfillmentToggle: {
+  checkoutDetails: { backgroundColor: '#fff', padding: 24, borderRadius: 24 },
+  pickupNotice: {
     flexDirection: 'row',
-    backgroundColor: '#F0F0F0',
+    gap: 12,
+    padding: 16,
+    backgroundColor: '#FFF5EC',
+    borderRadius: 12,
+    marginBottom: 20,
+  },
+  fulfillmentToggle: {
+    flexDirection: 'row-reverse',
+    backgroundColor: '#fff',
     borderRadius: 14,
     padding: 4,
     marginBottom: 16,
@@ -964,10 +1056,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 6,
     paddingVertical: 10,
-    borderRadius: 10,
+    borderRadius: 30,
   },
   fulfillmentOptionActive: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#EDF9F8',
   },
   fulfillmentOptionText: {
     fontSize: 14,
@@ -975,7 +1067,7 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   fulfillmentOptionTextActive: {
-    color: '#fff',
+    color: '#216E39',
   },
   addressCard: {
     flexDirection: 'row',

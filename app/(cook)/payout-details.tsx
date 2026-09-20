@@ -22,6 +22,11 @@ import { BankSelect } from '@/src/components/inputs/BankSelect';
 import { FOOD_SAFETY_WAIVER_VERSION } from '@/src/constants/foodSafetyWaiver';
 import { recordFoodComplianceAcceptance } from '@/src/utils/foodCompliance';
 import { saveRestaurantDiscoveryLocation } from '@/src/utils/restaurantLocation';
+import {
+  PaymentSettingsHeader,
+  PaymentSettingsButton,
+  paymentSettingsStyles,
+} from '@/src/components/settings/PaymentSettingsUI';
 
 const DISH_IMAGES_BUCKET = 'dish-images';
 
@@ -272,15 +277,10 @@ export default function PayoutDetailsScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="chevron-back" size={24} color="#000" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>
-          {isCookOnboarding ? 'Add payout details' : 'Payment Settings'}
-        </Text>
-        <View style={{ width: 40 }} />
-      </View>
+      <PaymentSettingsHeader
+        title={isCookOnboarding ? 'Add payout details' : 'Payment Settings'}
+        onBack={() => router.back()}
+      />
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
@@ -290,8 +290,26 @@ export default function PayoutDetailsScreen() {
           contentContainerStyle={styles.formContainer}
           keyboardShouldPersistTaps="handled"
         >
+          {!isCookOnboarding && (
+            <>
+              <TouchableOpacity
+                accessibilityRole="button"
+                style={styles.optionsLink}
+                onPress={() => router.push('/(cook)/direct-payment-settings')}
+              >
+                <Ionicons name="qr-code-outline" size={24} color="#4CAF50" />
+                <View style={styles.optionsText}>
+                  <Text style={styles.sectionTitle}>Customer Payment Options</Text>
+                  <Text style={styles.body}>DuitNow QR and pay on collection</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color="#666" />
+              </TouchableOpacity>
+              <Text style={styles.sectionTitle}>Payout details</Text>
+            </>
+          )}
           <Text style={styles.instruction}>
-            Earnings from your completed orders are transferred to this bank account.
+            Platform payouts use this bank account. Direct customer QR payments go to the recipient
+            configured in Customer Payment Options.
           </Text>
 
           <Text style={styles.fieldLabel}>BANK NAME</Text>
@@ -330,19 +348,12 @@ export default function PayoutDetailsScreen() {
             />
           </View>
 
-          <TouchableOpacity
-            style={[styles.primaryButton, (!isComplete || saving) && styles.primaryButtonDisabled]}
+          <PaymentSettingsButton
+            title={isCookOnboarding ? 'Submit application' : 'Save payout details'}
             onPress={handleSubmit}
-            disabled={!isComplete || saving}
-          >
-            {saving ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.primaryButtonText}>
-                {isCookOnboarding ? 'Submit application' : 'Save payout details'}
-              </Text>
-            )}
-          </TouchableOpacity>
+            disabled={!isComplete}
+            loading={saving}
+          />
 
           <Text style={styles.disclaimer}>
             Double-check your account number — payouts to a wrong account can't be recalled.
@@ -354,48 +365,10 @@ export default function PayoutDetailsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
+  ...paymentSettingsStyles,
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-  },
-  headerTitle: { fontSize: 20, fontWeight: '700' },
-  backButton: { padding: 5 },
-  formContainer: { padding: 20 },
   instruction: { fontSize: 14, color: '#666', marginBottom: 20, textAlign: 'center' },
-  fieldLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#888',
-    marginBottom: 6,
-    letterSpacing: 0.6,
-  },
-  inputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    marginBottom: 18,
-  },
   inputIcon: { marginRight: 10 },
-  input: { flex: 1, fontSize: 16 },
-  primaryButton: {
-    backgroundColor: '#4CAF50',
-    borderRadius: 12,
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginTop: 12,
-    marginBottom: 15,
-  },
-  primaryButtonDisabled: { backgroundColor: '#a5d6a7' },
-  primaryButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
   disclaimer: {
     fontSize: 11,
     color: '#999',
@@ -403,4 +376,15 @@ const styles = StyleSheet.create({
     marginTop: 8,
     fontStyle: 'italic',
   },
+  optionsLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 28,
+  },
+  optionsText: { flex: 1 },
 });

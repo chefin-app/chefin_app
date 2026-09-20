@@ -26,6 +26,7 @@ type RefundState = {
     created_at: string;
   } | null;
   policy: {
+    directPayment?: boolean;
     windowMinutes: number;
     deadline: string | null;
     eligible: boolean;
@@ -194,7 +195,10 @@ export default function CustomerRefundRequestCard({
           <Text style={styles.title}>Refund request: {humanize(state.request.status)}</Text>
           <Text style={styles.body}>
             Chefin is manually reviewing your {humanize(state.request.reason_code).toLowerCase()}{' '}
-            claim.
+            claim.{' '}
+            {state.policy.directPayment
+              ? 'The cook must return any approved refund directly; Chefin does not hold these funds.'
+              : ''}
           </Text>
           {state.request.decision_note ? (
             <Text style={styles.note}>{state.request.decision_note}</Text>
@@ -227,6 +231,9 @@ export default function CustomerRefundRequestCard({
           <Text style={styles.body}>
             Submit a request within {state.policy.windowMinutes} minutes of completion. Every
             request is reviewed by a person.
+            {state.policy.directPayment
+              ? ' Any approved refund must be returned directly by the cook.'
+              : ''}
           </Text>
           <TouchableOpacity style={styles.openButton} onPress={() => setVisible(true)}>
             <Text style={styles.openButtonText}>Request a refund review</Text>

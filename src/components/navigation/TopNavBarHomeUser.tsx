@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/src/services/auth-context';
 import SearchBar from '@/src/components/filters/SearchBar';
 import LocationPromptModal from '@/src/components/location/LocationPromptModal';
+import { formatScheduledOrderTime } from '@/src/utils/formatScheduledOrderTime';
 import {
   formatCustomerOrderTime,
   useCustomerLocation,
@@ -108,7 +109,7 @@ export default function TopNavBarHomeUser({
           accessibilityRole="button"
           accessibilityLabel={
             location
-              ? `${fulfillmentPreference} area: ${location.label}. ${formatCustomerOrderTime(orderTimePreference)}`
+              ? `${fulfillmentPreference} area: ${location.label}. ${orderTimePreference.mode === 'scheduled' ? formatScheduledOrderTime(orderTimePreference.scheduledAt) : formatCustomerOrderTime(orderTimePreference)}`
               : 'Choose delivery or pickup area and time'
           }
         >
@@ -118,8 +119,11 @@ export default function TopNavBarHomeUser({
           <View style={styles.locationCopy}>
             <View style={styles.locationLabelRow}>
               <Text style={styles.locationEyebrow}>
-                {fulfillmentPreference === 'delivery' ? 'DELIVER' : 'PICKUP'}{' '}
-                {orderTimePreference.mode === 'asap' ? 'NOW' : 'LATER'}
+                {orderTimePreference.mode === 'scheduled'
+                  ? formatScheduledOrderTime(orderTimePreference.scheduledAt)
+                  : fulfillmentPreference === 'delivery'
+                    ? 'DELIVER NOW'
+                    : 'PICKUP NOW'}
               </Text>
               <Ionicons name="chevron-down" size={14} color="#526359" />
             </View>
@@ -171,7 +175,13 @@ const styles = StyleSheet.create({
   },
   locationCopy: { flex: 1 },
   locationLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 2 },
-  locationEyebrow: { color: '#637068', fontSize: 9, fontWeight: '800', letterSpacing: 0.7 },
+  locationEyebrow: {
+    color: '#637068',
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.3,
+    flexShrink: 1,
+  },
   locationValue: { color: '#17251B', fontSize: 16, fontWeight: '800', marginTop: 1 },
   header: {
     flexDirection: 'row',

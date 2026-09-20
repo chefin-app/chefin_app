@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
 import LocationPromptModal from '@/src/components/location/LocationPromptModal';
 
@@ -43,6 +43,7 @@ const mockCustomerLocation = {
 };
 
 jest.mock('@expo/vector-icons', () => ({ Ionicons: () => null }));
+jest.mock('expo-location', () => ({}));
 jest.mock('@/src/context/CustomerLocationContext', () => ({
   formatCustomerOrderTime: (preference: { mode: string }) =>
     preference.mode === 'asap' ? 'Now' : 'Later',
@@ -51,6 +52,20 @@ jest.mock('@/src/context/CustomerLocationContext', () => ({
 
 describe('LocationPromptModal', () => {
   beforeEach(() => jest.clearAllMocks());
+  it('opens exact delivery details after choosing a checkout location', async () => {
+    render(
+      <LocationPromptModal
+        visible
+        initialView="location"
+        onClose={jest.fn()}
+        delivery={{ initialAddress: null, onSave: jest.fn() }}
+      />
+    );
+    fireEvent.press(screen.getByText('Use my current area'));
+    await waitFor(() => expect(screen.getByText('Recipient name')).toBeTruthy());
+    expect(screen.getByText('Unit number (optional)')).toBeTruthy();
+    expect(screen.getByText('Street address')).toBeTruthy();
+  });
 
   it('opens both the location and time choices from the home summary', () => {
     render(<LocationPromptModal visible onClose={jest.fn()} />);

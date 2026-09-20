@@ -180,6 +180,7 @@ model order_disputes {
 }
 
 model profiles {
+  cook_payment_settings         cook_payment_settings?
   id                            String                            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   user_id                       String                            @unique @db.Uuid
   full_name                     String
@@ -341,7 +342,30 @@ model cook_payout_ledger {
 /// Checkout-level money record. Gateway settlement and cook payout are kept
 /// separate so a customer refund can hold earnings without pretending that a
 /// gateway refund has already completed.
+model cook_payment_settings {
+  cook_id            String   @id @db.Uuid
+  qr_enabled         Boolean  @default(false)
+  collection_enabled Boolean  @default(false)
+  recipient_name     String?
+  qr_image           String?
+  updated_at         DateTime @default(now()) @db.Timestamptz(6)
+  cook               profiles @relation(fields: [cook_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@schema("public")
+}
+
 model payment_transactions {
+  collection_model        String            @default("platform")
+  direct_state            String?
+  recipient_name          String?
+  qr_image                String?
+  buyer_reference         String?
+  accepted_at             DateTime?         @db.Timestamptz(6)
+  payment_deadline        DateTime?         @db.Timestamptz(6)
+  buyer_claimed_at        DateTime?         @db.Timestamptz(6)
+  confirmed_at            DateTime?         @db.Timestamptz(6)
+  confirmed_by            String?           @db.Uuid
+  direct_acknowledged_at  DateTime?         @db.Timestamptz(6)
   id                      String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   transaction_code        String            @unique @db.VarChar(30)
   checkout_id             String            @unique @db.Uuid

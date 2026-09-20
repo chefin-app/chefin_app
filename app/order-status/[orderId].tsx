@@ -18,6 +18,7 @@ import { useAuth } from '@/src/services/auth-context';
 import PickupCoordinationCard from '@/src/components/orders/PickupCoordinationCard';
 import BuyerPickupCodeCard from '@/src/components/orders/BuyerPickupCodeCard';
 import CustomerRefundRequestCard from '@/src/components/orders/CustomerRefundRequestCard';
+import DirectPaymentCard from '@/src/components/orders/DirectPaymentCard';
 import {
   formatScheduledWindow,
   getBuyerOrderTimingLabel,
@@ -173,6 +174,11 @@ export default function OrderStatusScreen() {
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+          <DirectPaymentCard
+            orderId={order.id}
+            accessToken={session?.access_token}
+            onChange={load}
+          />
           {/* ETA / outcome hero */}
           {isCancelled ? (
             <View style={[styles.hero, styles.heroCancelled]}>

@@ -1,14 +1,19 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
-import { useRouter } from 'expo-router';
-import { TouchableOpacity } from 'react-native';
+import { render, fireEvent } from '@testing-library/react-native';
 import MealCard from '@/src/components/cards/MealCard';
-import { act } from 'react-test-renderer';
 
 const mockRouterPush = jest.fn();
 jest.mock('expo-router', () => ({
   useRouter: () => ({ push: mockRouterPush }),
-})); // Mock useRouter hook
+}));
+jest.mock('@expo/vector-icons', () => ({ Ionicons: () => null, MaterialIcons: () => null }));
+const mockToggleFavourite = jest.fn();
+jest.mock('@/src/context/FavouritesContext', () => ({
+  useFavourites: () => ({ toggleFavourite: mockToggleFavourite, isFavourite: () => false }),
+}));
+jest.mock('@/src/services/auth-context', () => ({
+  useAuth: () => ({ session: { user: { id: 'buyer-1' } } }),
+}));
 
 describe('MealCard', () => {
   const meal = {
@@ -39,28 +44,29 @@ describe('MealCard', () => {
     const { getByText, getByTestId } = render(<MealCard {...meal} />);
     expect(getByText('Pasta Palace')).toBeTruthy();
     expect(getByText('Italian')).toBeTruthy();
-    expect(getByText('RM 12.99')).toBeTruthy();
-    expect(getByText(/Available/)).toBeTruthy();
-    //expect(getByText('9/10/2025')).toBeTruthy(); // Date format may vary based on locale, so this test might need adjustment
-
-    const mealImage = getByTestId('meal-image');
-    expect(mealImage).toBeTruthy();
-    const mealAvatar = getByTestId('meal-avatar');
-    expect(mealAvatar).toBeTruthy();
+    expect(getByText(/available/i)).toBeTruthy();
+    expect(getByTestId('meal-image')).toBeTruthy();
   });
 
   it('MealCard navigates to restaurant page', () => {
     const { getByTestId } = render(<MealCard {...meal} />);
     fireEvent.press(getByTestId('meal-restaurant-push'));
-    expect(mockRouterPush).toHaveBeenCalledWith('/restaurant/[id]');
+    expect(mockRouterPush).toHaveBeenCalledWith('/restaurant/123');
   });
 
   it('toggles favourite state when heart icon is pressed', () => {
     const { getByTestId } = render(<MealCard {...meal} />);
     const heartButton = getByTestId('favourite-button');
-    act(() => {
-      fireEvent.press(heartButton);
-    });
-    expect(heartButton).toBeTruthy();
+    fireEvent.press(heartButton);
+    expect(mockToggleFavourite).toHaveBeenCalledWith(
+      expect.objectContaining({ profileId: '123', restaurantName: 'Pasta Palace' })
+    );
+  });
+
+  it('renders the modern vertical feed layout', () => {
+    const { getByLabelText, getByText } = render(<MealCard {...meal} layout="feed" />);
+    expect(getByLabelText('View Pasta Palace')).toBeTruthy();
+    expect(getByText('Italian')).toBeTruthy();
+    expect(getByText('New')).toBeTruthy();
   });
 });

@@ -10,12 +10,18 @@ import { supabase } from '../supabaseClient';
 const router = express.Router();
 const UUID_PATTERN = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
 const FILTERS = new Set(['all', 'payouts', 'refunds', 'failed', 'held']);
+// QR snapshots may be large. The admin ledger needs receipt metadata, not QR image bytes.
+const PAYMENT_COLUMNS =
+  'id,transaction_code,checkout_id,representative_order_id,customer_id,cook_id,food_subtotal,delivery_fee,gross_amount,processing_fee,cook_payout,currency,payment_method,gateway,gateway_reference,status,payout_status,payout_available_at,payout_hold_reason,payout_released_at,payout_paid_at,created_at,updated_at,collection_model,direct_state,confirmed_at';
 const SORTS = new Set(['newest', 'oldest', 'amount_desc', 'amount_asc']);
 const DATE_RANGES = new Set(['all', 'today', '7d', '30d', '90d']);
 const ACTIVE_REFUND_STATUSES = ['pending', 'reviewing', 'approved', 'processing'];
 const REVIEW_ACTIONS = new Set(['review', 'approve', 'reject', 'processing', 'complete', 'fail']);
 
 type PaymentRow = {
+  collection_model: string;
+  direct_state: string | null;
+  confirmed_at: string | null;
   id: string;
   transaction_code: string;
   checkout_id: string;
@@ -110,7 +116,7 @@ async function loadPaymentContext(id: string) {
   if (!UUID_PATTERN.test(id)) return null;
   const { data: payment, error } = await supabase
     .from('payment_transactions')
-    .select('*')
+    .select(PAYMENT_COLUMNS)
     .eq('id', id)
     .maybeSingle();
   if (error) throw error;
@@ -187,6 +193,8 @@ const presentPayment = (
     grossAmount: money(payment.gross_amount),
     cookPayout: money(payment.cook_payout),
     paymentMethod: payment.payment_method,
+    collectionModel: payment.collection_model,
+    directState: payment.direct_state,
     paymentStatus: payment.status,
     payoutStatus: payment.payout_status,
     payoutAvailableAt: payment.payout_available_at,
@@ -211,7 +219,10 @@ router.get('/', async (req, res) => {
   );
   try {
     const [paymentsResult, refundsResult, profilesResult] = await Promise.all([
-      supabase.from('payment_transactions').select('*').order('created_at', { ascending: false }),
+      supabase
+        .from('payment_transactions')
+        .select(PAYMENT_COLUMNS)
+        .order('created_at', { ascending: false }),
       supabase.from('refund_requests').select('*').order('created_at', { ascending: false }),
       supabase.from('profiles').select('id, user_id, full_name, restaurant_name, profile_image'),
     ]);
@@ -300,7 +311,9 @@ router.get('/', async (req, res) => {
     const totalPages = Math.max(1, Math.ceil(total / pageSize));
     const safePage = Math.min(page, totalPages);
     const pageItems = items.slice((safePage - 1) * pageSize, safePage * pageSize);
-    const succeeded = payments.filter(payment => payment.status !== 'failed');
+    const succeeded = payments.filter(payment =>
+      ['succeeded', 'refund_pending'].includes(payment.status)
+    );
     res.json({
       payments: pageItems,
       stats: {
@@ -402,6 +415,8 @@ router.post('/:id/hold', async (req: AdminRequest, res) => {
     if (context.payment.payout_status === 'paid') {
       return res.status(409).json({ error: 'A paid payout can no longer be held.' });
     }
+    if (context.payment.collection_model === 'direct_to_cook')
+      return res.status(409).json({ error: 'Chefin does not hold direct cook payments.' });
     const now = new Date().toISOString();
     const { error } = await supabase
       .from('payment_transactions')
@@ -438,6 +453,8 @@ router.post('/:id/release', async (req: AdminRequest, res) => {
         .status(409)
         .json({ error: 'Resolve the active refund request before releasing payout.' });
     }
+    if (context.payment.collection_model === 'direct_to_cook')
+      return res.status(409).json({ error: 'Direct cook payments have no platform payout.' });
     if (
       !context.payment.payout_available_at ||
       new Date(context.payment.payout_available_at).getTime() > Date.now()
@@ -574,6 +591,17 @@ router.patch('/refunds/:refundId', async (req: AdminRequest, res) => {
       .maybeSingle();
     if (refundError) throw refundError;
     if (!refund) return res.status(404).json({ error: 'Refund request not found.' });
+    const { data: refundPayment, error: refundPaymentError } = await supabase
+      .from('payment_transactions')
+      .select('collection_model,confirmed_at')
+      .eq('id', refund.transaction_id)
+      .single();
+    if (refundPaymentError) throw refundPaymentError;
+    const isDirect = refundPayment.collection_model === 'direct_to_cook';
+    if (isDirect && !refundPayment.confirmed_at && action !== 'reject' && action !== 'review')
+      return res
+        .status(409)
+        .json({ error: 'Verify receipt of the original payment before approving a refund.' });
     const allowed: Record<string, string[]> = {
       pending: ['review', 'approve', 'reject'],
       reviewing: ['approve', 'reject'],
@@ -613,6 +641,23 @@ router.patch('/refunds/:refundId', async (req: AdminRequest, res) => {
       .maybeSingle();
     if (error) throw error;
     if (!updated) return res.status(409).json({ error: 'The refund changed. Refresh and retry.' });
+    if (isDirect && action === 'approve') {
+      const { data: paymentCook } = await supabase
+        .from('payment_transactions')
+        .select('cook_id')
+        .eq('id', refund.transaction_id)
+        .single();
+      const { data: cook } = paymentCook
+        ? await supabase.from('profiles').select('user_id').eq('id', paymentCook.cook_id).single()
+        : { data: null };
+      if (cook?.user_id)
+        await createNotification(cook.user_id, {
+          type: 'admin_message',
+          title: 'Direct refund required',
+          body: `Chefin approved a refund of RM ${Number(refund.requested_amount).toFixed(2)}. Return the payment directly to the buyer and send the transfer reference to support. ${note}`,
+          data: { order_id: refund.representative_order_id },
+        }).catch(console.error);
+    }
 
     if (nextStatus === 'rejected') {
       const { data: payment } = await supabase
@@ -692,7 +737,9 @@ router.patch('/refunds/:refundId', async (req: AdminRequest, res) => {
         const messages: Record<string, { title: string; body: string }> = {
           approved: {
             title: 'Refund request approved',
-            body: 'Chefin approved your request. The refund still needs to be processed by the payment gateway.',
+            body: isDirect
+              ? 'Chefin approved your request. The cook must return the payment directly to you. Approval does not mean the money has been returned.'
+              : 'Chefin approved your request. The refund still needs to be processed by the payment gateway.',
           },
           rejected: {
             title: 'Refund request reviewed',
@@ -704,7 +751,9 @@ router.patch('/refunds/:refundId', async (req: AdminRequest, res) => {
           },
           failed: {
             title: 'Refund processing delayed',
-            body: 'The payment gateway did not complete your refund. Chefin support will retry it.',
+            body: isDirect
+              ? 'Your direct refund has not been confirmed. Chefin support will follow up with the cook.'
+              : 'The payment gateway did not complete your refund. Chefin support will retry it.',
           },
         };
         await createNotification(customer.user_id, {

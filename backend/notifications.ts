@@ -127,8 +127,8 @@ export function notifyBuyerOrderPlaced(
 ) {
   return createNotification(buyerUserId, {
     type: 'order_placed',
-    title: 'Payment received',
-    body: `${formatRM(totalPaid)} paid for ${itemCount} item${itemCount === 1 ? '' : 's'}. Your order has been sent to the cook to confirm.`,
+    title: 'Order sent to cook',
+    body: `Your order for ${itemCount} item${itemCount === 1 ? '' : 's'} (${formatRM(totalPaid)}) is awaiting cook acceptance. Open your order for payment instructions.`,
     data: { order_ids: orderIds },
   });
 }
@@ -164,7 +164,7 @@ export function notifyBuyerOrderCancelled(buyerUserId: string, o: OrderContext) 
   return createNotification(buyerUserId, {
     type: 'order_cancelled',
     title: 'Order cancelled',
-    body: `Your order for ${o.quantity}× ${o.listingTitle} was cancelled by the cook. Your payment of ${formatRM(o.totalPrice)} will be refunded.`,
+    body: `Your order for ${o.quantity}× ${o.listingTitle} was cancelled by the cook. If you paid directly, contact the cook to arrange your refund. Chefin can help review a dispute.`,
     data: { order_id: o.orderId },
   });
 }
@@ -273,16 +273,34 @@ export function notifyCookNewOrder(cookUserId: string, o: OrderContext) {
   });
 }
 
-export function notifyCookPayoutSent(cookUserId: string, o: OrderContext) {
+async function isDirectOrder(orderId: string): Promise<boolean> {
+  const { data: order } = await supabase
+    .from('orders')
+    .select('checkout_id')
+    .eq('id', orderId)
+    .maybeSingle();
+  if (!order) return false;
+  const { data } = await supabase
+    .from('payment_transactions')
+    .select('collection_model')
+    .eq('checkout_id', order.checkout_id)
+    .maybeSingle();
+  return data?.collection_model === 'direct_to_cook';
+}
+
+export async function notifyCookPayoutSent(cookUserId: string, o: OrderContext) {
+  const direct = await isDirectOrder(o.orderId);
   return createNotification(cookUserId, {
     type: 'payout_sent',
     title: 'Order fulfilled',
-    body: `${formatRM(o.totalPrice)} for ${o.quantity}× ${o.listingTitle} will become payable after the customer refund window closes.`,
+    body: direct
+      ? 'Order completed. Payment was made directly to you; no Chefin payout is due.'
+      : `${formatRM(o.totalPrice)} for ${o.quantity}× ${o.listingTitle} will become payable after the customer refund window closes.`,
     data: { order_id: o.orderId, credited_amount: Number(o.totalPrice) },
   });
 }
 
-export function notifyCookCheckoutFulfilled(
+export async function notifyCookCheckoutFulfilled(
   cookUserId: string,
   checkout: {
     checkoutId: string;
@@ -290,10 +308,13 @@ export function notifyCookCheckoutFulfilled(
     creditedAmount: number;
   }
 ) {
+  const direct = await isDirectOrder(checkout.orderIds[0]);
   return createNotification(cookUserId, {
     type: 'payout_sent',
     title: 'Order fulfilled',
-    body: `${formatRM(checkout.creditedAmount)} will become payable after the customer refund window closes.`,
+    body: direct
+      ? 'Order completed. Payment was made directly to you; no Chefin payout is due.'
+      : `${formatRM(checkout.creditedAmount)} will become payable after the customer refund window closes.`,
     data: {
       order_id: checkout.orderIds[0],
       order_ids: checkout.orderIds,
@@ -303,18 +324,20 @@ export function notifyCookCheckoutFulfilled(
   });
 }
 
-export function notifyCookDeliveryPayout(
+export async function notifyCookDeliveryPayout(
   cookUserId: string,
   foodTotal: number,
   deliveryDeduction: number,
   orderIds: string[]
 ) {
   const net = Math.max(0, foodTotal - deliveryDeduction);
+  const direct = await isDirectOrder(orderIds[0]);
   return createNotification(cookUserId, {
     type: 'payout_sent',
     title: 'Order fulfilled',
-    body:
-      deliveryDeduction > 0
+    body: direct
+      ? 'Delivery completed. You received the buyer payment directly. Courier charges are recorded separately; no Chefin payout is due.'
+      : deliveryDeduction > 0
         ? `${formatRM(net)} will become payable after the refund window, after the ${formatRM(deliveryDeduction)} Lalamove fee you covered.`
         : `${formatRM(foodTotal)} will become payable after the customer refund window closes.`,
     data: {

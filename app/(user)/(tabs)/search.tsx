@@ -20,6 +20,7 @@ import {
 import { getListingsRatingSummary, getRatingSummary } from '@/src/utils/ratings';
 import type { Listing } from '@/src/types/models';
 import { useCustomerLocation } from '@/src/context/CustomerLocationContext';
+import { useScheduledDiscovery } from '@/src/hooks/useScheduledDiscovery';
 import { useAuth } from '@/src/services/auth-context';
 
 type DiscoveryMode = 'all' | 'availableNow' | 'topRated' | 'nearest';
@@ -70,7 +71,8 @@ const CardSeparator = () => <View style={styles.cardSeparator} />;
 const SearchScreen = () => {
   const router = useRouter();
   const { user } = useAuth();
-  const { location } = useCustomerLocation();
+  const { location, orderTimePreference } = useCustomerLocation();
+  const scheduled = orderTimePreference.mode === 'scheduled';
   const params = useLocalSearchParams<{ q?: string; discover?: string; title?: string }>();
   const discoveryMode = parseDiscoveryMode(params.discover);
   const [searchQuery, setSearchQuery] = useState(params.q ?? '');
@@ -231,10 +233,11 @@ const SearchScreen = () => {
     };
   }, [restaurantData, today]);
 
+  const scheduledDiscovery = useScheduledDiscovery(restaurantData ?? []);
   const visibleRestaurants = useMemo(() => {
-    const allListings = restaurantData ?? [];
+    const allListings = scheduledDiscovery.listings;
 
-    if (discoveryMode === 'availableNow') {
+    if (discoveryMode === 'availableNow' && !scheduled) {
       return uniqueByCook(
         allListings.filter(listing =>
           isSummaryAvailableNow(listing.cook_id, availabilitySummaries, today)
@@ -266,7 +269,7 @@ const SearchScreen = () => {
     // to the same home restaurant. Every result mode should render one card
     // per cook while preserving the first matching dish as its representative.
     return uniqueByCook(allListings);
-  }, [availabilitySummaries, discoveryMode, restaurantData, today]);
+  }, [availabilitySummaries, discoveryMode, scheduledDiscovery.listings, today, scheduled]);
 
   const clearHistory = async () => {
     try {
@@ -291,7 +294,8 @@ const SearchScreen = () => {
     setLocationPromptVisible(true);
   };
 
-  const isLoading = queryPending || restaurantLoading || availabilityLoading;
+  const isLoading =
+    queryPending || restaurantLoading || availabilityLoading || scheduledDiscovery.loading;
   const configuredDiscovery = discoveryMode ? discoveryContent[discoveryMode] : null;
   const discoveryTitle =
     typeof params.title === 'string' && params.title.trim()
@@ -357,6 +361,9 @@ const SearchScreen = () => {
               </View>
             )}
 
+            {!!scheduledDiscovery.error && (
+              <Text style={styles.errorText}>{scheduledDiscovery.error}</Text>
+            )}
             {restaurantError && (
               <View style={styles.statusRow}>
                 <Ionicons name="alert-circle-outline" size={18} color="#B3261E" />

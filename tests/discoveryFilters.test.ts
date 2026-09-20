@@ -1,4 +1,4 @@
-import { filterDiscoveryListings } from '@/src/utils/discoveryFilters';
+import { filterDiscoveryListings, hasActiveDiscoveryFilters } from '@/src/utils/discoveryFilters';
 
 const profile = {
   user_id: 'user-1',
@@ -20,6 +20,25 @@ const listing = (id: string, cuisine: string) => ({
 });
 
 describe('discovery listing filters', () => {
+  it.each([
+    ['cuisine', { cuisine: 'thai', dietary: [], certified: false, availableNow: false }],
+    ['dietary', { cuisine: 'all', dietary: ['vegetarian'], certified: false, availableNow: false }],
+    ['certified', { cuisine: 'all', dietary: [], certified: true, availableNow: false }],
+    ['available now', { cuisine: 'all', dietary: [], certified: false, availableNow: true }],
+  ])('uses vertical-only discovery when the %s filter is active', (_name, filters) => {
+    expect(hasActiveDiscoveryFilters(filters)).toBe(true);
+  });
+
+  it('keeps discovery sections when all filters are clear', () => {
+    expect(
+      hasActiveDiscoveryFilters({
+        cuisine: 'all',
+        dietary: [],
+        certified: false,
+        availableNow: false,
+      })
+    ).toBe(false);
+  });
   it('filters the actual dish rows before a restaurant representative is selected', () => {
     const japaneseDish = listing('dish-japanese', 'Japanese');
     const malaysianDish = listing('dish-malaysian', 'Malaysian');

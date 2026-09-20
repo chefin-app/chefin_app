@@ -59,7 +59,7 @@ export function DeliveryAddressModal({
   initialAddress: DeliveryAddress | null;
   defaults?: Partial<DeliveryAddress>;
   onClose: () => void;
-  onSave: (address: DeliveryAddress) => void;
+  onSave: (address: DeliveryAddress) => void | Promise<void>;
 }) {
   const [draft, setDraft] = useState<Draft>(() => emptyDraft(initialAddress ?? defaults));
   const [locating, setLocating] = useState(false);
@@ -143,7 +143,7 @@ export function DeliveryAddressModal({
         );
         return;
       }
-      onSave({
+      await onSave({
         recipientName: draft.recipientName.trim(),
         phoneNumber: draft.phoneNumber.trim(),
         addressLine1: draft.addressLine1.trim(),

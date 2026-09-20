@@ -79,6 +79,17 @@ export async function runOverdueOrderSweep(now = new Date()): Promise<void> {
     .in('status', ['pending', 'confirmed', 'ready']);
   if (error) throw error;
 
+  const { data: acceptedDirectPayments, error: directError } = await supabase
+    .from('payment_transactions')
+    .select('checkout_id')
+    .eq('collection_model', 'direct_to_cook')
+    .not('accepted_at', 'is', null)
+    .is('confirmed_at', null);
+  if (directError) throw directError;
+  const awaitingDirectPayment = new Set(
+    (acceptedDirectPayments ?? []).map(payment => payment.checkout_id)
+  );
+
   const byCheckout = new Map<string, LiveOrder[]>();
   for (const order of (data ?? []) as unknown as LiveOrder[]) {
     byCheckout.set(order.checkout_id, [...(byCheckout.get(order.checkout_id) ?? []), order]);
@@ -90,6 +101,7 @@ export async function runOverdueOrderSweep(now = new Date()): Promise<void> {
     const phase = getOrderMonitoringPhase(lines.map(line => line.status));
     const pendingLines = lines.filter(line => line.status === 'pending');
     if (phase === 'awaiting_acceptance') {
+      if (awaitingDirectPayment.has(checkoutId)) continue;
       const createdAt = pendingLines
         .map(line => line.created_at)
         .filter((value): value is string => Boolean(value))
@@ -176,7 +188,7 @@ export async function runOverdueOrderSweep(now = new Date()): Promise<void> {
                 : 'Critical: Chefin order is over 60 minutes late',
             message:
               alert.alert_type === 'acceptance_overdue_20'
-                ? 'A paid order is still awaiting cook acceptance after 20 minutes.'
+                ? 'An order is still awaiting cook acceptance after 20 minutes.'
                 : 'An accepted order has not been fulfilled 60 minutes after its expected time.',
           })
         )
@@ -196,7 +208,8 @@ export async function runOverdueOrderSweep(now = new Date()): Promise<void> {
   const pendingCheckoutIds = new Set(
     [...byCheckout]
       .filter(
-        ([, lines]) =>
+        ([checkoutId, lines]) =>
+          !awaitingDirectPayment.has(checkoutId) &&
           getOrderMonitoringPhase(lines.map(line => line.status)) === 'awaiting_acceptance'
       )
       .map(([checkoutId]) => checkoutId)

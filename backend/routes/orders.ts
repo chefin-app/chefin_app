@@ -2,6 +2,7 @@ import express from 'express';
 import { randomUUID } from 'node:crypto';
 import { supabase } from '../supabaseClient';
 import {
+  createNotification,
   notifyBuyerOrderPlaced,
   notifyBuyerOrderConfirmed,
   notifyBuyerOrderReady,
@@ -28,11 +29,7 @@ import {
   type RequestedOptionGroup,
   type SelectedOptionSnapshot,
 } from '../menuOptionService';
-import {
-  bookQuotedDeliveryJob,
-  cancelDeliveryJob,
-  cancelDeliveryJobWhenUnused,
-} from '../deliveryService';
+import { cancelDeliveryJob, cancelDeliveryJobWhenUnused } from '../deliveryService';
 import {
   ensurePickupHandoff,
   getPickupHandoffForAccount,
@@ -43,6 +40,7 @@ import {
 import { notifyAdminsOfCriticalOrderAlert } from '../orderAlerts';
 import { queueCancelledCheckoutRefund, recordCheckoutPayment } from '../paymentService';
 import { getRefundWindowMinutes, validateRefundRequest } from '../paymentPolicy';
+import { validateDirectMethod } from '../directPaymentPolicy';
 import { findServiceRegion } from '../serviceRegions';
 
 const router = express.Router();
@@ -244,7 +242,16 @@ router.post('/cart-status', async (req, res) => {
 
 // POST / - Place an order from the cart
 router.post('/', requireActiveAccount, async (req: AccountRequest, res) => {
-  const { userId, items, fulfillmentType, deliveryJobIds } = req.body as {
+  const {
+    userId,
+    items,
+    fulfillmentType,
+    deliveryJobIds,
+    paymentMethod,
+    directPaymentAcknowledged,
+  } = req.body as {
+    paymentMethod?: string;
+    directPaymentAcknowledged?: boolean;
     userId?: string;
     items: {
       listingId: string;
@@ -527,6 +534,19 @@ router.post('/', requireActiveAccount, async (req: AccountRequest, res) => {
         .json({ error: 'Delivery quotes cannot be attached to a pickup order.' });
     }
 
+    const { data: paymentSettings, error: settingsError } = await supabase
+      .from('cook_payment_settings')
+      .select('*')
+      .eq('cook_id', cookIds[0])
+      .maybeSingle();
+    if (settingsError) throw settingsError;
+    const methodError = validateDirectMethod(
+      paymentMethod,
+      fulfillmentType ?? 'pickup',
+      paymentSettings,
+      directPaymentAcknowledged
+    );
+    if (methodError) return res.status(400).json({ error: methodError });
     const checkoutId = randomUUID();
     const orderRows = items.map((item, index) => {
       const scheduled = normalizeServiceDate(item.pickupDate);
@@ -555,7 +575,9 @@ router.post('/', requireActiveAccount, async (req: AccountRequest, res) => {
             ? deliveryJobByCook.get(requestedListingById.get(item.listingId)!.cook_id)!.id
             : null,
         status: 'pending',
-        payment_status: 'paid', // mock-paid via locally-saved card
+        // Order acceptance is pending; the separate payment status must use
+        // the existing orders_payment_status_check vocabulary.
+        payment_status: 'unpaid',
       };
     });
 
@@ -595,36 +617,7 @@ router.post('/', requireActiveAccount, async (req: AccountRequest, res) => {
       await rollbackReservations();
       return res.status(400).json({ error: error.message });
     }
-    // Book only after the order rows exist. If any fleet booking fails, undo
-    // every row and reservation so the customer never receives a half-order.
-    if ((fulfillmentType ?? 'pickup') === 'delivery') {
-      try {
-        for (const job of deliveryJobByCook.values()) await bookQuotedDeliveryJob(job.id);
-      } catch (bookingError) {
-        for (const order of data ?? []) {
-          await releaseListingCapacityForOrder(order.id).catch(error =>
-            console.error('Delivery rollback capacity release failed:', error)
-          );
-        }
-        await supabase
-          .from('orders')
-          .delete()
-          .in(
-            'id',
-            (data ?? []).map(order => order.id)
-          );
-        await Promise.allSettled(
-          [...deliveryJobByCook.values()].map(job => cancelDeliveryJob(job.id))
-        );
-        reservations.splice(0, reservations.length);
-        return res.status(409).json({
-          error:
-            bookingError instanceof Error
-              ? `Lalamove could not be booked: ${bookingError.message}`
-              : 'Lalamove could not be booked. Request a new quote and try again.',
-        });
-      }
-    }
+    // Direct orders are booked by the cook only after confirming bank receipt.
 
     const createdOrders = data ?? [];
     const foodTotal = createdOrders.reduce((sum, order) => sum + Number(order.total_price), 0);
@@ -647,6 +640,11 @@ router.post('/', requireActiveAccount, async (req: AccountRequest, res) => {
         deliveryFee: deliveryTotal,
         cookDeliveryCharge,
         createdAt: createdOrders[0].created_at,
+        direct: {
+          method: paymentMethod!,
+          recipient_name: paymentSettings?.recipient_name ?? null,
+          qr_image: paymentMethod === 'cook_qr' ? (paymentSettings?.qr_image ?? null) : null,
+        },
       });
     } catch (paymentRecordError) {
       for (const order of createdOrders) {
@@ -925,6 +923,72 @@ router.patch('/:id/status', requireActiveAccount, async (req: AccountRequest, re
 
     const currentStatus = order.status as CookOrderStatus | null;
     const requestedStatus = status as CookOrderStatus;
+    if (
+      (currentStatus === 'pending' && requestedStatus === 'confirmed') ||
+      requestedStatus === 'cancelled'
+    ) {
+      const { data: direct, error: directError } = await supabase
+        .from('payment_transactions')
+        .select('collection_model')
+        .eq('checkout_id', order.checkout_id)
+        .maybeSingle();
+      if (directError) throw directError;
+      if (!direct)
+        return res
+          .status(409)
+          .json({ error: 'Payment setup is still in progress. Refresh this order shortly.' });
+      if (direct?.collection_model === 'direct_to_cook') {
+        if (requestedStatus === 'cancelled') {
+          if (currentStatus !== 'cancelled') {
+            const { error: cancelError } = await supabase.rpc('direct_payment_action', {
+              p_order: id,
+              p_actor: profile.id,
+              p_action: 'cancel',
+              p_reference: cancellationReason?.trim() || 'Cook cancelled the checkout',
+            });
+            if (cancelError) return res.status(409).json({ error: cancelError.message });
+          }
+          const { data: cancelledLines, error: cancelledError } = await supabase
+            .from('orders')
+            .select('id')
+            .eq('checkout_id', order.checkout_id);
+          if (cancelledError) throw cancelledError;
+          for (const line of cancelledLines ?? []) await releaseListingCapacityForOrder(line.id);
+          await cancelDeliveryJobWhenUnused(order.delivery_job_id);
+          await queueCancelledCheckoutRefund({
+            checkoutId: order.checkout_id,
+            requestedBy: req.account!.userId,
+            source: 'system',
+            reason: cancellationReason?.trim() || 'Cook cancelled a directly paid order.',
+          });
+          return res.json({ success: true, directPayment: true });
+        }
+        const { error: acceptError } = await supabase.rpc('direct_payment_action', {
+          p_order: id,
+          p_actor: profile.id,
+          p_action: 'accept',
+          p_reference: null,
+        });
+        if (acceptError) return res.status(409).json({ error: acceptError.message });
+        const { data: buyer } = await supabase
+          .from('profiles')
+          .select('user_id')
+          .eq('id', order.customer_id)
+          .maybeSingle();
+        if (buyer?.user_id)
+          await createNotification(buyer.user_id, {
+            type: 'admin_message',
+            title: 'Cook accepted your order',
+            body: 'Open your order for direct payment instructions.',
+            data: { order_id: id },
+          }).catch(console.error);
+        return res.json({
+          success: true,
+          directPayment: true,
+          message: 'Open the order to manage its payment.',
+        });
+      }
+    }
     if (!currentStatus || !ORDER_STATUSES.has(currentStatus)) {
       return res.status(409).json({ error: 'This order is not in a recognised workflow state.' });
     }
@@ -1167,9 +1231,12 @@ router.get('/:id/refund-request', requireReadableAccount, async (req: AccountReq
     res.json({
       request,
       policy: {
+        directPayment: context.transaction.collection_model === 'direct_to_cook',
         windowMinutes: getRefundWindowMinutes(),
         deadline,
         eligible:
+          (context.transaction.collection_model !== 'direct_to_cook' ||
+            Boolean(context.transaction.confirmed_at)) &&
           context.lines.every(line => line.status === 'completed') &&
           Boolean(deadline) &&
           Date.now() <= new Date(deadline!).getTime() &&

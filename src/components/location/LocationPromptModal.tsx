@@ -27,6 +27,10 @@ import {
   type SavedCustomerLocation,
 } from '@/src/context/CustomerLocationContext';
 import { getLocalDateKey } from '@/src/utils/listingAvailability';
+import {
+  DeliveryAddressModal,
+  type DeliveryAddress,
+} from '@/src/components/delivery/DeliveryAddressModal';
 
 type PickerView = 'summary' | 'location' | 'region' | 'time';
 type LocationTab = 'recent' | 'suggested' | 'saved';
@@ -35,6 +39,11 @@ interface LocationPromptModalProps {
   visible: boolean;
   onClose: () => void;
   initialView?: Extract<PickerView, 'summary' | 'location'>;
+  delivery?: {
+    initialAddress: DeliveryAddress | null;
+    defaults?: Partial<DeliveryAddress>;
+    onSave: (address: DeliveryAddress) => void;
+  };
 }
 
 const MALAYSIA_UTC_OFFSET = '+08:00';
@@ -103,6 +112,7 @@ export default function LocationPromptModal({
   visible,
   onClose,
   initialView = 'summary',
+  delivery,
 }: LocationPromptModalProps) {
   const {
     location,
@@ -125,6 +135,7 @@ export default function LocationPromptModal({
     clearError,
   } = useCustomerLocation();
   const [view, setView] = useState<PickerView>(initialView);
+  const [deliveryDetailsOpen, setDeliveryDetailsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<LocationTab>('recent');
   const [query, setQuery] = useState('');
   const [searching, setSearching] = useState(false);
@@ -148,6 +159,7 @@ export default function LocationPromptModal({
     if (!visible) return;
     setPickerOpenedAt(new Date());
     setView(initialView);
+    setDeliveryDetailsOpen(false);
     setActiveTab('recent');
     setQuery('');
     setSearchResults([]);
@@ -195,7 +207,10 @@ export default function LocationPromptModal({
   };
 
   const chooseCurrentLocation = async () => {
-    if (await selectCurrentLocation()) setView('summary');
+    if (await selectCurrentLocation()) {
+      if (delivery) setDeliveryDetailsOpen(true);
+      else setView('summary');
+    }
   };
 
   const chooseCandidate = async (
@@ -209,7 +224,8 @@ export default function LocationPromptModal({
     });
     if (selected) {
       setQuery('');
-      setView('summary');
+      if (delivery) setDeliveryDetailsOpen(true);
+      else setView('summary');
     }
   };
 
@@ -335,12 +351,6 @@ export default function LocationPromptModal({
           <Ionicons name="chevron-forward" size={20} color="#8E9891" />
         </TouchableOpacity>
       </View>
-      {fulfillmentPreference === 'delivery' ? (
-        <Text style={styles.approximateNote}>
-          This is an approximate discovery area. You&apos;ll enter the exact delivery address at
-          checkout.
-        </Text>
-      ) : null}
 
       {!region.deliveryAvailable ? (
         <View style={styles.warningCard}>
@@ -376,9 +386,9 @@ export default function LocationPromptModal({
         <View style={styles.pageHeader}>
           <TouchableOpacity
             style={styles.pageBackButton}
-            onPress={() => setView('summary')}
+            onPress={() => (delivery ? onClose() : setView('summary'))}
             accessibilityRole="button"
-            accessibilityLabel="Back to delivery preferences"
+            accessibilityLabel={delivery ? 'Back to cart' : 'Back to delivery preferences'}
           >
             <Ionicons name="arrow-back" size={24} color="#26302A" />
           </TouchableOpacity>
@@ -689,12 +699,46 @@ export default function LocationPromptModal({
   );
 
   const fullScreen = view === 'location' || view === 'region';
+  if (delivery && deliveryDetailsOpen && visible) {
+    const sameAddress =
+      delivery.initialAddress &&
+      delivery.initialAddress.latitude === location?.latitude &&
+      delivery.initialAddress.longitude === location?.longitude;
+    return (
+      <DeliveryAddressModal
+        visible
+        initialAddress={null}
+        defaults={{
+          ...delivery.defaults,
+          ...delivery.initialAddress,
+          addressLine1: sameAddress
+            ? delivery.initialAddress?.addressLine1
+            : (location?.label ?? ''),
+          addressLine2: sameAddress ? delivery.initialAddress?.addressLine2 : '',
+          city: sameAddress ? delivery.initialAddress?.city : '',
+          state: sameAddress ? delivery.initialAddress?.state : '',
+          postcode: sameAddress ? delivery.initialAddress?.postcode : '',
+          deliveryInstructions: sameAddress ? delivery.initialAddress?.deliveryInstructions : '',
+          latitude: location?.latitude,
+          longitude: location?.longitude,
+        }}
+        onClose={() => setDeliveryDetailsOpen(false)}
+        onSave={delivery.onSave}
+      />
+    );
+  }
   return (
     <Modal
       visible={visible}
       transparent
       animationType={fullScreen ? 'fade' : 'slide'}
-      onRequestClose={view === 'summary' ? close : () => setView('summary')}
+      onRequestClose={
+        delivery && view === 'location'
+          ? onClose
+          : view === 'summary'
+            ? close
+            : () => setView('summary')
+      }
       statusBarTranslucent
     >
       <KeyboardAvoidingView

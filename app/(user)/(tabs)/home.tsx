@@ -3,9 +3,9 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import {
   StyleSheet,
   ScrollView,
+  FlatList,
   View,
   Image,
-  FlatList,
   Text,
   TouchableOpacity,
   ActivityIndicator,
@@ -20,6 +20,7 @@ import LoadingSpinner from '@/src/components/feedback/LoadingSpinner';
 
 import PromoImage from '@/src/assets/images/promo-food.webp';
 import MealCard from '@/src/components/cards/MealCard';
+import { formatScheduledOrderTime } from '@/src/utils/formatScheduledOrderTime';
 import FloatingCartButton from '@/src/components/navigation/FloatingCartButton';
 import LocationPromptModal from '@/src/components/location/LocationPromptModal';
 
@@ -30,11 +31,12 @@ import {
   isSummaryAvailableNow,
   type AvailabilitySummaryMap,
 } from '@/src/utils/listingAvailability';
-import { getListingsRatingSummary, getRatingSummary } from '@/src/utils/ratings';
 import { fetchCooks, fetchNearestCooks } from '@/src/utils/fetchCooks';
 import { useCustomerLocation } from '@/src/context/CustomerLocationContext';
 import { useAuth } from '@/src/services/auth-context';
-import { filterDiscoveryListings } from '@/src/utils/discoveryFilters';
+import { supabase } from '@/src/utils/supabaseClient';
+import { filterDiscoveryListings, hasActiveDiscoveryFilters } from '@/src/utils/discoveryFilters';
+import { useScheduledDiscovery } from '@/src/hooks/useScheduledDiscovery';
 
 interface ListingWithProfile extends Listing {
   profiles: Profile;
@@ -52,14 +54,68 @@ function uniqueByCook(listings: ListingWithProfile[]): ListingWithProfile[] {
   });
 }
 
-const RailSeparator = () => <View style={styles.railSeparator} />;
-
 export default function HomeScreen() {
   const router = useRouter();
   const { user } = useAuth();
-  const { location, prompted: locationPrompted, loading: locationLoading } = useCustomerLocation();
-  const [popularChefins, setPopularChefins] = useState<ListingWithProfile[]>([]);
-  const [nearestChefins, setNearestChefins] = useState<ListingWithProfile[]>([]);
+  const [orderHistory, setOrderHistory] = useState<{ userId: string; cookIds: string[] } | null>(
+    null
+  );
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      if (!user) {
+        setOrderHistory(null);
+        return;
+      }
+      const loadHistory = async () => {
+        try {
+          const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('user_id', user.id)
+            .single();
+          if (profileError || !profile) throw profileError;
+          const { data, error } = await supabase
+            .from('orders')
+            .select('listings(cook_id)')
+            .eq('customer_id', profile.id)
+            .eq('status', 'completed')
+            .order('created_at', { ascending: false })
+            .limit(100);
+          if (error) throw error;
+          const rows = (data ?? []) as unknown as { listings: { cook_id: string } | null }[];
+          if (active)
+            setOrderHistory({
+              userId: user.id,
+              cookIds: [
+                ...new Set(
+                  rows.flatMap(row => (row.listings?.cook_id ? [row.listings.cook_id] : []))
+                ),
+              ],
+            });
+        } catch {
+          if (active) setOrderHistory(null);
+        }
+      };
+      void loadHistory();
+      return () => {
+        active = false;
+      };
+    }, [user])
+  );
+  const {
+    location,
+    prompted: locationPrompted,
+    loading: locationLoading,
+    orderTimePreference,
+  } = useCustomerLocation();
+  const scheduled = orderTimePreference.mode === 'scheduled';
+  const [rawPopular, setPopularChefins] = useState<ListingWithProfile[]>([]);
+  const [rawNearest, setNearestChefins] = useState<ListingWithProfile[]>([]);
+  const scheduledPopular = useScheduledDiscovery(rawPopular);
+  const scheduledNearest = useScheduledDiscovery(rawNearest);
+  const popularChefins = scheduledPopular.listings;
+  const nearestChefins = scheduledNearest.listings;
   const [nearestLoading, setNearestLoading] = useState(false);
   const [nearestError, setNearestError] = useState<string | null>(null);
   const nearestRequestId = useRef(0);
@@ -75,31 +131,27 @@ export default function HomeScreen() {
   const [availabilitySummaries, setAvailabilitySummaries] = useState<AvailabilitySummaryMap>({});
 
   const [today, setToday] = useState(getLocalDateKey);
-
-  const availableToday = useMemo(
-    () =>
-      uniqueByCook(
-        filteredChefins.filter(c => isSummaryAvailableNow(c.cook_id, availabilitySummaries, today))
-      ),
-    [availabilitySummaries, filteredChefins, today]
-  );
-
-  const popularRestaurants = useMemo(
-    () => uniqueByCook(filteredChefins).slice(0, 10),
-    [filteredChefins]
-  );
+  const filteringDiscovery = hasActiveDiscoveryFilters({
+    cuisine: selectedCuisine,
+    dietary: selectedDietary,
+    certified: Boolean(activeFilters.certified),
+    availableNow: Boolean(activeFilters.availableNow),
+  });
 
   const nearestRestaurants = useMemo(() => {
-    const filteredNearest = filterDiscoveryListings(nearestChefins, {
-      cuisine: selectedCuisine,
-      certified: Boolean(activeFilters.certified),
-      availableNow: Boolean(activeFilters.availableNow),
-      dietary: selectedDietary,
-      availabilitySummaries,
-      today,
-    });
-    return uniqueByCook(filteredNearest).slice(0, 10);
+    const filteredNearest = scheduled
+      ? nearestChefins
+      : filterDiscoveryListings(nearestChefins, {
+          cuisine: selectedCuisine,
+          certified: Boolean(activeFilters.certified),
+          availableNow: Boolean(activeFilters.availableNow),
+          dietary: selectedDietary,
+          availabilitySummaries,
+          today,
+        });
+    return uniqueByCook(filteredNearest);
   }, [
+    scheduled,
     activeFilters.availableNow,
     activeFilters.certified,
     availabilitySummaries,
@@ -111,24 +163,11 @@ export default function HomeScreen() {
 
   const featuredAvailableToday = useMemo(
     () =>
-      popularChefins.filter(c => isSummaryAvailableNow(c.cook_id, availabilitySummaries, today)),
-    [availabilitySummaries, popularChefins, today]
+      popularChefins.filter(
+        c => scheduled || isSummaryAvailableNow(c.cook_id, availabilitySummaries, today)
+      ),
+    [availabilitySummaries, popularChefins, today, scheduled]
   );
-
-  const topRated = useMemo(() => {
-    const scored = uniqueByCook(filteredChefins).map(c => {
-      const cookListings = popularChefins.filter(listing => listing.cook_id === c.cook_id);
-      const rating = Array.isArray(c.restaurant_reviews)
-        ? getRatingSummary(c.restaurant_reviews)
-        : getListingsRatingSummary(cookListings);
-      return { listing: c, average: rating.average, count: rating.count };
-    });
-    return scored
-      .filter(s => s.average !== null)
-      .sort((a, b) => b.average! - a.average! || b.count - a.count)
-      .slice(0, 8)
-      .map(s => s.listing);
-  }, [filteredChefins, popularChefins]);
 
   const handleCuisineSelect = (cuisine: string) => {
     setSelectedCuisine(cuisine);
@@ -144,16 +183,19 @@ export default function HomeScreen() {
 
   useEffect(() => {
     setFilteredChefins(
-      filterDiscoveryListings(popularChefins, {
-        cuisine: selectedCuisine,
-        certified: Boolean(activeFilters.certified),
-        availableNow: Boolean(activeFilters.availableNow),
-        dietary: selectedDietary,
-        availabilitySummaries,
-        today,
-      })
+      scheduled
+        ? popularChefins
+        : filterDiscoveryListings(popularChefins, {
+            cuisine: selectedCuisine,
+            certified: Boolean(activeFilters.certified),
+            availableNow: Boolean(activeFilters.availableNow),
+            dietary: selectedDietary,
+            availabilitySummaries,
+            today,
+          })
     );
   }, [
+    scheduled,
     popularChefins,
     selectedCuisine,
     activeFilters,
@@ -213,7 +255,7 @@ export default function HomeScreen() {
         latitude: location.latitude,
         longitude: location.longitude,
         limit: 20,
-        cuisine: selectedCuisine === 'all' ? undefined : selectedCuisine,
+        cuisine: scheduled || selectedCuisine === 'all' ? undefined : selectedCuisine,
       })) as ListingWithProfile[];
       if (requestId === nearestRequestId.current) setNearestChefins(nearby);
     } catch (caught) {
@@ -226,7 +268,7 @@ export default function HomeScreen() {
     } finally {
       if (requestId === nearestRequestId.current) setNearestLoading(false);
     }
-  }, [location, selectedCuisine]);
+  }, [location, selectedCuisine, scheduled]);
 
   useFocusEffect(
     useCallback(() => {
@@ -263,51 +305,48 @@ export default function HomeScreen() {
     });
   };
 
-  const renderRail = (
-    title: string,
-    data: ListingWithProfile[],
-    discover: DiscoveryMode,
-    destinationTitle = title
-  ) => {
-    if (data.length === 0) return null;
-    return (
+  const restaurantFeed = uniqueByCook([...nearestRestaurants, ...filteredChefins]);
+  const orderAgain =
+    orderHistory?.userId === user?.id
+      ? (orderHistory?.cookIds ?? []).flatMap(id => {
+          const restaurant = restaurantFeed.find(item => item.cook_id === id);
+          return restaurant ? [restaurant] : [];
+        })
+      : [];
+  const renderHorizontalSection = (title: string, items: ListingWithProfile[]) =>
+    items.length ? (
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <HeadingText level={4} style={styles.sectionTitle}>
             {title}
           </HeadingText>
-          <TouchableOpacity
-            onPress={() => openDiscovery(discover, destinationTitle)}
-            accessibilityRole="link"
-            accessibilityLabel={`See all ${title}`}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <Text style={styles.seeAllText}>See all</Text>
-          </TouchableOpacity>
         </View>
         <FlatList
-          data={data}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          data={items.slice(0, 10)}
+          keyExtractor={item => item.cook_id}
+          contentContainerStyle={styles.popularRail}
           renderItem={({ item }) => (
             <MealCard
               {...item}
-              cookName={item.profiles.full_name}
+              layout="rail"
               restaurantName={item.profiles.restaurant_name}
               isVerified={item.profiles.is_verified}
               cookImage={item.profiles.profile_image}
               reviews={item.reviews || []}
               listings={popularChefins}
               availability={availabilitySummaries[item.cook_id]}
+              scheduledLabel={
+                orderTimePreference.mode === 'scheduled'
+                  ? formatScheduledOrderTime(orderTimePreference.scheduledAt)
+                  : undefined
+              }
             />
           )}
-          keyExtractor={item => item.id}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.railContent}
-          ItemSeparatorComponent={RailSeparator}
         />
       </View>
-    );
-  };
+    ) : null;
 
   if (loading) {
     return (
@@ -333,20 +372,28 @@ export default function HomeScreen() {
     );
   }
 
-  const hasAnyResults = filteredChefins.length > 0;
   const featuredKitchenCount = new Set(featuredAvailableToday.map(item => item.cook_id)).size;
   const hasFeaturedAvailability = featuredKitchenCount > 0;
-  const promoTitle = hasFeaturedAvailability
-    ? 'Home-cooked meals, available now'
-    : 'Discover food made close to home';
-  const promoDescription = hasFeaturedAvailability
-    ? `${featuredKitchenCount} featured ${
-        featuredKitchenCount === 1 ? 'kitchen has' : 'kitchens have'
-      } order slots still open today.`
-    : 'Explore local Chefins, fresh menus and the next available pickup times.';
+  const promoTitle = scheduled
+    ? 'Meals for your selected time'
+    : hasFeaturedAvailability
+      ? 'Home-cooked meals, available now'
+      : 'Discover food made close to home';
+  const promoDescription = scheduled
+    ? 'Explore kitchens with an available meal slot at your selected time.'
+    : hasFeaturedAvailability
+      ? `${featuredKitchenCount} featured ${
+          featuredKitchenCount === 1 ? 'kitchen has' : 'kitchens have'
+        } order slots still open today.`
+      : 'Explore local Chefins, fresh menus and the next available pickup times.';
   const promoCallToAction = hasFeaturedAvailability ? 'See available meals' : 'Explore kitchens';
-  const promoDiscoveryMode: DiscoveryMode = hasFeaturedAvailability ? 'availableNow' : 'all';
-  const promoDiscoveryTitle = hasFeaturedAvailability ? 'Available Now' : 'All Home Restaurants';
+  const promoDiscoveryMode: DiscoveryMode =
+    !scheduled && hasFeaturedAvailability ? 'availableNow' : 'all';
+  const promoDiscoveryTitle = scheduled
+    ? 'Available at your selected time'
+    : hasFeaturedAvailability
+      ? 'Available Now'
+      : 'All Home Restaurants';
   const featuredPromoListing = featuredAvailableToday[0] ?? popularChefins[0];
 
   return (
@@ -407,76 +454,86 @@ export default function HomeScreen() {
           </View>
         </TouchableOpacity>
 
-        <CuisineFilter onCuisineSelect={handleCuisineSelect} />
-        <MainFilter onFilterToggle={handleMainFilterToggle} onDietarySelect={handleDietarySelect} />
-
-        {hasAnyResults ? (
+        {!scheduled && (
           <>
-            {location ? (
-              nearestLoading ? (
-                <View style={styles.nearestStatusCard}>
-                  <ActivityIndicator size="small" color="#4CAF50" />
-                  <Text style={styles.nearestStatusText}>Finding the closest kitchens…</Text>
-                </View>
-              ) : nearestRestaurants.length > 0 ? (
-                renderRail('Nearest to You', nearestRestaurants, 'nearest')
-              ) : (
-                <View style={styles.nearestEmptyCard}>
-                  <Ionicons
-                    name={nearestError ? 'cloud-offline-outline' : 'location-outline'}
-                    size={24}
-                    color="#4C6651"
-                  />
-                  <View style={styles.nearestEmptyCopy}>
-                    <Text style={styles.nearestEmptyTitle}>
-                      {nearestError
-                        ? 'Nearby restaurants could not load'
-                        : 'No nearby kitchens yet'}
-                    </Text>
-                    <Text style={styles.nearestEmptyText} numberOfLines={2}>
-                      {nearestError ||
-                        'Try a different area or check again as new home restaurants join.'}
-                    </Text>
-                  </View>
-                  <TouchableOpacity onPress={nearestError ? fetchNearest : openLocationPrompt}>
-                    <Text style={styles.nearestActionText}>
-                      {nearestError ? 'Retry' : 'Change'}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              )
-            ) : (
-              <TouchableOpacity style={styles.nearestCta} onPress={openLocationPrompt}>
-                <View style={styles.nearestCtaIcon}>
-                  <Ionicons name="navigate-outline" size={22} color="#2E7D32" />
-                </View>
-                <View style={styles.nearestCtaCopy}>
-                  <Text style={styles.nearestCtaTitle}>See the nearest home restaurants</Text>
-                  <Text style={styles.nearestCtaText}>
-                    Set an area to receive privacy-friendly local recommendations.
-                  </Text>
-                </View>
-                <Ionicons name="chevron-forward" size={20} color="#2E7D32" />
-              </TouchableOpacity>
-            )}
-            {renderRail(
-              'Popular Home Restaurants',
-              popularRestaurants,
-              'all',
-              'All Home Restaurants'
-            )}
-            {/* {renderRail('Available Now', availableToday, 'availableNow')} */}
-            {renderRail('Top Rated', topRated, 'topRated')}
+            <CuisineFilter onCuisineSelect={handleCuisineSelect} />
+            <MainFilter
+              onFilterToggle={handleMainFilterToggle}
+              onDietarySelect={handleDietarySelect}
+            />
           </>
-        ) : (
-          <View style={styles.emptyState}>
-            <Ionicons name="restaurant-outline" size={56} color="#bbb" />
-            <Text style={styles.stateTitle}>No chefins match your filters</Text>
-            <Text style={styles.stateSubtitle}>
-              Try clearing some filters or picking a different cuisine.
-            </Text>
-          </View>
         )}
+        {/* {scheduled && (
+          <Text style={styles.stateTitle}>
+            {scheduledPopular.loading || scheduledNearest.loading
+              ? 'Checking your selected time…'
+              : scheduledPopular.error ||
+                scheduledNearest.error ||
+                'Available at your selected time'}
+          </Text>
+        )} */}
+
+        {!filteringDiscovery && renderHorizontalSection('Order Again', orderAgain)}
+        <View style={styles.restaurantFeed}>
+          <View style={styles.feedHeader}></View>
+          {!location && (
+            <TouchableOpacity style={styles.nearestCta} onPress={openLocationPrompt}>
+              <Ionicons name="location-outline" size={22} color="#216E39" />
+              <Text style={styles.nearestCtaText}>Choose your area to find nearby kitchens</Text>
+              <Ionicons name="chevron-forward" size={20} color="#216E39" />
+            </TouchableOpacity>
+          )}
+          {!!nearestError && (
+            <TouchableOpacity style={styles.nearestStatusCard} onPress={fetchNearest}>
+              <Text style={styles.nearestStatusText}>
+                Nearby kitchens could not load. Tap to retry.
+              </Text>
+            </TouchableOpacity>
+          )}
+          {scheduled && (scheduledPopular.loading || scheduledNearest.loading) ? (
+            <View style={styles.nearestStatusCard}>
+              <ActivityIndicator color="#216E39" />
+              <Text style={styles.nearestStatusText}>Checking your selected time…</Text>
+            </View>
+          ) : restaurantFeed.length ? (
+            restaurantFeed.map((item, index) => (
+              <React.Fragment key={item.cook_id}>
+                <MealCard
+                  key={item.cook_id}
+                  {...item}
+                  layout="feed"
+                  restaurantName={item.profiles.restaurant_name}
+                  isVerified={item.profiles.is_verified}
+                  reviews={item.reviews || []}
+                  listings={popularChefins}
+                  availability={availabilitySummaries[item.cook_id]}
+                  scheduledLabel={
+                    orderTimePreference.mode === 'scheduled'
+                      ? formatScheduledOrderTime(orderTimePreference.scheduledAt)
+                      : undefined
+                  }
+                />
+                {(index === 3 ||
+                  (restaurantFeed.length < 4 && index === restaurantFeed.length - 1)) &&
+                  location &&
+                  !filteringDiscovery &&
+                  renderHorizontalSection('Popular Near You', nearestRestaurants)}
+              </React.Fragment>
+            ))
+          ) : (
+            <View style={styles.emptyState}>
+              <Ionicons name="restaurant-outline" size={48} color="#94A39A" />
+              <Text style={styles.stateTitle}>No matching home restaurants</Text>
+              <Text style={styles.stateSubtitle}>
+                {scheduled
+                  ? scheduledPopular.error ||
+                    scheduledNearest.error ||
+                    'Try another time to discover available kitchens.'
+                  : 'Try another area or adjust your filters.'}
+              </Text>
+            </View>
+          )}
+        </View>
       </ScrollView>
       <FloatingCartButton />
       <LocationPromptModal
@@ -489,6 +546,15 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
+  popularRail: { paddingHorizontal: 20, paddingBottom: 12, gap: 14 },
+  restaurantFeed: {
+    width: '100%',
+    backgroundColor: '#f8f9fa',
+    paddingTop: 20,
+    paddingBottom: 24,
+  },
+  feedHeader: { paddingHorizontal: 20, marginBottom: 14 },
+  feedSubtitle: { color: '#77827B', fontSize: 12, marginTop: 4 },
   centerContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -689,10 +755,10 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   sectionTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: 'bold',
     color: '#333',
-    marginTop: 2,
+    marginTop: 20,
     marginBottom: 2,
   },
   seeAllText: {

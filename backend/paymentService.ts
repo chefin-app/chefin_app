@@ -14,6 +14,7 @@ export async function recordCheckoutPayment(input: {
   deliveryFee: number;
   cookDeliveryCharge: number;
   createdAt?: string | null;
+  direct?: { method: string; recipient_name: string | null; qr_image: string | null };
 }) {
   const grossAmount = money(input.foodSubtotal + input.deliveryFee);
   const processingFee = calculateProcessingFee(grossAmount);
@@ -41,6 +42,23 @@ export async function recordCheckoutPayment(input: {
         payout_hold_reason: 'Held until order completion and refund window expiry',
         created_at: input.createdAt ?? new Date().toISOString(),
         updated_at: new Date().toISOString(),
+        ...(input.direct
+          ? {
+              collection_model: 'direct_to_cook',
+              payment_method: input.direct.method,
+              gateway: 'direct_to_cook',
+              gateway_reference: null,
+              processing_fee: 0,
+              cook_payout: 0,
+              status: 'processing',
+              payout_status: 'not_applicable',
+              payout_hold_reason: null,
+              direct_state: 'awaiting_acceptance',
+              recipient_name: input.direct.recipient_name,
+              qr_image: input.direct.qr_image,
+              direct_acknowledged_at: new Date().toISOString(),
+            }
+          : {}),
       },
       { onConflict: 'checkout_id', ignoreDuplicates: true }
     )
@@ -60,6 +78,7 @@ export async function holdCheckoutPayout(checkoutId: string, reason: string) {
       updated_at: new Date().toISOString(),
     })
     .eq('checkout_id', checkoutId)
+    .eq('collection_model', 'platform')
     .neq('payout_status', 'paid');
   if (error) throw error;
 }
@@ -74,6 +93,7 @@ export async function scheduleCheckoutPayout(checkoutId: string, completedAt: st
       updated_at: new Date().toISOString(),
     })
     .eq('checkout_id', checkoutId)
+    .eq('collection_model', 'platform')
     .eq('status', 'succeeded')
     .neq('payout_status', 'paid');
   if (error) throw error;
@@ -87,11 +107,14 @@ export async function queueCancelledCheckoutRefund(input: {
 }) {
   const { data: payment, error: paymentError } = await supabase
     .from('payment_transactions')
-    .select('id, representative_order_id, customer_id, gross_amount')
+    .select(
+      'id, representative_order_id, customer_id, gross_amount, collection_model, confirmed_at'
+    )
     .eq('checkout_id', input.checkoutId)
     .maybeSingle();
   if (paymentError) throw paymentError;
   if (!payment) return null;
+  if (payment.collection_model === 'direct_to_cook' && !payment.confirmed_at) return null;
   const { data: existing, error: existingError } = await supabase
     .from('refund_requests')
     .select('id')

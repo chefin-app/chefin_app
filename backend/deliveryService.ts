@@ -78,9 +78,34 @@ const getJob = async (jobId: string): Promise<DeliveryJobRow> => {
   return data as unknown as DeliveryJobRow;
 };
 
-export async function bookQuotedDeliveryJob(jobId: string): Promise<void> {
+export async function bookQuotedDeliveryJob(
+  jobId: string,
+  expectedQuotationId?: string
+): Promise<void> {
   const job = await getJob(jobId);
+  const { data: attached, error: attachedError } = await supabase
+    .from('orders')
+    .select('checkout_id')
+    .eq('delivery_job_id', jobId)
+    .limit(1)
+    .maybeSingle();
+  if (attachedError) throw attachedError;
+  const { data: payment, error: paymentError } = attached
+    ? await supabase
+        .from('payment_transactions')
+        .select('collection_model,confirmed_at,status')
+        .eq('checkout_id', attached.checkout_id)
+        .maybeSingle()
+    : { data: null, error: null };
+  if (paymentError) throw paymentError;
+  if (
+    payment?.collection_model === 'direct_to_cook' &&
+    (!payment.confirmed_at || payment.status !== 'succeeded')
+  )
+    throw new Error('Confirm direct payment before booking delivery.');
   if (job.provider_order_id) return;
+  if (expectedQuotationId && job.provider_quotation_id !== expectedQuotationId)
+    throw new Error('Delivery price changed. Review the current quotation again.');
   if (job.status !== 'quoted') throw new Error('The delivery quote is no longer bookable.');
 
   const { data: claimed, error: claimError } = await supabase
@@ -88,6 +113,7 @@ export async function bookQuotedDeliveryJob(jobId: string): Promise<void> {
     .update({ status: 'booking', updated_at: new Date().toISOString() })
     .eq('id', job.id)
     .eq('status', 'quoted')
+    .eq('provider_quotation_id', job.provider_quotation_id)
     .select('id')
     .maybeSingle();
   if (claimError) throw claimError;
@@ -131,7 +157,10 @@ export async function bookQuotedDeliveryJob(jobId: string): Promise<void> {
       .eq('id', job.id);
     if (updateError) throw updateError;
 
-    const cookCharge = Number(job.cook_delivery_charge);
+    const cookCharge =
+      payment?.collection_model === 'direct_to_cook'
+        ? Number(job.quoted_fee)
+        : Number(job.cook_delivery_charge);
     if (cookCharge > 0) {
       const { error: ledgerError } = await supabase.from('cook_payout_ledger').upsert(
         {

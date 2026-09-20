@@ -12,6 +12,8 @@ import { formatRating, getListingsRatingSummary, getRatingSummary } from '@/src/
 import { formatAvailabilityLabel, type AvailabilitySummary } from '@/src/utils/listingAvailability';
 
 export interface MealCardProps extends Listing {
+  layout?: 'rail' | 'feed';
+  scheduledLabel?: string;
   cookName?: string;
   restaurantName?: string;
   isVerified?: boolean;
@@ -29,9 +31,10 @@ export function getAvailabilityLabel(availability?: AvailabilitySummary, now = n
 }
 
 const MealCard: React.FC<MealCardProps> = ({
+  layout = 'rail',
+  scheduledLabel,
   restaurantName,
   isVerified,
-  cookImage,
   title,
   cuisine,
   description,
@@ -53,7 +56,6 @@ const MealCard: React.FC<MealCardProps> = ({
   const profileId = cook_id || profiles?.id || '';
   const displayName =
     restaurantName || profiles?.restaurant_name || profiles?.full_name || 'Unknown Restaurant';
-  const displayImage = cookImage || profiles?.profile_image;
   const displayVerified = isVerified ?? profiles?.is_verified ?? false;
 
   // Prefer a cook-wide review set supplied by the API. The listings fallback
@@ -82,8 +84,96 @@ const MealCard: React.FC<MealCardProps> = ({
     });
   };
 
+  if (layout === 'feed') {
+    return (
+      <TouchableOpacity
+        accessibilityRole="button"
+        accessibilityLabel={`View ${displayName}`}
+        style={styles.feedCard}
+        activeOpacity={0.86}
+        onPress={() => router.push(`/restaurant/${profileId}`)}
+      >
+        <Image
+          source={image_url ? { uri: image_url } : images.templateMeal}
+          style={styles.feedImage}
+        />
+        <View style={styles.feedCopy}>
+          <View style={styles.feedTitleRow}>
+            <Text style={styles.feedTitle} numberOfLines={2}>
+              {displayName}
+            </Text>
+            <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel={
+                isFavourite(profileId)
+                  ? `Remove ${displayName} from favourites`
+                  : `Save ${displayName} to favourites`
+              }
+              onPress={event => {
+                event?.stopPropagation?.();
+                handleToggleFavourite();
+              }}
+              style={styles.feedFavourite}
+            >
+              <Ionicons
+                name={isFavourite(profileId) ? 'heart' : 'heart-outline'}
+                size={21}
+                color={isFavourite(profileId) ? '#E55252' : '#64748B'}
+              />
+            </TouchableOpacity>
+          </View>
+          <View style={styles.feedMetadata}>
+            <Ionicons name="star" size={17} color="#F5BE18" />
+            <Text style={styles.ratingTextStrong}>
+              {ratingSummary.count ? displayRestaurantRating : 'New'}
+            </Text>
+            {ratingSummary.count > 0 ? (
+              <Text style={styles.feedMetaText}>({ratingSummary.count})</Text>
+            ) : null}
+            <Text style={styles.metadataDivider}>·</Text>
+            <Text style={styles.feedCuisine} numberOfLines={1}>
+              {cuisine || 'Home-cooked meals'}
+            </Text>
+            {displayVerified ? (
+              <View style={styles.verifiedLabel}>
+                <VerifiedBadge size={13} />
+              </View>
+            ) : null}
+          </View>
+          <View style={styles.feedDetailRow}>
+            <Ionicons
+              name={scheduledLabel ? 'calendar-outline' : 'time-outline'}
+              size={15}
+              color={!scheduledLabel && availability?.state !== 'available' ? '#747B77' : '#EB6B2A'}
+            />
+            <Text
+              numberOfLines={1}
+              style={[
+                styles.feedAvailability,
+                !scheduledLabel && availability?.state !== 'available' && styles.unavailable,
+              ]}
+            >
+              {scheduledLabel || getAvailabilityLabel(availability)}
+            </Text>
+          </View>
+          {distance_label ? (
+            <View style={styles.feedDetailRow}>
+              <Ionicons name="navigate-outline" size={15} color="#64706A" />
+              <Text style={styles.distanceText}>{distance_label} away</Text>
+            </View>
+          ) : null}
+        </View>
+      </TouchableOpacity>
+    );
+  }
+
   return (
-    <TouchableOpacity style={styles.card} onPress={() => router.push(`/restaurant/${profileId}`)}>
+    <TouchableOpacity
+      testID="meal-restaurant-push"
+      style={styles.card}
+      activeOpacity={0.88}
+      onPress={() => router.push(`/restaurant/${profileId}`)}
+    >
       <ImageBackground
         testID="meal-image"
         source={image_url ? { uri: image_url } : images.templateMeal}
@@ -93,7 +183,14 @@ const MealCard: React.FC<MealCardProps> = ({
         <TouchableOpacity
           testID="favourite-button"
           style={styles.heartIcon}
-          onPress={handleToggleFavourite}
+          accessibilityRole="button"
+          accessibilityLabel={
+            isFavourite(profileId) ? 'Remove from favourites' : 'Add to favourites'
+          }
+          onPress={event => {
+            event?.stopPropagation?.();
+            handleToggleFavourite();
+          }}
         >
           <Ionicons
             name={isFavourite(profileId) ? 'heart' : 'heart-outline'}
@@ -104,32 +201,34 @@ const MealCard: React.FC<MealCardProps> = ({
       </ImageBackground>
 
       <View style={styles.infoContainer}>
-        <Image
-          source={displayImage ? { uri: displayImage } : images.templateAvatar}
-          style={styles.avatar}
-        />
-
         <View style={styles.titleContainer}>
           <View style={styles.titleRow}>
             <Text style={styles.title} numberOfLines={1}>
               {displayName}
             </Text>
             <View style={styles.rating}>
-              <Ionicons name="star" size={16} color="#FFD700" />
+              <Ionicons name="star" size={13} color="#E4A11B" />
               <Text style={styles.ratingText}>{displayRestaurantRating}</Text>
             </View>
           </View>
 
           <View style={styles.subtitleRow}>
-            <Text style={styles.subtitle}>{cuisine || 'No description'}</Text>
+            <Text style={styles.subtitle} numberOfLines={1}>
+              {cuisine || 'Home-cooked meals'}
+            </Text>
             {displayVerified && <VerifiedBadge style={styles.verifiedIcon} size={16} />}
           </View>
         </View>
       </View>
 
       <View style={styles.availabilityRow}>
-        <Text style={[styles.available, availability?.state !== 'available' && styles.unavailable]}>
-          {getAvailabilityLabel(availability)}
+        <Text
+          style={[
+            styles.available,
+            !scheduledLabel && availability?.state !== 'available' && styles.unavailable,
+          ]}
+        >
+          {scheduledLabel || getAvailabilityLabel(availability)}
         </Text>
         {distance_label && (
           <View style={styles.distanceRow}>
@@ -143,20 +242,53 @@ const MealCard: React.FC<MealCardProps> = ({
 };
 
 const styles = StyleSheet.create({
+  feedCard: {
+    flexDirection: 'row',
+    width: '100%',
+    gap: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 18,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#DDE2DF',
+    backgroundColor: '#FFFFFF',
+  },
+  feedImage: { width: 124, height: 124, borderRadius: 16, backgroundColor: '#EDF0EE' },
+  feedCopy: { flex: 1, justifyContent: 'flex-start', paddingTop: 2, gap: 7 },
+  feedTitleRow: { flexDirection: 'row', alignItems: 'flex-start' },
+  feedTitle: { flex: 1, fontSize: 18, fontWeight: '800', color: '#171A18', lineHeight: 23 },
+  feedFavourite: {
+    minWidth: 44,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: -10,
+    marginRight: -10,
+  },
+  feedCuisine: { flexShrink: 1, fontSize: 14, color: '#525A55' },
+  feedMetadata: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  ratingTextStrong: { fontSize: 14, color: '#303532', fontWeight: '700' },
+  feedMetaText: { fontSize: 14, color: '#6D746F' },
+  metadataDivider: { color: '#9BA19D', fontSize: 14 },
+  verifiedLabel: { flexDirection: 'row', alignItems: 'center', marginLeft: 1 },
+  feedDetailRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  feedAvailability: { flex: 1, fontSize: 13, lineHeight: 18, color: '#EB6B2A', fontWeight: '600' },
   card: {
-    width: 300,
-    height: 220,
+    width: 252,
+    minHeight: 230,
     backgroundColor: '#ffffff',
-    borderRadius: 10,
-    elevation: 4,
-    shadowColor: '#000000',
-    shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: 2 },
+    borderRadius: 18,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#E8EDE9',
+    elevation: 2,
+    shadowColor: '#183C25',
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 5 },
   },
   image: {
     width: '100%',
-    height: 120,
-    borderRadius: 10,
+    height: 140,
     justifyContent: 'flex-start',
     alignItems: 'flex-end',
     overflow: 'hidden',
@@ -164,28 +296,23 @@ const styles = StyleSheet.create({
   },
   imageStyle: {
     resizeMode: 'cover',
-    borderTopLeftRadius: 12,
-    borderTopRightRadius: 12,
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
   },
   heartIcon: {
-    backgroundColor: '#fff',
+    backgroundColor: 'rgba(255,255,255,0.94)',
     borderRadius: 20,
     padding: 6,
     position: 'absolute',
-    top: 6,
-    right: 6,
+    top: 9,
+    right: 9,
   },
   infoContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
-    gap: 8,
-  },
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 2,
+    paddingHorizontal: 14,
+    paddingTop: 12,
+    paddingBottom: 7,
   },
   titleContainer: {
     flex: 1,
@@ -197,32 +324,30 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   title: {
-    color: '#333333',
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginLeft: 8,
+    color: '#17251B',
+    fontSize: 15,
+    fontWeight: '700',
     flexShrink: 1,
-    maxWidth: '70%',
+    maxWidth: '76%',
   },
   subtitle: {
-    color: '#666666',
+    color: '#6B756F',
     fontSize: 12,
     marginTop: 2,
-    marginLeft: 8,
   },
   availabilityRow: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
-    paddingRight: 14,
+    paddingHorizontal: 14,
+    paddingBottom: 12,
   },
   available: {
-    color: '#4CAF50',
-    fontSize: 12,
-    marginTop: 2,
-    marginLeft: 14,
-    fontWeight: 'bold',
+    color: '#267A42',
+    fontSize: 11,
+    fontWeight: '600',
+    flexShrink: 1,
   },
   unavailable: {
     color: '#666666',

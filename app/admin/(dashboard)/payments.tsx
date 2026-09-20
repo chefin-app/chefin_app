@@ -705,7 +705,12 @@ export default function PaymentsScreen() {
                 </Text>
                 <View style={styles.statusColumn}>
                   <AdminStatusBadge
-                    status={payment.refundStatus ?? payment.payoutStatus ?? payment.paymentStatus}
+                    status={
+                      payment.refundStatus ??
+                      (payment.collectionModel === 'direct_to_cook'
+                        ? (payment.directState ?? payment.paymentStatus)
+                        : payment.payoutStatus)
+                    }
                   />
                 </View>
                 <View style={styles.actionsColumn}>{renderActions(payment)}</View>
@@ -721,7 +726,14 @@ export default function PaymentsScreen() {
                     <Text style={styles.cellStrong}>{payment.transactionCode}</Text>
                     <Text style={styles.cellMuted}>Order #{payment.orderDisplayId}</Text>
                   </View>
-                  <AdminStatusBadge status={payment.refundStatus ?? payment.payoutStatus} />
+                  <AdminStatusBadge
+                    status={
+                      payment.refundStatus ??
+                      (payment.collectionModel === 'direct_to_cook'
+                        ? (payment.directState ?? payment.paymentStatus)
+                        : payment.payoutStatus)
+                    }
+                  />
                 </View>
                 <View style={styles.cardPeople}>
                   <Person name={payment.customerName} imageUrl={payment.customerAvatarUrl} />
@@ -795,7 +807,8 @@ export default function PaymentsScreen() {
                   onPress={() => beginAction('release')}
                 />
               ) : details.payment.payoutStatus !== 'paid' &&
-                details.payment.payoutStatus !== 'cancelled' ? (
+                details.payment.payoutStatus !== 'cancelled' &&
+                details.payment.collectionModel !== 'direct_to_cook' ? (
                 <SmallButton label="Hold payout" onPress={() => beginAction('hold')} />
               ) : null}
               {!hasActiveRefund && details.transaction.status !== 'refunded' ? (
@@ -819,6 +832,14 @@ export default function PaymentsScreen() {
           </View>
         ) : details ? (
           <View style={styles.detailContent}>
+            {details.payment.collectionModel === 'direct_to_cook' && (
+              <Text style={styles.refundDetails}>
+                Paid directly to cook ·{' '}
+                {humanize(details.payment.directState ?? 'awaiting_acceptance')}. Chefin holds no
+                funds and no platform payout is due. Refund approval requires the cook to return the
+                money directly.
+              </Text>
+            )}
             <View style={styles.detailStatusRow}>
               <AdminStatusBadge status={details.transaction.status} />
               <AdminStatusBadge status={details.transaction.payout_status} />
@@ -1105,7 +1126,9 @@ export default function PaymentsScreen() {
         }
         subtitle={
           actionMode === 'complete'
-            ? 'Only record completion after the gateway confirms the refund.'
+            ? details?.payment.collectionModel === 'direct_to_cook'
+              ? 'The cook must return the money directly. Record completion only after verifying the buyer received it. Enter the bank transfer reference and verification details in the note.'
+              : 'Only record completion after the gateway confirms the refund.'
             : 'This action will be recorded in the administrator audit trail.'
         }
         onClose={closeAction}
@@ -1133,7 +1156,11 @@ export default function PaymentsScreen() {
           ) : null}
           {actionMode === 'complete' ? (
             <View>
-              <Text style={styles.fieldLabel}>GATEWAY REFUND REFERENCE</Text>
+              <Text style={styles.fieldLabel}>
+                {details?.payment.collectionModel === 'direct_to_cook'
+                  ? 'COOK REFUND TRANSFER REFERENCE'
+                  : 'GATEWAY REFUND REFERENCE'}
+              </Text>
               <TextInput
                 value={gatewayReference}
                 onChangeText={setGatewayReference}

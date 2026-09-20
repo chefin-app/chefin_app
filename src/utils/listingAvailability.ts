@@ -426,7 +426,7 @@ export function buildNextAvailableDates(
   );
 }
 
-async function fetchAvailabilityRecords(
+export async function fetchAvailabilityRecords(
   listings: AvailabilityListing[],
   _today: string
 ): Promise<AvailabilityRecord[]> {

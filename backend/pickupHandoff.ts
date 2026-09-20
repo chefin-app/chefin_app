@@ -240,6 +240,14 @@ export async function verifyPickupCode(orderId: string, cookUserId: string, code
   if (lines.some(line => line.status !== 'ready')) {
     throw new Error('Mark every dish in this checkout ready before completing the pickup.');
   }
+  const { data: payment, error: paymentError } = await supabase
+    .from('payment_transactions')
+    .select('collection_model,confirmed_at')
+    .eq('checkout_id', representative.checkout_id)
+    .maybeSingle();
+  if (paymentError) throw paymentError;
+  if (payment?.collection_model === 'direct_to_cook' && !payment.confirmed_at)
+    throw new Error('Record receipt of the collection payment before entering the pickup PIN.');
   const { data: handoff, error } = await supabase
     .from('pickup_handoffs')
     .select('*')

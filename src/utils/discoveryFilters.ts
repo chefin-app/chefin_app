@@ -12,6 +12,15 @@ export interface DiscoveryFilterState {
   today: string;
 }
 
+export function hasActiveDiscoveryFilters({
+  cuisine,
+  dietary,
+  certified,
+  availableNow,
+}: Pick<DiscoveryFilterState, 'cuisine' | 'dietary' | 'certified' | 'availableNow'>): boolean {
+  return cuisine !== 'all' || dietary.length > 0 || certified || availableNow;
+}
+
 type DiscoveryListing = Listing & { profiles: Profile };
 
 /** Applies dish-level filters before callers collapse results by restaurant. */

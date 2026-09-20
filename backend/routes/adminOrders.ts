@@ -23,7 +23,6 @@ import {
   notifyCookDeliveryPayout,
 } from '../notifications';
 import { supabase } from '../supabaseClient';
-import { completePickupCheckout } from '../pickupHandoff';
 import { queueCancelledCheckoutRefund } from '../paymentService';
 
 const router = express.Router();

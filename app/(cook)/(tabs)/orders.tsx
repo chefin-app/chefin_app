@@ -61,7 +61,7 @@ const TABS: { key: TabKey; label: string }[] = [
 
 // The action that advances an order to the next stage of the workflow.
 const CARD_ACTION: Partial<Record<OrderStatus, { next: OrderStatus; label: string }>> = {
-  pending: { next: 'confirmed', label: 'Accept' },
+  pending: { next: 'confirmed', label: 'Review order' },
   confirmed: { next: 'ready', label: 'Ready' },
   ready: { next: 'completed', label: 'Complete' },
 };
@@ -378,6 +378,10 @@ export default function Orders() {
   // instead of erroring, which made "Accept order" look like it worked in the
   // UI while the database never changed.
   const advanceOrder = async (order: OrderRow) => {
+    if (order.status === 'pending') {
+      router.push({ pathname: '/(cook)/order/[orderId]', params: { orderId: order.id } });
+      return;
+    }
     const action = CARD_ACTION[order.status];
     if (!action || updatingId) return;
     setUpdatingId(order.id);
@@ -394,7 +398,10 @@ export default function Orders() {
         const body = (await res.json().catch(() => ({}))) as { error?: string };
         throw new Error(body.error || 'Failed to update order status.');
       }
-      setOrders(prev => prev.map(o => (o.id === order.id ? { ...o, status: action.next } : o)));
+      const body = await res.json();
+      await fetchOrders(false);
+      if (body.directPayment)
+        router.push({ pathname: '/(cook)/order/[orderId]', params: { orderId: order.id } });
     } catch (error: unknown) {
       console.error('Could not update order:', getErrorMessage(error, 'Unknown error'));
       fetchOrders(false);

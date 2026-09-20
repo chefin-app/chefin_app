@@ -50,6 +50,8 @@ export interface ManagedPayment {
   grossAmount: number;
   cookPayout: number;
   paymentMethod: string;
+  collectionModel?: string;
+  directState?: string | null;
   paymentStatus: string;
   payoutStatus: string;
   payoutAvailableAt: string | null;

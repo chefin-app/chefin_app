@@ -21,6 +21,7 @@ import { useAuth } from '@/src/services/auth-context';
 import PickupCoordinationCard from '@/src/components/orders/PickupCoordinationCard';
 import BuyerRatingCard from '@/src/components/reviews/BuyerRatingCard';
 import PickupPinModal from '@/src/components/orders/PickupPinModal';
+import DirectPaymentCard from '@/src/components/orders/DirectPaymentCard';
 
 type OrderStatus = 'pending' | 'confirmed' | 'ready' | 'completed' | 'cancelled';
 
@@ -128,7 +129,7 @@ export default function CookOrderDetail() {
         const body = (await res.json().catch(() => ({}))) as { error?: string };
         throw new Error(body.error || 'Failed to update order status.');
       }
-      setOrder(prev => (prev ? { ...prev, status } : prev));
+      await load();
       if (status === 'completed' || status === 'cancelled') router.back();
     } catch (error: unknown) {
       Alert.alert(
@@ -221,6 +222,7 @@ export default function CookOrderDetail() {
       </View>
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <DirectPaymentCard orderId={order.id} accessToken={session?.access_token} onChange={load} />
         <View style={styles.summaryRow}>
           <Text style={styles.summaryText}>
             <Text style={styles.summaryBold}>
