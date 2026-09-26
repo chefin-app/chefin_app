@@ -478,14 +478,6 @@ export default function PaymentMethodScreen() {
             <Ionicons name="add-circle-outline" size={22} color="#2E7D32" />
             <Text style={styles.addAnotherButtonText}>Add another card</Text>
           </TouchableOpacity>
-
-          <View style={styles.localStorageNotice}>
-            <Ionicons name="phone-portrait-outline" size={18} color="#616161" />
-            <Text style={styles.localStorageNoticeText}>
-              These demo payment methods are available only on this device and do not process real
-              charges.
-            </Text>
-          </View>
         </ScrollView>
       </SafeAreaView>
     );
@@ -733,19 +725,5 @@ const styles = StyleSheet.create({
     color: '#2E7D32',
     fontSize: 16,
     fontWeight: '700',
-  },
-  localStorageNotice: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 9,
-    borderRadius: 12,
-    backgroundColor: '#F5F5F5',
-    padding: 13,
-  },
-  localStorageNoticeText: {
-    flex: 1,
-    color: '#616161',
-    fontSize: 12,
-    lineHeight: 17,
   },
 });

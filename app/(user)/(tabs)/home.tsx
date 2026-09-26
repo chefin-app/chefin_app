@@ -315,7 +315,7 @@ export default function HomeScreen() {
       : [];
   const renderHorizontalSection = (title: string, items: ListingWithProfile[]) =>
     items.length ? (
-      <View style={styles.section}>
+      <View>
         <View style={styles.sectionHeader}>
           <HeadingText level={4} style={styles.sectionTitle}>
             {title}
@@ -665,9 +665,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-  section: {
-    marginBottom: 24,
-  },
+ 
   locationSelector: {
     flexDirection: 'row',
     alignItems: 'center',

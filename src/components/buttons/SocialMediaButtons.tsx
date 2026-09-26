@@ -1,15 +1,25 @@
-import { StyleSheet, View, Text, TextInput, TouchableOpacity } from 'react-native';
+import { StyleSheet, View, Text, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 type SocialButtonName = 'facebook' | 'apple' | 'google' | 'email';
 type SocialMediaButtonsProps = {
   buttonName: SocialButtonName;
   onPress?: () => void;
+  disabled?: boolean;
 };
-const SocialMediaButtons: React.FC<SocialMediaButtonsProps> = ({ buttonName, onPress }) => {
+const SocialMediaButtons: React.FC<SocialMediaButtonsProps> = ({
+  buttonName,
+  onPress,
+  disabled = false,
+}) => {
   if (buttonName === 'facebook') {
     return (
-      <TouchableOpacity style={styles.facebookButton} onPress={onPress}>
+      <TouchableOpacity
+        style={[styles.facebookButton, disabled && styles.disabledButton]}
+        onPress={onPress}
+        disabled={disabled}
+        accessibilityState={{ disabled }}
+      >
         <View style={styles.socialButtonContent}>
           <Ionicons name="logo-facebook" size={20} color="#fff" />
           <Text style={styles.facebookButtonText}>Continue with Facebook</Text>
@@ -20,10 +30,15 @@ const SocialMediaButtons: React.FC<SocialMediaButtonsProps> = ({ buttonName, onP
 
   if (buttonName === 'apple') {
     return (
-      <TouchableOpacity style={styles.appleButton} onPress={onPress}>
+      <TouchableOpacity
+        style={[styles.appleButton, disabled && styles.disabledButton]}
+        onPress={onPress}
+        disabled={disabled}
+        accessibilityState={{ disabled }}
+      >
         <View style={styles.socialButtonContent}>
           <Ionicons name="logo-apple" size={20} color="#fff" />
-          <Text style={styles.appleButtonText}>Continue with Appple</Text>
+          <Text style={styles.appleButtonText}>Continue with Apple</Text>
         </View>
       </TouchableOpacity>
     );
@@ -31,7 +46,12 @@ const SocialMediaButtons: React.FC<SocialMediaButtonsProps> = ({ buttonName, onP
 
   if (buttonName === 'google') {
     return (
-      <TouchableOpacity style={styles.googleButton} onPress={onPress}>
+      <TouchableOpacity
+        style={[styles.googleButton, disabled && styles.disabledButton]}
+        onPress={onPress}
+        disabled={disabled}
+        accessibilityState={{ disabled }}
+      >
         <View style={styles.socialButtonContent}>
           <Ionicons name="logo-google" size={20} color="#DB4437" />
           <Text style={styles.googleButtonText}>Continue with Google</Text>
@@ -109,6 +129,9 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  disabledButton: {
+    opacity: 0.4,
   },
 });
 

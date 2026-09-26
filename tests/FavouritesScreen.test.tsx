@@ -23,6 +23,14 @@ jest.mock('@/src/context/FavouritesContext', () => ({
         reviewCount: 12,
         regionId: 'sandakan',
       },
+      {
+        profileId: 'klang-valley-cook',
+        restaurantName: 'Klang Valley Kitchen',
+        fullChefName: 'Chef Mira',
+        rating: '4.7',
+        reviewCount: 9,
+        regionId: 'klang-valley',
+      },
     ],
     toggleFavourite: mockToggleFavourite,
   }),
@@ -40,5 +48,14 @@ describe('FavouritesScreen region availability', () => {
     fireEvent.press(screen.getByLabelText('Sandakan Kitchen, unavailable in Klang Valley'));
 
     expect(mockPush).not.toHaveBeenCalled();
+  });
+
+  it('places restaurants available in the selected region before unavailable favourites', () => {
+    render(<FavouritesScreen />);
+
+    expect(screen.getAllByText(/Kitchen$/).map(node => node.props.children)).toEqual([
+      'Klang Valley Kitchen',
+      'Sandakan Kitchen',
+    ]);
   });
 });

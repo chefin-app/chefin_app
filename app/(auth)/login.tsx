@@ -75,9 +75,9 @@ export default function LoginScreen() {
           {/* Login Buttons */}
           <View style={styles.buttonContainer}>
             {/* Facebook Login */}
-            <SocialMediaButtons buttonName={'facebook'} onPress={signInWithFacebook} />
-            <SocialMediaButtons buttonName={'apple'} onPress={signInWithApple} />
-            <SocialMediaButtons buttonName={'google'} onPress={signInWithGoogle} />
+            <SocialMediaButtons buttonName={'facebook'} onPress={signInWithFacebook} disabled />
+            <SocialMediaButtons buttonName={'apple'} onPress={signInWithApple} disabled />
+            <SocialMediaButtons buttonName={'google'} onPress={signInWithGoogle} disabled />
             <SocialMediaButtons buttonName={'email'} onPress={handleEmailLogin} />
 
             {/* <TouchableOpacity style={styles.facebookButton} onPress={signInWithFacebook}>

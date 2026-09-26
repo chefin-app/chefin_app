@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -18,6 +18,20 @@ const FavouritesScreen = () => {
   const router = useRouter();
   const { favourites, toggleFavourite } = useFavourites();
   const { region } = useCustomerLocation();
+  const prioritisedFavourites = useMemo(() => {
+    const available: typeof favourites = [];
+    const unavailable: typeof favourites = [];
+
+    favourites.forEach(favourite => {
+      if (isRestaurantAvailableInRegion(favourite.regionId, region.id)) {
+        available.push(favourite);
+      } else {
+        unavailable.push(favourite);
+      }
+    });
+
+    return [...available, ...unavailable];
+  }, [favourites, region.id]);
 
   if (favourites.length === 0) {
     return (
@@ -58,7 +72,7 @@ const FavouritesScreen = () => {
       </View>
 
       <FlatList
-        data={favourites}
+        data={prioritisedFavourites}
         keyExtractor={item => item.profileId}
         renderItem={({ item }) => {
           const available = isRestaurantAvailableInRegion(item.regionId, region.id);

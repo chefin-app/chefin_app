@@ -40,7 +40,7 @@ import { useAuth } from '@/src/services/auth-context';
 import AdminDialog from '@/src/components/admin/AdminDialog';
 import { AdminPanel, AdminStatusBadge } from '@/src/components/admin/AdminOverviewUI';
 import AdminSelect from '@/src/components/admin/AdminSelect';
-import { showAdminFailure, showAdminSuccess } from '@/src/admin/feedback';
+import { showAdminFailure } from '@/src/admin/feedback';
 import { ADMIN_SHARED_STYLES, ADMIN_THEME } from '@/src/admin/theme';
 
 const FILTERS: Array<{ key: CookManagementFilter; label: string }> = [
@@ -121,6 +121,36 @@ function Button({
   );
 }
 
+function SuccessFeedback({
+  title,
+  message,
+  onDismiss,
+}: {
+  title: string;
+  message: string;
+  onDismiss: () => void;
+}) {
+  return (
+    <View style={styles.successFeedback} accessibilityRole="alert">
+      <View style={styles.successIcon}>
+        <Ionicons name="checkmark" size={18} color="#FFFFFF" />
+      </View>
+      <View style={styles.flexOne}>
+        <Text style={styles.successTitle}>{title}</Text>
+        <Text style={styles.successMessage}>{message}</Text>
+      </View>
+      <TouchableOpacity
+        accessibilityRole="button"
+        accessibilityLabel="Dismiss success message"
+        style={styles.successDismiss}
+        onPress={onDismiss}
+      >
+        <Ionicons name="close" size={18} color="#336044" />
+      </TouchableOpacity>
+    </View>
+  );
+}
+
 export default function CookManagementScreen() {
   const { userId: linkedUserId, documentId: linkedDocumentId } = useLocalSearchParams<{
     userId?: string;
@@ -148,10 +178,14 @@ export default function CookManagementScreen() {
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [detailsError, setDetailsError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [actionFeedback, setActionFeedback] = useState<{
+    title: string;
+    message: string;
+  } | null>(null);
   const [openedDocs, setOpenedDocs] = useState<Set<string>>(new Set());
   const [reviewerNote, setReviewerNote] = useState('');
   const [dialog, setDialog] = useState<
-    'invite' | 'edit' | 'message' | 'suspend' | 'deactivate' | 'reject' | null
+    'invite' | 'edit' | 'message' | 'suspend' | 'deactivate' | 'approve' | 'reject' | null
   >(null);
   const [inviteName, setInviteName] = useState('');
   const [inviteEmail, setInviteEmail] = useState('');
@@ -162,6 +196,16 @@ export default function CookManagementScreen() {
   const [editEmail, setEditEmail] = useState('');
   const [editPhone, setEditPhone] = useState('');
   const [editRestaurant, setEditRestaurant] = useState('');
+
+  const showSuccess = useCallback((title: string, message: string) => {
+    setActionFeedback({ title, message });
+  }, []);
+
+  useEffect(() => {
+    if (!actionFeedback) return;
+    const timeout = setTimeout(() => setActionFeedback(null), 8000);
+    return () => clearTimeout(timeout);
+  }, [actionFeedback]);
 
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -208,6 +252,7 @@ export default function CookManagementScreen() {
     async (userId: string) => {
       if (!session?.access_token) return;
       setSelectedId(userId);
+      setActionFeedback(null);
       setDetails(null);
       setDetailsError(null);
       setDetailsLoading(true);
@@ -287,7 +332,7 @@ export default function CookManagementScreen() {
       }
       setReviewerNote('');
       await refreshDetails();
-      showAdminSuccess(
+      showSuccess(
         decision === 'approved'
           ? 'Document approved'
           : decision === 'rejected'
@@ -316,10 +361,10 @@ export default function CookManagementScreen() {
       setDialog(null);
       setReviewerNote('');
       await refreshDetails();
-      showAdminSuccess(
+      showSuccess(
         action === 'approve' ? 'Cook approved' : 'Cook application rejected',
         action === 'approve'
-          ? 'The cook may now submit dishes for publication and accept orders after dish approval.'
+          ? `${details?.cook.name ?? 'The cook'} has received final platform approval. They can now submit dishes for publication and accept orders after dish approval.`
           : 'The rejection was saved, the cook was notified, and customer-mode access was retained.'
       );
     } catch (caught: unknown) {
@@ -343,7 +388,7 @@ export default function CookManagementScreen() {
       if (action === 'hide') await hideCookListings(session.access_token, targetUserId);
       else await runManagedUserAction(session.access_token, targetUserId, action);
       await refreshDetails();
-      showAdminSuccess(
+      showSuccess(
         action === 'hide'
           ? 'Listings hidden'
           : action === 'reset-password'
@@ -456,11 +501,15 @@ export default function CookManagementScreen() {
         setBusy(false);
         await decideApplication('reject');
         return;
+      } else if (dialog === 'approve') {
+        setBusy(false);
+        await decideApplication('approve');
+        return;
       }
       setDialog(null);
       setReviewerNote('');
       await refreshDetails();
-      if (successFeedback) showAdminSuccess(successFeedback.title, successFeedback.message);
+      if (successFeedback) showSuccess(successFeedback.title, successFeedback.message);
     } catch (caught: unknown) {
       showAdminFailure(caught);
     } finally {
@@ -544,7 +593,7 @@ export default function CookManagementScreen() {
       anchor.download = `chefin-cooks-${new Date().toISOString().slice(0, 10)}.csv`;
       anchor.click();
       URL.revokeObjectURL(url);
-      showAdminSuccess(
+      showSuccess(
         'CSV exported',
         `${cooks.length.toLocaleString('en-MY')} cook record(s) were downloaded.`
       );
@@ -597,7 +646,9 @@ export default function CookManagementScreen() {
     if (!latestCompliance.has(document.doc_type)) latestCompliance.set(document.doc_type, document);
   }
   const latestIdentity = details?.identityDocuments[0];
-  const canFinalApprove = details?.application?.identity_status === 'approved';
+  const applicationApproved = details?.application?.status === 'approved';
+  const canFinalApprove =
+    details?.application?.identity_status === 'approved' && !applicationApproved;
   const complianceReviewLocked =
     details?.application?.identity_status !== 'approved' || details?.cook.userId === admin?.userId;
 
@@ -617,6 +668,14 @@ export default function CookManagementScreen() {
           <Button label="+ Add cook" tone="primary" onPress={() => setDialog('invite')} />
         </View>
       </View>
+
+      {actionFeedback && !selectedId ? (
+        <SuccessFeedback
+          title={actionFeedback.title}
+          message={actionFeedback.message}
+          onDismiss={() => setActionFeedback(null)}
+        />
+      ) : null}
 
       <View style={styles.stats}>
         {[
@@ -873,6 +932,13 @@ export default function CookManagementScreen() {
           ) : undefined
         }
       >
+        {actionFeedback ? (
+          <SuccessFeedback
+            title={actionFeedback.title}
+            message={actionFeedback.message}
+            onDismiss={() => setActionFeedback(null)}
+          />
+        ) : null}
         {detailsLoading ? (
           <View style={styles.empty}>
             <ActivityIndicator size="large" color="#4CAF50" />
@@ -1081,30 +1147,73 @@ export default function CookManagementScreen() {
               />
             </View>
             <View style={styles.finalReview}>
-              <View style={styles.flexOne}>
-                <Text style={styles.finalTitle}>Final platform approval</Text>
-                <Text style={styles.meta}>
-                  Enabled after identity approval. Food and business documents are optional and only
-                  control public credential badges.
-                </Text>
+              <View style={styles.finalReviewHeader}>
+                <View
+                  style={[
+                    styles.finalReviewIcon,
+                    applicationApproved && styles.finalReviewIconComplete,
+                  ]}
+                >
+                  <Ionicons
+                    name={applicationApproved ? 'checkmark' : 'shield-checkmark-outline'}
+                    size={20}
+                    color={applicationApproved ? '#FFFFFF' : '#237A3B'}
+                  />
+                </View>
+                <View style={styles.flexOne}>
+                  <Text style={styles.finalTitle}>
+                    {applicationApproved ? 'Platform approval complete' : 'Final platform approval'}
+                  </Text>
+                  <Text style={styles.finalDescription}>
+                    {applicationApproved
+                      ? 'This cook is approved. Individual dishes still require publication approval.'
+                      : 'Confirm the cook is ready to join the platform. This action notifies the cook and enables their approved or pending listings.'}
+                  </Text>
+                </View>
               </View>
-              <Button
-                label="Hide all listings"
-                onPress={() => quickAction('hide')}
-                disabled={busy || details.cook.userId === admin?.userId}
-              />
-              <Button
-                label="Reject application"
-                tone="danger"
-                onPress={() => setDialog('reject')}
-                disabled={busy || details.cook.userId === admin?.userId}
-              />
-              <Button
-                label="Approve cook"
-                tone="primary"
-                onPress={() => decideApplication('approve')}
-                disabled={!canFinalApprove || busy || details.cook.userId === admin?.userId}
-              />
+              {!applicationApproved ? (
+                <View style={styles.approvalChecklist}>
+                  <View style={styles.checklistRow}>
+                    <Ionicons
+                      name={canFinalApprove ? 'checkmark-circle' : 'ellipse-outline'}
+                      size={18}
+                      color={canFinalApprove ? '#2E8B4E' : '#A1AAA4'}
+                    />
+                    <Text style={styles.checklistText}>
+                      Identity review {canFinalApprove ? 'approved' : 'must be approved first'}
+                    </Text>
+                  </View>
+                  <View style={styles.checklistRow}>
+                    <Ionicons name="information-circle-outline" size={18} color="#6C7770" />
+                    <Text style={styles.checklistText}>
+                      Food and business credentials are optional and affect badges only
+                    </Text>
+                  </View>
+                </View>
+              ) : null}
+              <View style={styles.finalActions}>
+                <Button
+                  label="Hide all listings"
+                  onPress={() => quickAction('hide')}
+                  disabled={busy || details.cook.userId === admin?.userId}
+                />
+                {!applicationApproved ? (
+                  <>
+                    <Button
+                      label="Reject application"
+                      tone="danger"
+                      onPress={() => setDialog('reject')}
+                      disabled={busy || details.cook.userId === admin?.userId}
+                    />
+                    <Button
+                      label="Review & approve"
+                      tone="primary"
+                      onPress={() => setDialog('approve')}
+                      disabled={!canFinalApprove || busy || details.cook.userId === admin?.userId}
+                    />
+                  </>
+                ) : null}
+              </View>
             </View>
           </View>
         ) : null}
@@ -1123,12 +1232,16 @@ export default function CookManagementScreen() {
                   ? 'Suspend cook account'
                   : dialog === 'deactivate'
                     ? 'Deactivate cook account'
-                    : 'Reject cook application'
+                    : dialog === 'approve'
+                      ? 'Approve cook for Chefin'
+                      : 'Reject cook application'
         }
         subtitle={
           dialog === 'invite'
             ? 'The invitation continues into cook onboarding after account setup.'
-            : details?.cook.name
+            : dialog === 'approve'
+              ? 'Review the outcome before granting final platform access.'
+              : details?.cook.name
         }
         onClose={() => !busy && setDialog(null)}
         maxWidth={600}
@@ -1147,7 +1260,11 @@ export default function CookManagementScreen() {
                         ? 'Suspend'
                         : dialog === 'deactivate'
                           ? 'Deactivate'
-                          : 'Reject'
+                          : dialog === 'approve'
+                            ? busy
+                              ? 'Approving…'
+                              : 'Confirm approval'
+                            : 'Reject'
               }
               tone={
                 dialog === 'suspend' || dialog === 'deactivate' || dialog === 'reject'
@@ -1263,6 +1380,43 @@ export default function CookManagementScreen() {
               onChangeText={setReviewerNote}
               placeholder="Rejection reason and resubmission guidance"
             />
+          ) : null}
+          {dialog === 'approve' && details ? (
+            <View style={styles.approvalConfirmation}>
+              <View style={styles.confirmationHero}>
+                <View style={styles.confirmationIcon}>
+                  <Ionicons name="shield-checkmark" size={24} color="#237A3B" />
+                </View>
+                <View style={styles.flexOne}>
+                  <Text style={styles.confirmationTitle}>{details.cook.name}</Text>
+                  <Text style={styles.confirmationRestaurant}>
+                    {details.cook.restaurantName ?? 'No restaurant name'}
+                  </Text>
+                </View>
+              </View>
+              <View style={styles.confirmationSummary}>
+                <View style={styles.checklistRow}>
+                  <Ionicons name="checkmark-circle" size={18} color="#2E8B4E" />
+                  <Text style={styles.checklistText}>Identity review approved</Text>
+                </View>
+                <View style={styles.checklistRow}>
+                  <Ionicons name="notifications-outline" size={18} color="#56635B" />
+                  <Text style={styles.checklistText}>
+                    The cook will receive an approval notification
+                  </Text>
+                </View>
+                <View style={styles.checklistRow}>
+                  <Ionicons name="restaurant-outline" size={18} color="#56635B" />
+                  <Text style={styles.checklistText}>
+                    Approved and pending listings will be enabled; dishes still follow publication
+                    review
+                  </Text>
+                </View>
+              </View>
+              <Text style={styles.confirmationNotice}>
+                This action is recorded in the admin audit log.
+              </Text>
+            </View>
           ) : null}
         </View>
       </AdminDialog>
@@ -1382,6 +1536,39 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   errorText: { fontFamily: 'mon', color: '#B42318', fontSize: 10 },
+  successFeedback: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#A9D9B7',
+    borderRadius: 12,
+    backgroundColor: '#ECF9F0',
+  },
+  successIcon: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#2E8B4E',
+  },
+  successTitle: { fontFamily: 'mon-b', fontSize: 11, color: '#205C35' },
+  successMessage: {
+    fontFamily: 'mon',
+    fontSize: 9,
+    lineHeight: 15,
+    color: '#41694D',
+    marginTop: 3,
+  },
+  successDismiss: {
+    width: 30,
+    height: 30,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   hero: { flexDirection: 'row', alignItems: 'center', gap: 13 },
   detailsContent: { gap: 22 },
   heroAvatar: { width: 58, height: 58, borderRadius: 29 },
@@ -1464,14 +1651,66 @@ const styles = StyleSheet.create({
     fontSize: 10,
   },
   finalReview: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'center',
-    gap: 9,
-    backgroundColor: '#F7F9F8',
+    gap: 14,
+    borderWidth: 1,
+    borderColor: '#DCE7DF',
+    backgroundColor: '#F8FBF9',
     borderRadius: 14,
-    padding: 15,
+    padding: 17,
   },
+  finalReviewHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
+  finalReviewIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#E5F5EA',
+  },
+  finalReviewIconComplete: { backgroundColor: '#2E8B4E' },
   finalTitle: { fontFamily: 'mon-b', fontSize: 14, color: '#28332C' },
+  finalDescription: {
+    fontFamily: 'mon',
+    fontSize: 9,
+    lineHeight: 15,
+    color: '#6D7770',
+    marginTop: 4,
+  },
+  approvalChecklist: {
+    gap: 9,
+    padding: 12,
+    borderRadius: 10,
+    backgroundColor: '#FFFFFF',
+  },
+  checklistRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+  checklistText: { flex: 1, fontFamily: 'mon', fontSize: 9, lineHeight: 15, color: '#4D5951' },
+  finalActions: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 8 },
+  approvalConfirmation: { gap: 16 },
+  confirmationHero: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 14,
+    borderRadius: 12,
+    backgroundColor: '#F1F8F3',
+  },
+  confirmationIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#DDF1E3',
+  },
+  confirmationTitle: { fontFamily: 'mon-b', fontSize: 14, color: '#243029' },
+  confirmationRestaurant: { fontFamily: 'mon', fontSize: 9, color: '#737D77', marginTop: 3 },
+  confirmationSummary: { gap: 12 },
+  confirmationNotice: {
+    fontFamily: 'mon',
+    fontSize: 8,
+    lineHeight: 14,
+    color: '#7D8781',
+    paddingTop: 4,
+  },
   dialogForm: { gap: 14 },
 });
