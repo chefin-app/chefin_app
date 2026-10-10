@@ -1895,7 +1895,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 13,
     borderRadius: 24,
-    backgroundColor: theme.colors.primary,
+    backgroundColor: theme.colors.primaryAction,
   },
   selectionActionText: { fontSize: 13, fontWeight: '800', color: theme.colors.textOnAction },
   selectionActionSecondary: {
@@ -1968,7 +1968,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 12,
-    backgroundColor: theme.colors.primary,
+    backgroundColor: theme.colors.primaryAction,
   },
   manageStatusText: { fontSize: 13, fontWeight: '800', color: theme.colors.textOnAction },
   fab: {
@@ -2047,7 +2047,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 29,
-    backgroundColor: theme.colors.primary,
+    backgroundColor: theme.colors.primaryAction,
   },
   statusConfirmText: { color: theme.colors.textOnAction, fontSize: 18, fontWeight: '800' },
   primaryButton: {

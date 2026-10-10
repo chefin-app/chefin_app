@@ -917,7 +917,7 @@ const styles = StyleSheet.create({
   orderCancelled: { color: theme.colors.error },
   orderMeta: { fontSize: 13, color: theme.colors.textMuted },
   cardAction: {
-    backgroundColor: theme.colors.primary,
+    backgroundColor: theme.colors.primaryAction,
     borderRadius: 24,
     paddingHorizontal: 22,
     paddingVertical: 12,
@@ -1050,7 +1050,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   confirmButton: {
-    backgroundColor: theme.colors.primary,
+    backgroundColor: theme.colors.primaryAction,
     borderRadius: 28,
     paddingVertical: 16,
     alignItems: 'center',

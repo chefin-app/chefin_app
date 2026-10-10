@@ -671,7 +671,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     paddingVertical: 10,
   },
-  retryText: { fontFamily: 'mon-b', fontSize: 10, color: ADMIN_THEME.colors.surface },
+  retryText: { fontFamily: 'mon-b', fontSize: 10, color: ADMIN_THEME.colors.textOnAction },
   staleBanner: {
     flexDirection: 'row',
     alignItems: 'center',

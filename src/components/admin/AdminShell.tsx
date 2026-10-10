@@ -167,7 +167,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
     <View style={styles.sidebarInner}>
       <View style={styles.brandRow}>
         <View style={styles.brandIcon}>
-          <Ionicons name="restaurant" size={20} color={ADMIN_THEME.colors.surface} />
+          <Ionicons name="restaurant" size={20} color={ADMIN_THEME.colors.textOnAction} />
         </View>
         <View>
           <Text style={styles.brandName}>Chefin</Text>
@@ -358,7 +358,7 @@ const styles = StyleSheet.create({
   },
   navItemActive: { backgroundColor: ADMIN_THEME.colors.green },
   navItemText: { flex: 1, fontFamily: 'mon-sb', fontSize: 12, color: '#4B5850' },
-  navItemTextActive: { color: ADMIN_THEME.colors.surface },
+  navItemTextActive: { color: ADMIN_THEME.colors.textOnAction },
   soonDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: '#CDD3CF' },
   sidebarSpacer: { flex: 1, minHeight: 28 },
   logoutItem: { marginTop: 5 },
@@ -411,7 +411,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: ADMIN_THEME.colors.surface,
   },
-  badgeText: { fontFamily: 'mon-b', fontSize: 8, color: ADMIN_THEME.colors.surface },
+  badgeText: { fontFamily: 'mon-b', fontSize: 8, color: ADMIN_THEME.colors.textOnAction },
   profileDivider: { width: 1, height: 30, backgroundColor: '#E5EAE7', marginHorizontal: 16 },
   profileImage: {
     width: 38,

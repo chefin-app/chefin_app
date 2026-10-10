@@ -18,6 +18,8 @@ export const ADMIN_THEME = {
     slate: '#667085',
     blue: '#175CD3',
     amber: '#9A6700',
+    /** White text or icon on a green/red filled control. */
+    textOnAction: '#FFFFFF',
   },
 
   /**

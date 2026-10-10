@@ -1352,7 +1352,7 @@ const styles = StyleSheet.create({
   },
   smallButtonDanger: { borderColor: '#F3C7C4', backgroundColor: '#FFF5F4' },
   smallButtonText: { fontFamily: 'mon-sb', fontSize: 8, color: '#56615A' },
-  smallButtonTextPrimary: { color: ADMIN_THEME.colors.surface },
+  smallButtonTextPrimary: { color: ADMIN_THEME.colors.textOnAction },
   smallButtonTextDanger: { color: ADMIN_THEME.colors.red },
   buttonDisabled: { opacity: 0.45 },
   cardList: { gap: 10 },

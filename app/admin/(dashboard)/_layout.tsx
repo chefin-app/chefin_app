@@ -130,5 +130,5 @@ const styles = StyleSheet.create({
     paddingVertical: 13,
     borderRadius: 12,
   },
-  primaryButtonText: { fontFamily: 'mon-b', fontSize: 12, color: ADMIN_THEME.colors.surface },
+  primaryButtonText: { fontFamily: 'mon-b', fontSize: 12, color: ADMIN_THEME.colors.textOnAction },
 });

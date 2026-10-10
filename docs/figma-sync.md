@@ -1427,3 +1427,60 @@ no screenshot had caught it, because the clipped row still looked plausible at t
 Screenshots verify what is *visible*; they do not catch a frame that clips its own content and
 still looks reasonable. **Geometry needs a programmatic assertion** — compare child extent against
 frame height — not just a visual check.
+
+## Final verification round (2026-10-10)
+
+Ran as a fresh audit, deliberately looking for things never checked before. Three defects found
+and fixed; one new class of pre-existing issue found and **not** fixed (see below).
+
+### Fixed — my defects
+1. **12 white-on-green contrast failures survived the "contrast fix".** The original audit only
+   searched for `#4CAF50`; the cook console used `#00B85A` / `#00A651` (also ~2.6:1), and several
+   button/text pairs (`startShoppingBtn`→`startShoppingText`, `activeFilterTag`→`activeFilterText`)
+   did not match the naming heuristic. The token migration then mapped all of them to
+   `theme.colors.primary`, so the earlier "0 remaining" claim was false. All 12 → `primaryAction`.
+   `MainFilter / Chip` active variants in Figma changed to match (3 variants).
+2. **19 admin uses of the `surface` token as a text colour** — the semantic bug fixed in mobile
+   earlier but never checked in admin. Added `ADMIN_THEME.colors.textOnAction` and swapped all 19
+   (10 files).
+3. **Garbled component descriptions in the published library** (`andamp;quot;`, `andamp;gt;`).
+   Every description write re-escapes `& < > " '`; the earlier decode pass turned one escape level
+   into the literal word "and". The entity check missed it because the result no longer contains
+   `&`. Repaired 21 descriptions with a full decode → safe-character rewrite; verified **0**
+   descriptions contain `&` or the garbage pattern. **Library needs republishing again.**
+
+### Verified clean
+- Figma: 227 variables / 0 dangling aliases · 45 text styles · 106 components (all described,
+  0 collapsed, 0 loose, 0 overlaps, all icons `Icon/`-prefixed) · 72 screens (all 393×852 or
+  1440×1024, 0 collapsed auto-layouts, 0 missing fonts, 320 instances, 0 broken) · Flows 50/76.
+- Library: republished by the user; `Icon/restaurant` and the new `BuyerRatingCard` variants
+  resolve from it.
+- Code: `tsc` clean · eslint 0 errors (156 pre-existing warnings) · jest 189/189 · migrations
+  24/24 · 17 files modified, uncommitted.
+
+### Found, NOT fixed — needs a decision
+A full WCAG pass over **every** white-text rule (not just the brand green) found **15 further
+failures across 11 one-off colours** that were never in scope:
+
+| Background | Ratio | Where |
+|---|---|---|
+| `#42C975` | 2.13 | OrderFulfilledPopup primary button |
+| `#35B958` | 2.55 | restaurant/index unavailableButton, DishOrderModal addButton |
+| `#19B85A` | 2.61 | MenuItemCard add `+` |
+| `#22AE50` | 2.90 | option-group primaryButton |
+| `#25A84B` | 3.10 | LocationPromptModal confirmButton |
+| `destructive #FF4D4D` | 3.27 | account signOutButton |
+| `#F04438` / `#E5484D` | 3.76 / 3.91 | unread-count badges (9px text) |
+| `#1877F2` | 4.23 | Facebook brand button |
+| `#238B45` / `#168A47` | 4.33 / 4.41 | browseButton, WhatsApp button (near-miss) |
+
+Plus **78 occurrences of green (#4CAF50) text on light backgrounds** at 2.78:1 — links, active
+labels, selected-cuisine text.
+
+Not fixed because: (a) these are pre-existing and were never claimed; (b) several are judgement
+calls — Facebook's brand blue, 9px count badges, a `+` glyph; (c) consolidating the one-off greens
+onto `primaryAction` visibly changes ~8 screens. The buttons in the first six rows are the same
+bug class as the 39 already fixed and would take the same one-line fix each.
+
+**Honest status:** everything I built or claimed is now verified. The app has pre-existing
+contrast debt beyond that scope.

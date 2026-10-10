@@ -731,7 +731,11 @@ export default function DishManagementScreen() {
               >
                 <Image source={{ uri: details.dish.imageUrl }} style={styles.heroImage} />
                 <View style={styles.imageExpandHint}>
-                  <Ionicons name="expand-outline" size={15} color={ADMIN_THEME.colors.surface} />
+                  <Ionicons
+                    name="expand-outline"
+                    size={15}
+                    color={ADMIN_THEME.colors.textOnAction}
+                  />
                   <Text style={styles.imageExpandText}>View full image</Text>
                 </View>
               </TouchableOpacity>
@@ -1052,7 +1056,7 @@ export default function DishManagementScreen() {
                 accessibilityRole="button"
                 accessibilityLabel="Close image preview"
               >
-                <Ionicons name="close" size={22} color={ADMIN_THEME.colors.surface} />
+                <Ionicons name="close" size={22} color={ADMIN_THEME.colors.textOnAction} />
               </TouchableOpacity>
             </View>
             {imagePreview ? (
@@ -1182,7 +1186,7 @@ const styles = StyleSheet.create({
   },
   actionButtonDanger: { borderColor: '#F6C7C3', backgroundColor: ADMIN_THEME.colors.redSoft },
   actionButtonText: ADMIN_SHARED_STYLES.buttonText,
-  actionButtonTextPrimary: { color: ADMIN_THEME.colors.surface },
+  actionButtonTextPrimary: { color: ADMIN_THEME.colors.textOnAction },
   actionButtonTextDanger: { color: ADMIN_THEME.colors.red },
   buttonDisabled: { opacity: 0.42 },
   flagBadge: {
@@ -1244,7 +1248,7 @@ const styles = StyleSheet.create({
     borderRadius: 9,
     backgroundColor: 'rgba(20, 29, 23, 0.72)',
   },
-  imageExpandText: { fontFamily: 'mon-sb', fontSize: 9, color: ADMIN_THEME.colors.surface },
+  imageExpandText: { fontFamily: 'mon-sb', fontSize: 9, color: ADMIN_THEME.colors.textOnAction },
   imagePreviewOverlay: {
     flex: 1,
     alignItems: 'center',
@@ -1264,7 +1268,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontFamily: 'mon-b',
     fontSize: 16,
-    color: ADMIN_THEME.colors.surface,
+    color: ADMIN_THEME.colors.textOnAction,
   },
   imagePreviewClose: {
     width: 42,

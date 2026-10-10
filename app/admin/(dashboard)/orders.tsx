@@ -1437,7 +1437,7 @@ const styles = StyleSheet.create({
   smallButtonPrimary: { borderColor: '#35A853', backgroundColor: '#35A853' },
   smallButtonDanger: { borderColor: '#F1B7B4', backgroundColor: '#FFF4F3' },
   smallButtonText: { fontFamily: 'mon-sb', fontSize: 9, color: '#66716A' },
-  smallButtonTextPrimary: { color: ADMIN_THEME.colors.surface },
+  smallButtonTextPrimary: { color: ADMIN_THEME.colors.textOnAction },
   smallButtonTextDanger: { color: ADMIN_THEME.colors.red },
   buttonDisabled: { opacity: 0.48 },
   inlineBadgeGap: { marginTop: 5 },

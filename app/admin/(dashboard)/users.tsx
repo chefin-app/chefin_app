@@ -1392,7 +1392,7 @@ const styles = StyleSheet.create({
   actionButtonDanger: { backgroundColor: '#FFF4F3', borderColor: '#F6C6C2' },
   actionButtonDisabled: { opacity: 0.4 },
   actionButtonText: { fontFamily: 'mon-sb', fontSize: 9, color: '#626D66' },
-  actionButtonTextPrimary: { color: ADMIN_THEME.colors.surface },
+  actionButtonTextPrimary: { color: ADMIN_THEME.colors.textOnAction },
   actionButtonTextDanger: { color: ADMIN_THEME.colors.red },
   errorBanner: {
     flexDirection: 'row',

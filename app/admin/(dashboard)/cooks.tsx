@@ -133,7 +133,7 @@ function SuccessFeedback({
   return (
     <View style={styles.successFeedback} accessibilityRole="alert">
       <View style={styles.successIcon}>
-        <Ionicons name="checkmark" size={18} color={ADMIN_THEME.colors.surface} />
+        <Ionicons name="checkmark" size={18} color={ADMIN_THEME.colors.textOnAction} />
       </View>
       <View style={styles.flexOne}>
         <Text style={styles.successTitle}>{title}</Text>

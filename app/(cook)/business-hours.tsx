@@ -747,7 +747,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 27,
-    backgroundColor: theme.colors.primary,
+    backgroundColor: theme.colors.primaryAction,
   },
   primaryWideText: { color: theme.colors.textOnAction, fontSize: 17, fontWeight: '800' },
   sectionCard: {
@@ -820,7 +820,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 27,
-    backgroundColor: theme.colors.primary,
+    backgroundColor: theme.colors.primaryAction,
   },
   saveText: { color: theme.colors.textOnAction, fontSize: 17, fontWeight: '800' },
   disabled: { opacity: 0.45 },

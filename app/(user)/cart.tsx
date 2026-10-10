@@ -897,7 +897,7 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   startShoppingBtn: {
-    backgroundColor: theme.colors.primary,
+    backgroundColor: theme.colors.primaryAction,
     paddingHorizontal: 32,
     paddingVertical: 16,
     borderRadius: 16,
@@ -1149,7 +1149,7 @@ const styles = StyleSheet.create({
     color: theme.colors.text,
   },
   placeOrderBtn: {
-    backgroundColor: theme.colors.primary,
+    backgroundColor: theme.colors.primaryAction,
     paddingVertical: 16,
     borderRadius: 16,
     alignItems: 'center',

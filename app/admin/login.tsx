@@ -98,7 +98,7 @@ export default function AdminLoginScreen() {
             {wide && (
               <View style={styles.brandPanel}>
                 <View style={styles.brandMark}>
-                  <Ionicons name="restaurant" size={28} color={ADMIN_THEME.colors.surface} />
+                  <Ionicons name="restaurant" size={28} color={ADMIN_THEME.colors.textOnAction} />
                 </View>
                 <Text style={styles.brandName}>Chefin</Text>
                 <Text style={styles.brandHeadline}>
@@ -119,7 +119,7 @@ export default function AdminLoginScreen() {
               {!wide && (
                 <View style={styles.mobileBrand}>
                   <View style={styles.mobileBrandMark}>
-                    <Ionicons name="restaurant" size={22} color={ADMIN_THEME.colors.surface} />
+                    <Ionicons name="restaurant" size={22} color={ADMIN_THEME.colors.textOnAction} />
                   </View>
                   <Text style={styles.mobileBrandText}>Chefin Admin</Text>
                 </View>
@@ -239,14 +239,14 @@ const styles = StyleSheet.create({
   brandName: {
     fontFamily: 'mon-b',
     fontSize: 22,
-    color: ADMIN_THEME.colors.surface,
+    color: ADMIN_THEME.colors.textOnAction,
     marginBottom: 42,
   },
   brandHeadline: {
     fontFamily: 'mon-b',
     fontSize: 36,
     lineHeight: 46,
-    color: ADMIN_THEME.colors.surface,
+    color: ADMIN_THEME.colors.textOnAction,
     marginBottom: 18,
   },
   brandCopy: { fontFamily: 'mon', fontSize: 15, lineHeight: 25, color: '#DDF5E5' },

@@ -587,7 +587,7 @@ const styles = StyleSheet.create({
   buttonDanger: { backgroundColor: '#FFF4F3', borderColor: '#F4C7C3' },
   buttonDisabled: { opacity: 0.45 },
   buttonText: { fontFamily: 'mon-sb', fontSize: 9, color: '#626D66' },
-  buttonTextPrimary: { color: ADMIN_THEME.colors.surface },
+  buttonTextPrimary: { color: ADMIN_THEME.colors.textOnAction },
   buttonTextDanger: { color: ADMIN_THEME.colors.red },
   cards: { gap: 10 },
   card: {

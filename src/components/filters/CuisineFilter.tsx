@@ -127,7 +127,7 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.border,
   },
   activeFilterTag: {
-    backgroundColor: theme.colors.primary,
+    backgroundColor: theme.colors.primaryAction,
     borderColor: theme.colors.primary,
   },
   filterText: {

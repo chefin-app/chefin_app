@@ -265,7 +265,7 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.border,
   },
   activeFilterTag: {
-    backgroundColor: theme.colors.primary,
+    backgroundColor: theme.colors.primaryAction,
     borderColor: theme.colors.primary,
   },
   filterText: {
@@ -394,7 +394,7 @@ const styles = StyleSheet.create({
     minHeight: 54,
     justifyContent: 'center',
     borderRadius: 27,
-    backgroundColor: theme.colors.primary,
+    backgroundColor: theme.colors.primaryAction,
     alignItems: 'center',
   },
   applyButtonText: {
