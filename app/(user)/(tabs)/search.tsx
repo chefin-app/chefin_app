@@ -22,6 +22,7 @@ import type { Listing } from '@/src/types/models';
 import { useCustomerLocation } from '@/src/context/CustomerLocationContext';
 import { useScheduledDiscovery } from '@/src/hooks/useScheduledDiscovery';
 import { useAuth } from '@/src/services/auth-context';
+import theme from '@/src/styles/theme';
 
 type DiscoveryMode = 'all' | 'availableNow' | 'topRated' | 'nearest';
 
@@ -330,7 +331,11 @@ const SearchScreen = () => {
             {configuredDiscovery && (
               <View style={styles.discoveryHeader}>
                 <View style={styles.discoveryIcon}>
-                  <Ionicons name={configuredDiscovery.icon} size={22} color="#2E7D32" />
+                  <Ionicons
+                    name={configuredDiscovery.icon}
+                    size={22}
+                    color={theme.colors.primaryOnLight}
+                  />
                 </View>
                 <View style={styles.discoveryCopy}>
                   <Text style={styles.discoveryEyebrow}>DISCOVER</Text>
@@ -366,7 +371,7 @@ const SearchScreen = () => {
             )}
             {restaurantError && (
               <View style={styles.statusRow}>
-                <Ionicons name="alert-circle-outline" size={18} color="#B3261E" />
+                <Ionicons name="alert-circle-outline" size={18} color={theme.colors.error} />
                 <Text style={styles.errorText}>{restaurantError.message}</Text>
               </View>
             )}
@@ -398,7 +403,7 @@ const SearchScreen = () => {
                 </Text>
                 {discoveryMode === 'nearest' && !location && (
                   <TouchableOpacity style={styles.locationButton} onPress={chooseLocation}>
-                    <Ionicons name="location" size={18} color="#fff" />
+                    <Ionicons name="location" size={18} color={theme.colors.textOnAction} />
                     <Text style={styles.locationButtonText}>Choose location</Text>
                   </TouchableOpacity>
                 )}
@@ -442,7 +447,7 @@ export default SearchScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: theme.colors.surfaceAlt,
   },
   listContent: {
     flexGrow: 1,
@@ -471,7 +476,7 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 21,
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 11,
@@ -480,7 +485,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   discoveryEyebrow: {
-    color: '#2E7D32',
+    color: theme.colors.primaryOnLight,
     fontSize: 10,
     fontWeight: '800',
     letterSpacing: 1,
@@ -498,7 +503,7 @@ const styles = StyleSheet.create({
     marginTop: 3,
   },
   discoveryCount: {
-    color: '#2E7D32',
+    color: theme.colors.primaryOnLight,
     fontSize: 12,
     fontWeight: '700',
     marginTop: 7,
@@ -507,7 +512,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: 6,
@@ -525,7 +530,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   errorText: {
-    color: '#B3261E',
+    color: theme.colors.error,
     fontSize: 13,
     flexShrink: 1,
   },
@@ -535,7 +540,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   resultsText: {
-    color: '#555',
+    color: theme.colors.textSecondary,
     fontSize: 13,
   },
   searchResults: {
@@ -565,13 +570,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 7,
-    backgroundColor: '#237A3B',
+    backgroundColor: theme.colors.primaryAction,
     paddingHorizontal: 18,
     paddingVertical: 11,
     borderRadius: 22,
     marginTop: 15,
   },
-  locationButtonText: { color: '#fff', fontSize: 13, fontWeight: '700' },
+  locationButtonText: { color: theme.colors.textOnAction, fontSize: 13, fontWeight: '700' },
   historyContainer: {
     marginTop: 22,
   },
@@ -583,12 +588,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   historyTitle: {
-    color: '#555',
+    color: theme.colors.textSecondary,
     fontSize: 14,
     fontWeight: '600',
   },
   clearHistoryText: {
-    color: '#2E7D32',
+    color: theme.colors.primaryOnLight,
     fontSize: 13,
     fontWeight: '600',
   },

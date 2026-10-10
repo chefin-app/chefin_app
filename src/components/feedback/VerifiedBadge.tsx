@@ -12,6 +12,7 @@ import {
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
+import theme from '@/src/styles/theme';
 
 export const VERIFIED_COOK_TOOLTIP =
   'Chefin has approved at least one food-safety or food-business credential from this cook';
@@ -159,7 +160,7 @@ const styles = StyleSheet.create({
   tooltip: {
     position: 'absolute',
     opacity: 0,
-    backgroundColor: '#1F2937',
+    backgroundColor: theme.colors.text,
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 12,
@@ -173,7 +174,7 @@ const styles = StyleSheet.create({
     opacity: 1,
   },
   tooltipText: {
-    color: '#FFFFFF',
+    color: theme.colors.textOnAction,
     fontSize: 13,
     fontWeight: '500',
     lineHeight: 19,
@@ -183,7 +184,7 @@ const styles = StyleSheet.create({
     bottom: -ARROW_SIZE / 2,
     width: ARROW_SIZE,
     height: ARROW_SIZE,
-    backgroundColor: '#1F2937',
+    backgroundColor: theme.colors.text,
     transform: [{ rotate: '45deg' }],
   },
 });

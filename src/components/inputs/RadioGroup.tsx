@@ -2,6 +2,7 @@ import React from 'react';
 import { View, StyleSheet, TextStyle, ViewStyle } from 'react-native';
 import { BaseText } from '@/src/components/typography';
 import { RadioButton } from '../buttons/RadioButton';
+import theme from '@/src/styles/theme';
 
 type RadioOption = {
   label: string;
@@ -52,7 +53,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    color: '#333',
+    color: theme.colors.textStrong,
     marginBottom: 8,
     fontWeight: '500',
   },

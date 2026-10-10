@@ -16,6 +16,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { supabase } from '@/src/utils/supabaseClient';
 import { useAuth } from '@/src/services/auth-context';
 import PickupPinModal from '@/src/components/orders/PickupPinModal';
+import theme from '@/src/styles/theme';
 
 type OrderStatus = 'pending' | 'confirmed' | 'ready' | 'completed' | 'cancelled';
 type TabKey = 'preparing' | 'ready' | 'upcoming' | 'completed';
@@ -549,7 +550,7 @@ export default function Orders() {
             }}
           >
             {busy ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
+              <ActivityIndicator size="small" color={theme.colors.textOnAction} />
             ) : (
               <Text style={styles.cardActionText}>{action.label}</Text>
             )}
@@ -568,14 +569,14 @@ export default function Orders() {
             <Ionicons
               name={reviewed ? 'checkmark-circle' : 'person-outline'}
               size={14}
-              color={reviewed ? '#2E7D32' : '#237A3B'}
+              color={reviewed ? theme.colors.primaryOnLight : theme.colors.primaryAction}
             />
             <Text style={[styles.reviewButtonText, reviewed && styles.reviewButtonTextDone]}>
               {reviewed ? 'Reviewed' : 'Review'}
             </Text>
           </TouchableOpacity>
         ) : (
-          <Ionicons name="chevron-forward" size={22} color="#5F6368" />
+          <Ionicons name="chevron-forward" size={22} color={theme.colors.textSecondary} />
         )}
       </TouchableOpacity>
     );
@@ -606,7 +607,7 @@ export default function Orders() {
     if (loading) {
       return (
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color="#00A651" />
+          <ActivityIndicator size="large" color={theme.colors.primary} />
         </View>
       );
     }
@@ -617,7 +618,7 @@ export default function Orders() {
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         >
           <View style={styles.emptyIcon}>
-            <Ionicons name="receipt-outline" size={26} color="#666" />
+            <Ionicons name="receipt-outline" size={26} color={theme.colors.textSecondary} />
           </View>
           <Text style={styles.emptyText}>
             Nothing here right now — new orders will show up automatically.
@@ -658,14 +659,14 @@ export default function Orders() {
           <Text style={styles.hoursText} numberOfLines={1}>
             {pillState.label}
           </Text>
-          <Ionicons name="chevron-down" size={16} color="#333" />
+          <Ionicons name="chevron-down" size={16} color={theme.colors.textStrong} />
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.helpButton}
           onPress={() => router.push('/(cook)/help-support')}
           hitSlop={6}
         >
-          <Ionicons name="help-circle-outline" size={28} color="#1A1A1A" />
+          <Ionicons name="help-circle-outline" size={28} color={theme.colors.text} />
         </TouchableOpacity>
       </View>
 
@@ -707,7 +708,7 @@ export default function Orders() {
                   <Text style={styles.statusTitle}>{openUntilLabel}</Text>
                 </View>
                 {draftStatus === 'open' && (
-                  <Ionicons name="checkmark-circle" size={28} color="#00A651" />
+                  <Ionicons name="checkmark-circle" size={28} color={theme.colors.primary} />
                 )}
               </TouchableOpacity>
 
@@ -736,7 +737,7 @@ export default function Orders() {
                         disabled={draftBusyMinutes <= 5 || statusSaving}
                         onPress={() => setDraftBusyMinutes(m => Math.max(5, m - 5))}
                       >
-                        <Ionicons name="remove" size={24} color="#5F6368" />
+                        <Ionicons name="remove" size={24} color={theme.colors.textSecondary} />
                       </TouchableOpacity>
                       <Text style={styles.stepperValue}>{draftBusyMinutes} mins</Text>
                       <TouchableOpacity
@@ -748,13 +749,13 @@ export default function Orders() {
                         disabled={draftBusyMinutes >= 240 || statusSaving}
                         onPress={() => setDraftBusyMinutes(m => Math.min(240, m + 5))}
                       >
-                        <Ionicons name="add" size={24} color="#00794F" />
+                        <Ionicons name="add" size={24} color={theme.colors.primaryAction} />
                       </TouchableOpacity>
                     </View>
                   )}
                 </View>
                 {draftStatus === 'busy' && (
-                  <Ionicons name="checkmark-circle" size={28} color="#00A651" />
+                  <Ionicons name="checkmark-circle" size={28} color={theme.colors.primary} />
                 )}
               </TouchableOpacity>
 
@@ -799,7 +800,7 @@ export default function Orders() {
                   )}
                 </View>
                 {draftStatus === 'paused' && (
-                  <Ionicons name="checkmark-circle" size={28} color="#00A651" />
+                  <Ionicons name="checkmark-circle" size={28} color={theme.colors.primary} />
                 )}
               </TouchableOpacity>
             </View>
@@ -820,7 +821,7 @@ export default function Orders() {
               disabled={statusSaving}
             >
               {statusSaving ? (
-                <ActivityIndicator color="#FFFFFF" />
+                <ActivityIndicator color={theme.colors.textOnAction} />
               ) : (
                 <Text style={styles.confirmButtonText}>Confirm</Text>
               )}
@@ -843,7 +844,7 @@ export default function Orders() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFFFFF' },
+  container: { flex: 1, backgroundColor: theme.colors.surface },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -852,13 +853,13 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 14,
   },
-  headerTitle: { flex: 1, fontSize: 28, fontWeight: '800', color: '#1A1A1A' },
+  headerTitle: { flex: 1, fontSize: 28, fontWeight: '800', color: theme.colors.text },
   hoursPill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 7,
     borderWidth: 1,
-    borderColor: '#D7DBD8',
+    borderColor: theme.colors.border,
     borderRadius: 22,
     paddingHorizontal: 13,
     paddingVertical: 9,
@@ -866,14 +867,14 @@ const styles = StyleSheet.create({
   },
   hoursDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#00C853' },
   hoursDotBusy: { backgroundColor: '#F5A623' },
-  hoursDotClosed: { backgroundColor: '#C62828' },
-  hoursText: { fontSize: 15, fontWeight: '700', color: '#1A1A1A', flexShrink: 1 },
+  hoursDotClosed: { backgroundColor: theme.colors.error },
+  hoursText: { fontSize: 15, fontWeight: '700', color: theme.colors.text, flexShrink: 1 },
   helpButton: { padding: 2 },
   tabs: { paddingHorizontal: 12 },
   tab: { paddingHorizontal: 12, paddingTop: 6 },
   tabLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingBottom: 11 },
   tabText: { fontSize: 16, fontWeight: '600', color: '#3C4440' },
-  tabTextActive: { color: '#00794F', fontWeight: '800' },
+  tabTextActive: { color: theme.colors.primaryAction, fontWeight: '800' },
   tabBadge: {
     minWidth: 20,
     height: 20,
@@ -883,15 +884,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  tabBadgeText: { fontSize: 11, fontWeight: '800', color: '#FFFFFF' },
-  tabIndicator: { height: 3, borderRadius: 2, backgroundColor: '#00794F' },
+  tabBadgeText: { fontSize: 11, fontWeight: '800', color: theme.colors.textOnAction },
+  tabIndicator: { height: 3, borderRadius: 2, backgroundColor: theme.colors.primaryAction },
   tabsDivider: { height: StyleSheet.hairlineWidth, backgroundColor: '#D8DCD8' },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   listContent: { padding: 16, paddingBottom: 40 },
   dateHeading: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#888',
+    color: theme.colors.textMuted,
     textTransform: 'uppercase',
     letterSpacing: 0.4,
     marginBottom: 8,
@@ -908,15 +909,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     paddingVertical: 16,
     marginBottom: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.surface,
   },
   orderCardBody: { flex: 1 },
-  orderCode: { fontSize: 20, fontWeight: '800', color: '#1A1A1A', marginBottom: 5 },
-  orderSubtitle: { fontSize: 15, color: '#333934', marginBottom: 6 },
-  orderCancelled: { color: '#C62828' },
-  orderMeta: { fontSize: 13, color: '#9AA19B' },
+  orderCode: { fontSize: 20, fontWeight: '800', color: theme.colors.text, marginBottom: 5 },
+  orderSubtitle: { fontSize: 15, color: theme.colors.textStrong, marginBottom: 6 },
+  orderCancelled: { color: theme.colors.error },
+  orderMeta: { fontSize: 13, color: theme.colors.textMuted },
   cardAction: {
-    backgroundColor: '#00A651',
+    backgroundColor: theme.colors.primary,
     borderRadius: 24,
     paddingHorizontal: 22,
     paddingVertical: 12,
@@ -924,20 +925,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   cardActionDisabled: { opacity: 0.6 },
-  cardActionText: { fontSize: 15, fontWeight: '800', color: '#FFFFFF' },
+  cardActionText: { fontSize: 15, fontWeight: '800', color: theme.colors.textOnAction },
   reviewButton: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
     borderWidth: 1,
-    borderColor: '#A5D6A7',
+    borderColor: theme.colors.primaryDisabled,
     borderRadius: 16,
     paddingHorizontal: 10,
     paddingVertical: 7,
   },
   reviewButtonDone: { borderColor: '#D5EAD8', backgroundColor: '#F1F8F4' },
-  reviewButtonText: { fontSize: 12, fontWeight: '700', color: '#237A3B' },
-  reviewButtonTextDone: { color: '#2E7D32' },
+  reviewButtonText: { fontSize: 12, fontWeight: '700', color: theme.colors.primaryAction },
+  reviewButtonTextDone: { color: theme.colors.primaryOnLight },
   emptyState: { flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: 40 },
   emptyIcon: {
     width: 60,
@@ -948,22 +949,28 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 15,
   },
-  emptyText: { fontSize: 14, color: '#666666', textAlign: 'center', maxWidth: 260, lineHeight: 20 },
+  emptyText: {
+    fontSize: 14,
+    color: theme.colors.textSecondary,
+    textAlign: 'center',
+    maxWidth: 260,
+    lineHeight: 20,
+  },
   sheetBackdrop: {
     flex: 1,
     justifyContent: 'flex-end',
     backgroundColor: 'rgba(20,28,23,0.5)',
   },
   sheet: {
-    backgroundColor: '#F7F8F7',
+    backgroundColor: theme.colors.surfaceAlt,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: 22,
     paddingBottom: 34,
   },
-  sheetTitle: { fontSize: 26, fontWeight: '800', color: '#1A1A1A', marginBottom: 18 },
+  sheetTitle: { fontSize: 26, fontWeight: '800', color: theme.colors.text, marginBottom: 18 },
   statusCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.surface,
     borderWidth: 1,
     borderColor: '#E1E5E1',
     borderRadius: 18,
@@ -980,8 +987,8 @@ const styles = StyleSheet.create({
   statusDotBusy: { backgroundColor: '#F5A623' },
   statusDotPaused: { backgroundColor: '#F05545' },
   statusCopy: { flex: 1 },
-  statusTitle: { fontSize: 19, fontWeight: '700', color: '#1A1A1A' },
-  statusHint: { fontSize: 16, color: '#5F6368', marginTop: 6, lineHeight: 22 },
+  statusTitle: { fontSize: 19, fontWeight: '700', color: theme.colors.text },
+  statusHint: { fontSize: 16, color: theme.colors.textSecondary, marginTop: 6, lineHeight: 22 },
   statusDivider: { height: StyleSheet.hairlineWidth, backgroundColor: '#DCE0DC' },
   stepperRow: {
     flexDirection: 'row',
@@ -996,47 +1003,58 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: '#D7DBD8',
+    borderColor: theme.colors.border,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.surface,
   },
-  stepperButtonPlus: { backgroundColor: '#D9F2E3', borderColor: '#D9F2E3' },
+  stepperButtonPlus: {
+    backgroundColor: theme.colors.primarySoft,
+    borderColor: theme.colors.primarySoft,
+  },
   stepperButtonDisabled: { opacity: 0.4 },
   stepperValue: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: theme.colors.text,
     minWidth: 84,
     textAlign: 'center',
   },
   pauseChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 16 },
   pauseChip: {
     borderWidth: 1,
-    borderColor: '#D7DBD8',
+    borderColor: theme.colors.border,
     borderRadius: 24,
     paddingHorizontal: 18,
     paddingVertical: 11,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.surface,
   },
-  pauseChipSelected: { backgroundColor: '#D9F2E3', borderColor: '#00A651' },
+  pauseChipSelected: {
+    backgroundColor: theme.colors.primarySoft,
+    borderColor: theme.colors.primary,
+  },
   pauseChipText: { fontSize: 16, color: '#3C4440' },
-  pauseChipTextSelected: { color: '#00794F', fontWeight: '700' },
-  scheduleHint: { fontSize: 15, color: '#5F6368', textAlign: 'center', marginTop: 22 },
+  pauseChipTextSelected: { color: theme.colors.primaryAction, fontWeight: '700' },
+  scheduleHint: {
+    fontSize: 15,
+    color: theme.colors.textSecondary,
+    textAlign: 'center',
+    marginTop: 22,
+  },
   scheduleLink: {
     fontSize: 17,
     fontWeight: '700',
-    color: '#1473E6',
+    color: theme.colors.link,
     textAlign: 'center',
     marginTop: 6,
     marginBottom: 20,
   },
   confirmButton: {
-    backgroundColor: '#00A651',
+    backgroundColor: theme.colors.primary,
     borderRadius: 28,
     paddingVertical: 16,
     alignItems: 'center',
   },
   confirmButtonDisabled: { opacity: 0.6 },
-  confirmButtonText: { fontSize: 17, fontWeight: '800', color: '#FFFFFF' },
+  confirmButtonText: { fontSize: 17, fontWeight: '800', color: theme.colors.textOnAction },
 });

@@ -22,6 +22,7 @@ import {
   saveRestaurantDiscoveryLocation,
   type RestaurantDiscoveryLocationDraft,
 } from '@/src/utils/restaurantLocation';
+import theme from '@/src/styles/theme';
 
 type AddressFields = {
   country: string;
@@ -283,7 +284,7 @@ export default function CookAddressScreen() {
             }
           }}
           placeholder={opts?.optional ? '(optional)' : ''}
-          placeholderTextColor="#bbb"
+          placeholderTextColor={theme.colors.placeholder}
           keyboardType={opts?.keyboardType ?? 'default'}
           autoCapitalize="words"
           editable={!saving}
@@ -297,7 +298,7 @@ export default function CookAddressScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color="#4CAF50" />
+          <ActivityIndicator size="large" color={theme.colors.primary} />
         </View>
       </SafeAreaView>
     );
@@ -311,7 +312,7 @@ export default function CookAddressScreen() {
       >
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-            <Ionicons name="chevron-back" size={24} color="#1A1A1A" />
+            <Ionicons name="chevron-back" size={24} color={theme.colors.text} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Confirm Your Address</Text>
           <View style={{ width: 40 }} />
@@ -329,20 +330,25 @@ export default function CookAddressScreen() {
 
           {/* Autocomplete search (Nominatim / OpenStreetMap) */}
           <View style={styles.searchWrap}>
-            <Ionicons name="search" size={18} color="#888" style={styles.searchIcon} />
+            <Ionicons
+              name="search"
+              size={18}
+              color={theme.colors.textMuted}
+              style={styles.searchIcon}
+            />
             <TextInput
               style={styles.searchInput}
               value={searchQuery}
               onChangeText={setSearchQuery}
               placeholder="Search for your address"
-              placeholderTextColor="#bbb"
+              placeholderTextColor={theme.colors.placeholder}
               autoCorrect={false}
               autoCapitalize="none"
             />
-            {searching && <ActivityIndicator size="small" color="#888" />}
+            {searching && <ActivityIndicator size="small" color={theme.colors.textMuted} />}
             {searchQuery.length > 0 && !searching && (
               <TouchableOpacity onPress={() => setSearchQuery('')} hitSlop={8}>
-                <Ionicons name="close-circle" size={18} color="#bbb" />
+                <Ionicons name="close-circle" size={18} color={theme.colors.placeholder} />
               </TouchableOpacity>
             )}
           </View>
@@ -355,7 +361,7 @@ export default function CookAddressScreen() {
                   style={styles.suggestionRow}
                   onPress={() => selectSuggestion(s)}
                 >
-                  <Ionicons name="location-outline" size={18} color="#666" />
+                  <Ionicons name="location-outline" size={18} color={theme.colors.textSecondary} />
                   <Text style={styles.suggestionText} numberOfLines={2}>
                     {s.display_name}
                   </Text>
@@ -382,7 +388,7 @@ export default function CookAddressScreen() {
             disabled={!isComplete || saving}
           >
             {saving ? (
-              <ActivityIndicator color="#fff" />
+              <ActivityIndicator color={theme.colors.textOnAction} />
             ) : (
               <Text style={styles.saveBtnText}>Looks good</Text>
             )}
@@ -394,7 +400,7 @@ export default function CookAddressScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
+  container: { flex: 1, backgroundColor: theme.colors.surface },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   header: {
     flexDirection: 'row',
@@ -403,13 +409,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: '#1A1A1A' },
+  headerTitle: { fontSize: 18, fontWeight: '700', color: theme.colors.text },
   backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   scrollContent: { padding: 20, gap: 12 },
   gateNote: {
     fontSize: 13,
     color: '#B26B00',
-    backgroundColor: '#FFF3E0',
+    backgroundColor: theme.colors.warningSoft,
     padding: 12,
     borderRadius: 10,
     marginBottom: 8,
@@ -417,17 +423,17 @@ const styles = StyleSheet.create({
   searchWrap: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F5F5F5',
+    backgroundColor: theme.colors.surfaceMuted,
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 10,
     gap: 8,
   },
   searchIcon: {},
-  searchInput: { flex: 1, fontSize: 15, color: '#1A1A1A' },
+  searchInput: { flex: 1, fontSize: 15, color: theme.colors.text },
   suggestionList: {
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: theme.colors.border,
     borderRadius: 12,
     overflow: 'hidden',
     marginTop: 4,
@@ -439,12 +445,12 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     gap: 8,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#E0E0E0',
+    borderBottomColor: theme.colors.border,
   },
-  suggestionText: { flex: 1, fontSize: 13, color: '#1A1A1A', lineHeight: 18 },
+  suggestionText: { flex: 1, fontSize: 13, color: theme.colors.text, lineHeight: 18 },
   manualLabel: {
     fontSize: 12,
-    color: '#888',
+    color: theme.colors.textMuted,
     fontWeight: '600',
     letterSpacing: 0.4,
     textTransform: 'uppercase',
@@ -452,34 +458,39 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   fieldWrap: { gap: 4, marginBottom: 8 },
-  fieldLabel: { fontSize: 11, color: '#888', fontWeight: '600', letterSpacing: 0.4 },
-  requiredAsterisk: { color: '#FF5252' },
+  fieldLabel: {
+    fontSize: 11,
+    color: theme.colors.textMuted,
+    fontWeight: '600',
+    letterSpacing: 0.4,
+  },
+  requiredAsterisk: { color: theme.colors.destructive },
   fieldInput: {
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: theme.colors.border,
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 16,
-    color: '#1A1A1A',
+    color: theme.colors.text,
   },
   fieldInputError: {
-    borderColor: '#FF5252',
+    borderColor: theme.colors.destructive,
     backgroundColor: '#FFEBEE',
   },
   errorText: {
-    color: '#FF5252',
+    color: theme.colors.destructive,
     fontSize: 12,
     marginTop: 2,
     marginLeft: 4,
   },
   footer: { padding: 20, paddingBottom: 28 },
   saveBtn: {
-    backgroundColor: '#237A3B',
+    backgroundColor: theme.colors.primaryAction,
     borderRadius: 28,
     paddingVertical: 16,
     alignItems: 'center',
   },
-  saveBtnDisabled: { backgroundColor: '#A5D6A7' },
-  saveBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  saveBtnDisabled: { backgroundColor: theme.colors.primaryDisabled },
+  saveBtnText: { color: theme.colors.textOnAction, fontSize: 16, fontWeight: '700' },
 });

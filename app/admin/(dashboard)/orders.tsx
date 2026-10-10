@@ -524,7 +524,7 @@ export default function OrderMonitoringScreen() {
             accessibilityLabel="Refresh orders"
           >
             {refreshing ? (
-              <ActivityIndicator size="small" color="#4CAF50" />
+              <ActivityIndicator size="small" color={ADMIN_THEME.colors.green} />
             ) : (
               <Ionicons name="refresh" size={18} color="#47544C" />
             )}
@@ -552,7 +552,11 @@ export default function OrderMonitoringScreen() {
         {cookId || customerId ? (
           <View style={styles.scopeBanner}>
             <View style={styles.scopeCopy}>
-              <Ionicons name="filter-circle-outline" size={18} color="#237A3B" />
+              <Ionicons
+                name="filter-circle-outline"
+                size={18}
+                color={ADMIN_THEME.colors.greenDark}
+              />
               <Text style={styles.scopeText}>
                 Showing orders for the selected {cookId ? 'cook' : 'customer'} profile.
               </Text>
@@ -601,12 +605,12 @@ export default function OrderMonitoringScreen() {
 
         <View style={styles.controls}>
           <View style={styles.searchBox}>
-            <Ionicons name="search-outline" size={19} color="#89928C" />
+            <Ionicons name="search-outline" size={19} color={ADMIN_THEME.colors.textMuted} />
             <TextInput
               value={searchInput}
               onChangeText={setSearchInput}
               placeholder="Search order ID, customer, cook or dish"
-              placeholderTextColor="#9AA29D"
+              placeholderTextColor={ADMIN_THEME.colors.textSubtle}
               style={styles.searchInput}
             />
             {searchInput ? (
@@ -614,7 +618,7 @@ export default function OrderMonitoringScreen() {
                 onPress={() => setSearchInput('')}
                 accessibilityLabel="Clear search"
               >
-                <Ionicons name="close-circle" size={18} color="#A0A8A3" />
+                <Ionicons name="close-circle" size={18} color={ADMIN_THEME.colors.textSubtle} />
               </TouchableOpacity>
             ) : null}
           </View>
@@ -641,7 +645,7 @@ export default function OrderMonitoringScreen() {
 
         {error ? (
           <View style={styles.errorBanner}>
-            <Ionicons name="alert-circle-outline" size={18} color="#B42318" />
+            <Ionicons name="alert-circle-outline" size={18} color={ADMIN_THEME.colors.red} />
             <Text style={styles.errorText}>{error}</Text>
             <SmallButton label="Retry" onPress={() => loadOrders('initial')} />
           </View>
@@ -649,7 +653,7 @@ export default function OrderMonitoringScreen() {
 
         {loading && !response ? (
           <View style={styles.emptyState}>
-            <ActivityIndicator size="large" color="#4CAF50" />
+            <ActivityIndicator size="large" color={ADMIN_THEME.colors.green} />
             <Text style={styles.emptyText}>Loading orders…</Text>
           </View>
         ) : response?.orders.length === 0 ? (
@@ -817,7 +821,7 @@ export default function OrderMonitoringScreen() {
       >
         {detailsLoading ? (
           <View style={styles.detailLoading}>
-            <ActivityIndicator size="large" color="#4CAF50" />
+            <ActivityIndicator size="large" color={ADMIN_THEME.colors.green} />
           </View>
         ) : detailsError ? (
           <View style={styles.errorBanner}>
@@ -887,7 +891,7 @@ export default function OrderMonitoringScreen() {
 
             {selectedOrder.cancelledAt ? (
               <View style={styles.cancellationNotice}>
-                <Ionicons name="close-circle-outline" size={20} color="#B42318" />
+                <Ionicons name="close-circle-outline" size={20} color={ADMIN_THEME.colors.red} />
                 <View style={styles.flexOne}>
                   <Text style={styles.cancellationTitle}>
                     Cancelled by {selectedOrder.cancelledBy ?? 'unknown'} ·{' '}
@@ -989,7 +993,11 @@ export default function OrderMonitoringScreen() {
                   />
                 ) : (
                   <View style={styles.auditedBadge}>
-                    <Ionicons name="shield-checkmark-outline" size={14} color="#237A3B" />
+                    <Ionicons
+                      name="shield-checkmark-outline"
+                      size={14}
+                      color={ADMIN_THEME.colors.greenDark}
+                    />
                     <Text style={styles.auditedText}>Audited access</Text>
                   </View>
                 )}
@@ -1215,7 +1223,7 @@ export default function OrderMonitoringScreen() {
         <View style={styles.actionForm}>
           {actionMode === 'cancel' ? (
             <View style={styles.warningBox}>
-              <Ionicons name="warning-outline" size={22} color="#B42318" />
+              <Ionicons name="warning-outline" size={22} color={ADMIN_THEME.colors.red} />
               <Text style={styles.warningText}>
                 This cancels every item in the checkout, releases capacity, cancels an eligible
                 Lalamove job, and places paid items in the manual refund queue.
@@ -1276,7 +1284,7 @@ export default function OrderMonitoringScreen() {
                   ? 'e.g. Missing item or late delivery'
                   : 'Explain the decision for the audit trail'
               }
-              placeholderTextColor="#9AA29D"
+              placeholderTextColor={ADMIN_THEME.colors.textSubtle}
               style={actionMode === 'flag' ? styles.input : styles.textarea}
               submitBehavior={actionMode === 'flag' ? 'submit' : 'newline'}
             />
@@ -1290,7 +1298,7 @@ export default function OrderMonitoringScreen() {
                 multiline
                 maxLength={2000}
                 placeholder="Record what was reported and any relevant support context"
-                placeholderTextColor="#9AA29D"
+                placeholderTextColor={ADMIN_THEME.colors.textSubtle}
                 style={styles.textarea}
                 submitBehavior="newline"
               />
@@ -1313,7 +1321,7 @@ const styles = StyleSheet.create({
   title: ADMIN_SHARED_STYLES.pageTitle,
   subtitle: ADMIN_SHARED_STYLES.pageSubtitle,
   refreshGroup: { alignItems: 'flex-end', gap: 7 },
-  updatedText: { fontFamily: 'mon', fontSize: 8, color: '#929A95' },
+  updatedText: { fontFamily: 'mon', fontSize: 8, color: ADMIN_THEME.colors.textSubtle },
   refreshButton: ADMIN_SHARED_STYLES.refreshButton,
   statsGrid: ADMIN_SHARED_STYLES.statsGrid,
   statCard: {
@@ -1348,11 +1356,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 5,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#EEF1EF',
+    backgroundColor: ADMIN_THEME.colors.borderSoft,
   },
   countBadgeActive: { backgroundColor: '#CDEED6' },
   countBadgeText: { fontFamily: 'mon-b', fontSize: 8, color: '#6F7973' },
-  countBadgeTextActive: { color: '#237A3B' },
+  countBadgeTextActive: { color: ADMIN_THEME.colors.greenDark },
   controls: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -1369,7 +1377,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#FECDCA',
     borderRadius: 12,
-    backgroundColor: '#FFF3F2',
+    backgroundColor: ADMIN_THEME.colors.redSoft,
     padding: 13,
     marginBottom: 14,
   },
@@ -1383,7 +1391,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderBottomWidth: 1,
-    borderBottomColor: '#EDF0EE',
+    borderBottomColor: ADMIN_THEME.colors.borderSoft,
     paddingHorizontal: 13,
   },
   tableHeader: ADMIN_SHARED_STYLES.tableHeader,
@@ -1409,7 +1417,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#E7F5EB',
   },
   avatarText: { fontFamily: 'mon-b', fontSize: 10, color: '#287F40' },
-  personName: { maxWidth: 155, fontFamily: 'mon-sb', fontSize: 10, color: '#303A34' },
+  personName: {
+    maxWidth: 155,
+    fontFamily: 'mon-sb',
+    fontSize: 10,
+    color: ADMIN_THEME.colors.textStrong,
+  },
   rowActions: { alignItems: 'stretch', gap: 5 },
   smallButton: {
     minHeight: 34,
@@ -1417,15 +1430,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 13,
     borderWidth: 1,
-    borderColor: '#D8DEDA',
+    borderColor: ADMIN_THEME.colors.border,
     borderRadius: 9,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: ADMIN_THEME.colors.surface,
   },
   smallButtonPrimary: { borderColor: '#35A853', backgroundColor: '#35A853' },
   smallButtonDanger: { borderColor: '#F1B7B4', backgroundColor: '#FFF4F3' },
   smallButtonText: { fontFamily: 'mon-sb', fontSize: 9, color: '#66716A' },
-  smallButtonTextPrimary: { color: '#FFFFFF' },
-  smallButtonTextDanger: { color: '#B42318' },
+  smallButtonTextPrimary: { color: ADMIN_THEME.colors.surface },
+  smallButtonTextDanger: { color: ADMIN_THEME.colors.red },
   buttonDisabled: { opacity: 0.48 },
   inlineBadgeGap: { marginTop: 5 },
   cardList: { gap: 10 },
@@ -1434,7 +1447,7 @@ const styles = StyleSheet.create({
     borderColor: '#E1E6E3',
     borderRadius: 14,
     padding: 14,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: ADMIN_THEME.colors.surface,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -1522,9 +1535,9 @@ const styles = StyleSheet.create({
   detailSection: {
     padding: 16,
     borderWidth: 1,
-    borderColor: '#E3E8E5',
+    borderColor: ADMIN_THEME.colors.border,
     borderRadius: 15,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: ADMIN_THEME.colors.surface,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -1532,11 +1545,16 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 12,
   },
-  sectionTitle: { fontFamily: 'mon-b', fontSize: 14, color: '#303A34', marginBottom: 12 },
+  sectionTitle: {
+    fontFamily: 'mon-b',
+    fontSize: 14,
+    color: ADMIN_THEME.colors.textStrong,
+    marginBottom: 12,
+  },
   sectionHint: {
     fontFamily: 'mon',
     fontSize: 8,
-    color: '#8A938D',
+    color: ADMIN_THEME.colors.textMuted,
     marginTop: -8,
     marginBottom: 12,
   },
@@ -1546,20 +1564,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 11,
     borderBottomWidth: 1,
-    borderBottomColor: '#EDF0EE',
+    borderBottomColor: ADMIN_THEME.colors.borderSoft,
     paddingVertical: 10,
   },
-  lineImage: { width: 44, height: 44, borderRadius: 10, backgroundColor: '#EEF1EF' },
+  lineImage: {
+    width: 44,
+    height: 44,
+    borderRadius: 10,
+    backgroundColor: ADMIN_THEME.colors.borderSoft,
+  },
   lineImagePlaceholder: {
     width: 44,
     height: 44,
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#EEF1EF',
+    backgroundColor: ADMIN_THEME.colors.borderSoft,
   },
-  lineTitle: { fontFamily: 'mon-sb', fontSize: 10, color: '#344039' },
-  linePrice: { fontFamily: 'mon-sb', fontSize: 11, color: '#344039' },
+  lineTitle: { fontFamily: 'mon-sb', fontSize: 10, color: ADMIN_THEME.colors.textStrong },
+  linePrice: { fontFamily: 'mon-sb', fontSize: 11, color: ADMIN_THEME.colors.textStrong },
   noteText: { fontFamily: 'mon', fontSize: 9, lineHeight: 15, color: '#6E7871', marginTop: 5 },
   totalRow: {
     flexDirection: 'row',
@@ -1568,7 +1591,12 @@ const styles = StyleSheet.create({
     paddingTop: 10,
   },
   totalSubValue: { fontFamily: 'mon-sb', fontSize: 10, color: '#455149' },
-  grandTotalRow: { marginTop: 8, borderTopWidth: 1, borderTopColor: '#DDE3DF', paddingTop: 13 },
+  grandTotalRow: {
+    marginTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: ADMIN_THEME.colors.border,
+    paddingTop: 13,
+  },
   grandTotalLabel: { fontFamily: 'mon-b', fontSize: 12, color: '#26332B' },
   grandTotalValue: { fontFamily: 'mon-b', fontSize: 16, color: '#26332B' },
   infoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 9 },
@@ -1580,7 +1608,12 @@ const styles = StyleSheet.create({
     borderRadius: 11,
     backgroundColor: '#F7F9F8',
   },
-  infoValue: { fontFamily: 'mon-sb', fontSize: 10, lineHeight: 16, color: '#344039' },
+  infoValue: {
+    fontFamily: 'mon-sb',
+    fontSize: 10,
+    lineHeight: 16,
+    color: ADMIN_THEME.colors.textStrong,
+  },
   auditedBadge: {
     minHeight: 30,
     flexDirection: 'row',
@@ -1588,20 +1621,31 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingHorizontal: 10,
     borderRadius: 9,
-    backgroundColor: '#EAF8EE',
+    backgroundColor: ADMIN_THEME.colors.greenSoft,
   },
-  auditedText: { fontFamily: 'mon-sb', fontSize: 8, color: '#237A3B' },
+  auditedText: { fontFamily: 'mon-sb', fontSize: 8, color: ADMIN_THEME.colors.greenDark },
   linkRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 },
-  disputeCard: { padding: 13, borderRadius: 11, backgroundColor: '#F8FAF9', marginTop: 8 },
+  disputeCard: {
+    padding: 13,
+    borderRadius: 11,
+    backgroundColor: ADMIN_THEME.colors.surfaceMuted,
+    marginTop: 8,
+  },
   disputeText: { fontFamily: 'mon', fontSize: 10, lineHeight: 17, color: '#505B54', marginTop: 10 },
   historyRow: {
     flexDirection: 'row',
     gap: 10,
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#EDF0EE',
+    borderBottomColor: ADMIN_THEME.colors.borderSoft,
   },
-  historyDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#4CAF50', marginTop: 4 },
+  historyDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: ADMIN_THEME.colors.green,
+    marginTop: 4,
+  },
   actionForm: { gap: 16 },
   warningBox: {
     flexDirection: 'row',
@@ -1618,24 +1662,24 @@ const styles = StyleSheet.create({
   input: {
     minHeight: 42,
     borderWidth: 1,
-    borderColor: '#D8DEDA',
+    borderColor: ADMIN_THEME.colors.border,
     borderRadius: 10,
     paddingHorizontal: 12,
     fontFamily: 'mon',
     fontSize: 10,
-    color: '#344039',
+    color: ADMIN_THEME.colors.textStrong,
     outlineStyle: 'none',
   } as never,
   textarea: {
     minHeight: 108,
     borderWidth: 1,
-    borderColor: '#D8DEDA',
+    borderColor: ADMIN_THEME.colors.border,
     borderRadius: 10,
     padding: 12,
     fontFamily: 'mon',
     fontSize: 10,
     lineHeight: 17,
-    color: '#344039',
+    color: ADMIN_THEME.colors.textStrong,
     textAlignVertical: 'top',
     outlineStyle: 'none',
   } as never,
@@ -1644,7 +1688,7 @@ const styles = StyleSheet.create({
     marginTop: 5,
     fontFamily: 'mon',
     fontSize: 8,
-    color: '#929A95',
+    color: ADMIN_THEME.colors.textSubtle,
   },
   choiceRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   choice: {
@@ -1653,11 +1697,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 13,
     borderWidth: 1,
-    borderColor: '#DDE3DF',
+    borderColor: ADMIN_THEME.colors.border,
     borderRadius: 9,
   },
-  choiceActive: { borderColor: '#4CAF50', backgroundColor: '#EAF8EE' },
+  choiceActive: {
+    borderColor: ADMIN_THEME.colors.green,
+    backgroundColor: ADMIN_THEME.colors.greenSoft,
+  },
   choiceText: { fontFamily: 'mon-sb', fontSize: 9, color: '#68736C' },
-  choiceTextActive: { color: '#237A3B' },
-  actionError: { fontFamily: 'mon-sb', fontSize: 10, color: '#B42318' },
+  choiceTextActive: { color: ADMIN_THEME.colors.greenDark },
+  actionError: { fontFamily: 'mon-sb', fontSize: 10, color: ADMIN_THEME.colors.red },
 });

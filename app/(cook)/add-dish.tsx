@@ -19,6 +19,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { supabase } from '@/src/utils/supabaseClient';
 import { useAuth } from '@/src/services/auth-context';
 import { useOnboarding } from '@/src/context/OnboardingContext';
+import theme from '@/src/styles/theme';
 
 type Step = 'photo' | 'title' | 'description' | 'ingredients' | 'keywords' | 'price';
 const STEPS: Step[] = ['photo', 'title', 'description', 'ingredients', 'keywords', 'price'];
@@ -302,7 +303,7 @@ export default function AddDishScreen() {
     return (
       <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-          <ActivityIndicator size="large" color="#4CAF50" />
+          <ActivityIndicator size="large" color={theme.colors.primary} />
         </View>
       </SafeAreaView>
     );
@@ -336,13 +337,13 @@ export default function AddDishScreen() {
                   <>
                     <Image source={{ uri: photoUri }} style={styles.photoPreview} />
                     <View style={styles.photoEditBadge}>
-                      <Ionicons name="pencil" size={14} color="#1A1A1A" />
+                      <Ionicons name="pencil" size={14} color={theme.colors.text} />
                       <Text style={styles.photoEditBadgeText}>Change</Text>
                     </View>
                   </>
                 ) : (
                   <View style={styles.photoPlaceholder}>
-                    <Ionicons name="camera-outline" size={36} color="#999" />
+                    <Ionicons name="camera-outline" size={36} color={theme.colors.placeholder} />
                     <Text style={styles.photoPlaceholderText}>Tap to add a photo</Text>
                   </View>
                 )}
@@ -356,7 +357,7 @@ export default function AddDishScreen() {
                   value={title}
                   onChangeText={text => setTitle(text.slice(0, TITLE_LIMIT))}
                   placeholder="e.g. The American Burger"
-                  placeholderTextColor="#bbb"
+                  placeholderTextColor={theme.colors.placeholder}
                   autoFocus
                   textAlignVertical="top"
                 />
@@ -373,7 +374,7 @@ export default function AddDishScreen() {
                   value={description}
                   onChangeText={text => setDescription(text.slice(0, DESCRIPTION_LIMIT))}
                   placeholder="Double cheeseburger with lettuce, tomato…"
-                  placeholderTextColor="#bbb"
+                  placeholderTextColor={theme.colors.placeholder}
                   autoFocus
                   textAlignVertical="top"
                 />
@@ -392,7 +393,7 @@ export default function AddDishScreen() {
                   placeholder={
                     'One ingredient per line, e.g.\n\nChicken breast\nOlive oil\nGarlic\nSea salt'
                   }
-                  placeholderTextColor="#bbb"
+                  placeholderTextColor={theme.colors.placeholder}
                   multiline
                   submitBehavior="newline"
                   autoFocus
@@ -415,7 +416,7 @@ export default function AddDishScreen() {
                     value={menuCategory}
                     onChangeText={text => setMenuCategory(text.slice(0, 80))}
                     placeholder="e.g. Nasi Lemak, Pasta, Drinks"
-                    placeholderTextColor="#bbb"
+                    placeholderTextColor={theme.colors.placeholder}
                   />
                   <Text style={styles.categoryHint}>
                     Categories keep your menu organised for customers.
@@ -501,7 +502,7 @@ export default function AddDishScreen() {
                     onPress={() => priceInputRef.current?.focus()}
                     activeOpacity={0.7}
                   >
-                    <Ionicons name="pencil" size={12} color="#1A1A1A" />
+                    <Ionicons name="pencil" size={12} color={theme.colors.text} />
                     <Text style={styles.priceEditText}>Edit</Text>
                   </TouchableOpacity>
                 </View>
@@ -530,7 +531,7 @@ export default function AddDishScreen() {
               style={[styles.nextBtn, (!canAdvance() || submitting) && styles.nextBtnDisabled]}
             >
               {submitting ? (
-                <ActivityIndicator color="#fff" />
+                <ActivityIndicator color={theme.colors.textOnAction} />
               ) : (
                 <Text style={styles.nextBtnText}>{isLast ? 'Publish' : 'Next'}</Text>
               )}
@@ -577,33 +578,33 @@ function stepSubtitle(step: Step): string {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
+  container: { flex: 1, backgroundColor: theme.colors.surface },
   topRow: { paddingHorizontal: 24, paddingTop: 8 },
   saveExitChip: {
     alignSelf: 'flex-start',
     borderWidth: 1.5,
-    borderColor: '#1A1A1A',
+    borderColor: theme.colors.text,
     borderRadius: 24,
     paddingHorizontal: 14,
     paddingVertical: 6,
   },
-  saveExitText: { fontSize: 13, fontWeight: '700', color: '#1A1A1A' },
+  saveExitText: { fontSize: 13, fontWeight: '700', color: theme.colors.text },
   scrollContent: { paddingHorizontal: 24, paddingTop: 24, paddingBottom: 24 },
-  title: { fontSize: 28, fontWeight: '800', color: '#1A1A1A', lineHeight: 34 },
-  subtitle: { fontSize: 14, color: '#666', marginTop: 8, lineHeight: 20 },
+  title: { fontSize: 28, fontWeight: '800', color: theme.colors.text, lineHeight: 34 },
+  subtitle: { fontSize: 14, color: theme.colors.textSecondary, marginTop: 8, lineHeight: 20 },
   stepBody: { marginTop: 40, minHeight: 280 },
 
   // Photo
   photoArea: {
     height: 240,
     borderRadius: 20,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: theme.colors.surfaceMuted,
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
   },
   photoPlaceholder: { alignItems: 'center', gap: 10 },
-  photoPlaceholderText: { fontSize: 14, color: '#888', fontWeight: '500' },
+  photoPlaceholderText: { fontSize: 14, color: theme.colors.textMuted, fontWeight: '500' },
   photoPreview: { width: '100%', height: '100%' },
   photoEditBadge: {
     position: 'absolute',
@@ -611,26 +612,26 @@ const styles = StyleSheet.create({
     right: 12,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 16,
     gap: 4,
   },
-  photoEditBadgeText: { fontSize: 12, fontWeight: '600', color: '#1A1A1A' },
+  photoEditBadgeText: { fontSize: 12, fontWeight: '600', color: theme.colors.text },
 
   // Text boxes
   textBox: {
     minHeight: 100,
     borderWidth: 1,
-    borderColor: '#1A1A1A',
+    borderColor: theme.colors.text,
     borderRadius: 12,
     padding: 14,
     fontSize: 16,
-    color: '#1A1A1A',
+    color: theme.colors.text,
   },
   textBoxTall: { minHeight: 150 },
-  counter: { fontSize: 12, color: '#888', marginTop: 6, fontWeight: '500' },
+  counter: { fontSize: 12, color: theme.colors.textMuted, marginTop: 6, fontWeight: '500' },
 
   // Keywords (3-column grid matching the mockup)
   sectionHeaderRow: {
@@ -647,17 +648,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 15,
-    color: '#1A1A1A',
+    color: theme.colors.text,
   },
-  categoryHint: { fontSize: 11, color: '#888', lineHeight: 16 },
+  categoryHint: { fontSize: 11, color: theme.colors.textMuted, lineHeight: 16 },
   sectionLabel: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: theme.colors.text,
     letterSpacing: 0.4,
     textTransform: 'uppercase',
   },
-  sectionHint: { fontSize: 12, color: '#888', fontWeight: '500' },
+  sectionHint: { fontSize: 12, color: theme.colors.textMuted, fontWeight: '500' },
   chipGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 14 },
   chip: {
     width: '31%',
@@ -665,8 +666,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
-    backgroundColor: '#fff',
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
@@ -674,20 +675,24 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     elevation: 1,
   },
-  chipSelected: { backgroundColor: '#1A1A1A', borderColor: '#1A1A1A' },
-  chipDisabled: { borderColor: '#F0F0F0', backgroundColor: '#FAFAFA', shadowOpacity: 0 },
-  chipText: { fontSize: 14, fontWeight: '500', color: '#1A1A1A' },
-  chipTextSelected: { color: '#fff' },
-  chipTextDisabled: { color: '#BBB' },
+  chipSelected: { backgroundColor: theme.colors.text, borderColor: theme.colors.text },
+  chipDisabled: {
+    borderColor: theme.colors.separator,
+    backgroundColor: '#FAFAFA',
+    shadowOpacity: 0,
+  },
+  chipText: { fontSize: 14, fontWeight: '500', color: theme.colors.text },
+  chipTextSelected: { color: theme.colors.textOnAction },
+  chipTextDisabled: { color: theme.colors.placeholder },
 
   // Price — large centred "RM X" with a small pencil hint
   priceWrapper: { alignItems: 'center', justifyContent: 'center', flex: 1, minHeight: 320 },
   priceRow: { flexDirection: 'row', alignItems: 'center' },
-  priceCurrency: { fontSize: 48, fontWeight: '800', color: '#1A1A1A' },
+  priceCurrency: { fontSize: 48, fontWeight: '800', color: theme.colors.text },
   priceInput: {
     fontSize: 48,
     fontWeight: '800',
-    color: '#1A1A1A',
+    color: theme.colors.text,
     minWidth: 60,
     padding: 0,
   },
@@ -695,7 +700,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#1A1A1A',
+    borderColor: theme.colors.text,
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: 8,
@@ -707,7 +712,7 @@ const styles = StyleSheet.create({
   priceEditText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#1A1A1A',
+    color: theme.colors.text,
   },
 
   // Footer
@@ -717,25 +722,25 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 5,
     borderRadius: 3,
-    backgroundColor: '#E0E0E0',
+    backgroundColor: theme.colors.border,
   },
-  progressSegmentFilled: { backgroundColor: '#4CAF50' },
+  progressSegmentFilled: { backgroundColor: theme.colors.primary },
   navRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   backLink: { paddingVertical: 12, paddingRight: 12 },
   backLinkText: {
     fontSize: 15,
-    color: '#1A1A1A',
+    color: theme.colors.text,
     textDecorationLine: 'underline',
     fontWeight: '600',
   },
   nextBtn: {
-    backgroundColor: '#237A3B',
+    backgroundColor: theme.colors.primaryAction,
     borderRadius: 28,
     paddingVertical: 14,
     paddingHorizontal: 36,
     minWidth: 140,
     alignItems: 'center',
   },
-  nextBtnDisabled: { backgroundColor: '#A5D6A7' },
-  nextBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  nextBtnDisabled: { backgroundColor: theme.colors.primaryDisabled },
+  nextBtnText: { color: theme.colors.textOnAction, fontSize: 16, fontWeight: '700' },
 });

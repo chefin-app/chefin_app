@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TextInput, StyleSheet, TextStyle, ViewStyle } from 'react-native';
 import { BaseText } from '@/src/components/typography';
+import theme from '@/src/styles/theme';
 
 type TextAreaProps = {
   label?: string;
@@ -27,7 +28,7 @@ export const TextArea = ({
         placeholder={placeholder}
         value={value}
         onChangeText={onChangeText}
-        placeholderTextColor="#999"
+        placeholderTextColor={theme.colors.placeholder}
         multiline={true}
         submitBehavior="newline"
         textAlignVertical="top" // Ensures text starts at the top on Android
@@ -43,19 +44,19 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    color: '#333',
+    color: theme.colors.textStrong,
     marginBottom: 8,
     fontWeight: '500',
   },
   input: {
     minHeight: 120, // Set a minimum height for multi-line input
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12, // Add vertical padding for better spacing
     fontSize: 16,
-    color: '#333',
+    color: theme.colors.textStrong,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: theme.colors.border,
   },
 });

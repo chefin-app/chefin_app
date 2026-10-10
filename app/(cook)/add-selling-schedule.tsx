@@ -18,6 +18,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/src/services/auth-context';
+import theme from '@/src/styles/theme';
 
 type Period = { opensAt: string; closesAt: string };
 type DayDraft = { enabled: boolean; allDay: boolean; periods: Period[] };
@@ -230,7 +231,7 @@ export default function AddSellingScheduleScreen() {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#4CAF50" />
+        <ActivityIndicator size="large" color={theme.colors.primary} />
       </View>
     );
   }
@@ -273,7 +274,7 @@ export default function AddSellingScheduleScreen() {
           <Ionicons
             name={specificDates ? 'checkbox' : 'square-outline'}
             size={27}
-            color={specificDates ? '#4CAF50' : '#A9B0AC'}
+            color={specificDates ? theme.colors.primary : '#A9B0AC'}
           />
         </TouchableOpacity>
         {specificDates && (
@@ -320,7 +321,7 @@ export default function AddSellingScheduleScreen() {
                     <Ionicons
                       name={day.allDay ? 'checkbox' : 'square-outline'}
                       size={24}
-                      color={day.allDay ? '#4CAF50' : '#A9B0AC'}
+                      color={day.allDay ? theme.colors.primary : '#A9B0AC'}
                     />
                   </TouchableOpacity>
                   {!day.allDay &&
@@ -349,7 +350,7 @@ export default function AddSellingScheduleScreen() {
                           <Ionicons
                             name="trash-outline"
                             size={20}
-                            color="#B42318"
+                            color={theme.colors.error}
                             onPress={() =>
                               updateDay(iso, {
                                 periods: day.periods.filter((_, i) => i !== periodIndex),
@@ -403,7 +404,7 @@ export default function AddSellingScheduleScreen() {
               <Ionicons
                 name={selected ? 'checkbox' : 'square-outline'}
                 size={25}
-                color={selected ? '#4CAF50' : '#A9B0AC'}
+                color={selected ? theme.colors.primary : '#A9B0AC'}
               />
             </TouchableOpacity>
           );
@@ -415,7 +416,11 @@ export default function AddSellingScheduleScreen() {
           disabled={saving}
           onPress={save}
         >
-          {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveText}>Save</Text>}
+          {saving ? (
+            <ActivityIndicator color={theme.colors.textOnAction} />
+          ) : (
+            <Text style={styles.saveText}>Save</Text>
+          )}
         </TouchableOpacity>
       </View>
       <DateTimePickerModal
@@ -440,7 +445,7 @@ export default function AddSellingScheduleScreen() {
 }
 
 const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: '#fff' },
+  page: { flex: 1, backgroundColor: theme.colors.surface },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   header: {
     height: 68,
@@ -459,15 +464,15 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 16,
     fontSize: 17,
-    color: '#202522',
+    color: theme.colors.text,
   },
-  hint: { fontSize: 12, color: '#747D77', lineHeight: 17, marginTop: 5 },
+  hint: { fontSize: 12, color: theme.colors.textSecondary, lineHeight: 17, marginTop: 5 },
   checkRow: { flexDirection: 'row', alignItems: 'center', marginTop: 28, gap: 12 },
   checkCopy: { flex: 1 },
-  checkTitle: { fontSize: 16, color: '#202522', fontWeight: '700' },
+  checkTitle: { fontSize: 16, color: theme.colors.text, fontWeight: '700' },
   dateRow: { flexDirection: 'row', gap: 12, marginTop: 18 },
   dateField: { flex: 1, borderWidth: 1, borderColor: '#D0D5D2', borderRadius: 14, padding: 13 },
-  dateValue: { fontSize: 14, color: '#202522' },
+  dateValue: { fontSize: 14, color: theme.colors.text },
   sectionTitle: {
     fontSize: 24,
     fontWeight: '900',
@@ -481,7 +486,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
   },
   dayHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  dayTitle: { fontSize: 17, fontWeight: '800', color: '#202522' },
+  dayTitle: { fontSize: 17, fontWeight: '800', color: theme.colors.text },
   allDayRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -491,9 +496,9 @@ const styles = StyleSheet.create({
   allDayText: { fontSize: 15, color: '#39413C' },
   periodRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 9, marginTop: 14 },
   timeField: { flex: 1, borderWidth: 1, borderColor: '#C9CFCC', borderRadius: 13, padding: 11 },
-  timeLabel: { fontSize: 11, color: '#747D77' },
-  timeValue: { fontSize: 15, color: '#202522', marginTop: 3 },
-  addPeriod: { color: '#1473E6', fontWeight: '800', marginTop: 15 },
+  timeLabel: { fontSize: 11, color: theme.colors.textSecondary },
+  timeValue: { fontSize: 15, color: theme.colors.text, marginTop: 3 },
+  addPeriod: { color: theme.colors.link, fontWeight: '800', marginTop: 15 },
   dishRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -512,20 +517,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   dishCopy: { flex: 1 },
-  dishTitle: { fontSize: 15, fontWeight: '800', color: '#242A26' },
+  dishTitle: { fontSize: 15, fontWeight: '800', color: theme.colors.text },
   footer: {
     padding: 16,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: '#DCE1DE',
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
   },
   save: {
     minHeight: 54,
     borderRadius: 28,
-    backgroundColor: '#237A3B',
+    backgroundColor: theme.colors.primaryAction,
     alignItems: 'center',
     justifyContent: 'center',
   },
   disabled: { opacity: 0.55 },
-  saveText: { color: '#fff', fontSize: 17, fontWeight: '900' },
+  saveText: { color: theme.colors.textOnAction, fontSize: 17, fontWeight: '900' },
 });

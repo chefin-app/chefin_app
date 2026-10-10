@@ -25,6 +25,7 @@ import {
   PeriodSelector,
   SalesChart,
 } from '@/src/components/admin/AdminOverviewUI';
+import { ADMIN_THEME } from '@/src/admin/theme';
 
 const currency = (value: number, compact = false): string =>
   new Intl.NumberFormat('en-MY', {
@@ -76,7 +77,7 @@ function EmptyPanel({
 }) {
   return (
     <View style={styles.emptyPanel}>
-      <Ionicons name={icon} size={25} color="#A0A8A3" />
+      <Ionicons name={icon} size={25} color={ADMIN_THEME.colors.textSubtle} />
       <Text style={styles.emptyPanelText}>{message}</Text>
     </View>
   );
@@ -222,7 +223,7 @@ export default function AdminOverviewScreen() {
         <RefreshControl
           refreshing={refreshing}
           onRefresh={() => loadOverview(true)}
-          tintColor="#4CAF50"
+          tintColor={ADMIN_THEME.colors.green}
         />
       }
     >
@@ -245,7 +246,7 @@ export default function AdminOverviewScreen() {
       {error && !data && (
         <AdminPanel style={styles.errorPanel}>
           <View style={styles.errorIcon}>
-            <Ionicons name="cloud-offline-outline" size={28} color="#9A6700" />
+            <Ionicons name="cloud-offline-outline" size={28} color={ADMIN_THEME.colors.amber} />
           </View>
           <Text style={styles.errorTitle}>Overview unavailable</Text>
           <Text style={styles.errorBody}>{error}</Text>
@@ -461,7 +462,11 @@ export default function AdminOverviewScreen() {
                         <Image source={{ uri: order.imageUrl }} style={styles.mealImage} />
                       ) : (
                         <View style={styles.mealFallback}>
-                          <Ionicons name="fast-food-outline" size={14} color="#89928C" />
+                          <Ionicons
+                            name="fast-food-outline"
+                            size={14}
+                            color={ADMIN_THEME.colors.textMuted}
+                          />
                         </View>
                       )}
                       <Text style={styles.personName} numberOfLines={1}>
@@ -500,7 +505,11 @@ export default function AdminOverviewScreen() {
                           <Image source={{ uri: order.imageUrl }} style={styles.mealImage} />
                         ) : (
                           <View style={styles.mealFallback}>
-                            <Ionicons name="fast-food-outline" size={14} color="#89928C" />
+                            <Ionicons
+                              name="fast-food-outline"
+                              size={14}
+                              color={ADMIN_THEME.colors.textMuted}
+                            />
                           </View>
                         )}
                         <View style={styles.personCopy}>
@@ -538,7 +547,7 @@ const styles = StyleSheet.create({
   pageTitle: ADMIN_SHARED_STYLES.pageTitle,
   pageSubtitle: ADMIN_SHARED_STYLES.pageSubtitle,
   pageHeaderActions: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  updatedText: { fontFamily: 'mon', fontSize: 9, color: '#929A95' },
+  updatedText: { fontFamily: 'mon', fontSize: 9, color: ADMIN_THEME.colors.textSubtle },
   refreshButton: ADMIN_SHARED_STYLES.refreshButton,
   metricGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   loadingGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 14 },
@@ -551,7 +560,12 @@ const styles = StyleSheet.create({
   },
   sectionHeadingCopy: { flex: 1 },
   sectionTitle: { fontFamily: 'mon-b', fontSize: 16, color: '#26322B', marginBottom: 5 },
-  sectionSubtitle: { fontFamily: 'mon', fontSize: 9, lineHeight: 15, color: '#8A938D' },
+  sectionSubtitle: {
+    fontFamily: 'mon',
+    fontSize: 9,
+    lineHeight: 15,
+    color: ADMIN_THEME.colors.textMuted,
+  },
   donutGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 14, justifyContent: 'space-between' },
   table: { borderWidth: 1, borderColor: '#E7EBE8', borderRadius: 12, overflow: 'hidden' },
   tableRow: {
@@ -560,12 +574,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 14,
     borderBottomWidth: 1,
-    borderBottomColor: '#EDF0EE',
+    borderBottomColor: ADMIN_THEME.colors.borderSoft,
   },
   tableHeader: { minHeight: 42, backgroundColor: '#F2F5F7', borderBottomColor: '#E1E6E3' },
   tableHeaderText: { fontFamily: 'mon-b', fontSize: 8, color: '#59645D' },
   tableCell: { fontFamily: 'mon', fontSize: 9, color: '#5D685F' },
-  tableCellStrong: { fontFamily: 'mon-sb', fontSize: 9, color: '#344039' },
+  tableCellStrong: { fontFamily: 'mon-sb', fontSize: 9, color: ADMIN_THEME.colors.textStrong },
   idColumn: { width: 90 },
   nameColumn: { flex: 1.6, minWidth: 190 },
   cuisineColumn: { flex: 1, minWidth: 110 },
@@ -573,7 +587,7 @@ const styles = StyleSheet.create({
   valueColumn: { width: 125 },
   personCell: { flexDirection: 'row', alignItems: 'center', gap: 9 },
   personCopy: { flex: 1, minWidth: 0 },
-  personName: { fontFamily: 'mon-sb', fontSize: 9, color: '#344039' },
+  personName: { fontFamily: 'mon-sb', fontSize: 9, color: ADMIN_THEME.colors.textStrong },
   personSecondary: { fontFamily: 'mon', fontSize: 8, color: '#929B95', marginTop: 3 },
   avatar: { width: 32, height: 32, borderRadius: 10, backgroundColor: '#ECF0ED' },
   avatarFallback: {
@@ -594,12 +608,17 @@ const styles = StyleSheet.create({
   orderValueColumn: { width: 90 },
   statusColumn: { width: 94 },
   mealCell: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  mealImage: { width: 30, height: 30, borderRadius: 9, backgroundColor: '#EEF1EF' },
+  mealImage: {
+    width: 30,
+    height: 30,
+    borderRadius: 9,
+    backgroundColor: ADMIN_THEME.colors.borderSoft,
+  },
   mealFallback: {
     width: 30,
     height: 30,
     borderRadius: 9,
-    backgroundColor: '#EEF1EF',
+    backgroundColor: ADMIN_THEME.colors.borderSoft,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -631,7 +650,7 @@ const styles = StyleSheet.create({
     width: 58,
     height: 58,
     borderRadius: 18,
-    backgroundColor: '#FFF1C2',
+    backgroundColor: ADMIN_THEME.status.warning.background,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 14,
@@ -647,12 +666,12 @@ const styles = StyleSheet.create({
     marginBottom: 17,
   },
   retryButton: {
-    backgroundColor: '#237A3B',
+    backgroundColor: ADMIN_THEME.colors.greenDark,
     borderRadius: 10,
     paddingHorizontal: 18,
     paddingVertical: 10,
   },
-  retryText: { fontFamily: 'mon-b', fontSize: 10, color: '#FFFFFF' },
+  retryText: { fontFamily: 'mon-b', fontSize: 10, color: ADMIN_THEME.colors.surface },
   staleBanner: {
     flexDirection: 'row',
     alignItems: 'center',

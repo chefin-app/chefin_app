@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/src/services/auth-context';
+import theme from '@/src/styles/theme';
 
 const SUPPORT_EMAIL = process.env.EXPO_PUBLIC_SUPPORT_EMAIL?.trim() || 'support@chefin.app';
 
@@ -113,7 +114,7 @@ export default function HelpSupportScreen() {
           accessibilityRole="button"
           accessibilityLabel="Go back"
         >
-          <Ionicons name="chevron-back" size={24} color="#1F2937" />
+          <Ionicons name="chevron-back" size={24} color={theme.colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Help & Support</Text>
         <View style={styles.headerButton} />
@@ -122,7 +123,7 @@ export default function HelpSupportScreen() {
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.hero}>
           <View style={styles.heroIcon}>
-            <Ionicons name="chatbubbles-outline" size={30} color="#2E7D32" />
+            <Ionicons name="chatbubbles-outline" size={30} color={theme.colors.primaryOnLight} />
           </View>
           <View style={styles.heroCopy}>
             <Text style={styles.heroEyebrow}>CHEFIN SUPPORT</Text>
@@ -141,10 +142,10 @@ export default function HelpSupportScreen() {
             accessibilityRole="button"
           >
             <View style={[styles.quickActionIcon, styles.paymentIcon]}>
-              <Ionicons name="card-outline" size={22} color="#2E7D32" />
+              <Ionicons name="card-outline" size={22} color={theme.colors.primaryOnLight} />
             </View>
             <Text style={styles.quickActionTitle}>Payment methods</Text>
-            <Ionicons name="arrow-forward" size={18} color="#6B7280" />
+            <Ionicons name="arrow-forward" size={18} color={theme.colors.textSecondary} />
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -156,7 +157,7 @@ export default function HelpSupportScreen() {
               <Ionicons name="person-outline" size={22} color="#1565C0" />
             </View>
             <Text style={styles.quickActionTitle}>Profile settings</Text>
-            <Ionicons name="arrow-forward" size={18} color="#6B7280" />
+            <Ionicons name="arrow-forward" size={18} color={theme.colors.textSecondary} />
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -168,7 +169,7 @@ export default function HelpSupportScreen() {
               <Ionicons name="notifications-outline" size={22} color="#A04B00" />
             </View>
             <Text style={styles.quickActionTitle}>Notifications</Text>
-            <Ionicons name="arrow-forward" size={18} color="#6B7280" />
+            <Ionicons name="arrow-forward" size={18} color={theme.colors.textSecondary} />
           </TouchableOpacity>
         </View>
 
@@ -222,7 +223,7 @@ export default function HelpSupportScreen() {
                   <Ionicons
                     name={expanded ? 'chevron-up' : 'chevron-down'}
                     size={20}
-                    color={expanded ? '#2E7D32' : '#757575'}
+                    color={expanded ? theme.colors.primaryOnLight : theme.colors.textMuted}
                   />
                 </View>
                 {expanded && <Text style={styles.faqAnswer}>{faq.answer}</Text>}
@@ -233,7 +234,7 @@ export default function HelpSupportScreen() {
 
         <View style={styles.contactCard}>
           <View style={styles.contactIcon}>
-            <Ionicons name="mail-outline" size={25} color="#FFFFFF" />
+            <Ionicons name="mail-outline" size={25} color={theme.colors.textOnAction} />
           </View>
           <Text style={styles.contactTitle}>Still need help?</Text>
           <Text style={styles.contactText}>
@@ -245,7 +246,7 @@ export default function HelpSupportScreen() {
             accessibilityRole="link"
             accessibilityLabel={`Email Chefin support at ${SUPPORT_EMAIL}`}
           >
-            <Ionicons name="mail" size={19} color="#2E7D32" />
+            <Ionicons name="mail" size={19} color={theme.colors.primaryOnLight} />
             <Text style={styles.contactButtonText}>Email support</Text>
           </TouchableOpacity>
           <Text style={styles.contactEmail}>{SUPPORT_EMAIL}</Text>
@@ -266,9 +267,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.surface,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: theme.colors.border,
   },
   headerButton: {
     width: 40,
@@ -277,7 +278,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   headerTitle: {
-    color: '#1F2937',
+    color: theme.colors.text,
     fontSize: 19,
     fontWeight: '700',
   },
@@ -290,7 +291,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 16,
-    backgroundColor: '#E8F5E9',
+    backgroundColor: theme.colors.primarySoft,
     borderRadius: 20,
     padding: 20,
     marginBottom: 28,
@@ -299,7 +300,7 @@ const styles = StyleSheet.create({
     width: 58,
     height: 58,
     borderRadius: 18,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -307,7 +308,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   heroEyebrow: {
-    color: '#2E7D32',
+    color: theme.colors.primaryOnLight,
     fontSize: 10,
     fontWeight: '800',
     letterSpacing: 1,
@@ -325,12 +326,12 @@ const styles = StyleSheet.create({
     lineHeight: 19,
   },
   sectionTitle: {
-    color: '#1F2937',
+    color: theme.colors.text,
     fontSize: 18,
     fontWeight: '700',
   },
   sectionSubtitle: {
-    color: '#6B7280',
+    color: theme.colors.textSecondary,
     fontSize: 13,
     marginTop: 4,
   },
@@ -343,7 +344,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.surface,
     borderWidth: 1,
     borderColor: '#E8E8E8',
     borderRadius: 15,
@@ -357,7 +358,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   paymentIcon: {
-    backgroundColor: '#E8F5E9',
+    backgroundColor: theme.colors.primarySoft,
   },
   profileIcon: {
     backgroundColor: '#E7F1FC',
@@ -383,34 +384,34 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#DDDFE1',
     borderRadius: 999,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.surface,
     paddingHorizontal: 14,
     paddingVertical: 9,
   },
   categoryChipSelected: {
-    borderColor: '#4CAF50',
-    backgroundColor: '#E8F5E9',
+    borderColor: theme.colors.primary,
+    backgroundColor: theme.colors.primarySoft,
   },
   categoryText: {
-    color: '#5F6368',
+    color: theme.colors.textSecondary,
     fontSize: 13,
     fontWeight: '600',
   },
   categoryTextSelected: {
-    color: '#2E7D32',
+    color: theme.colors.primaryOnLight,
   },
   faqList: {
     gap: 10,
   },
   faqCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.surface,
     borderWidth: 1,
     borderColor: '#E6E8EA',
     borderRadius: 15,
     padding: 16,
   },
   faqCardExpanded: {
-    borderColor: '#A5D6A7',
+    borderColor: theme.colors.primaryDisabled,
   },
   faqQuestionRow: {
     flexDirection: 'row',
@@ -421,7 +422,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   faqCategory: {
-    color: '#4CAF50',
+    color: theme.colors.primary,
     fontSize: 9,
     fontWeight: '800',
     letterSpacing: 0.8,
@@ -434,7 +435,7 @@ const styles = StyleSheet.create({
     lineHeight: 21,
   },
   faqAnswer: {
-    color: '#5F6368',
+    color: theme.colors.textSecondary,
     fontSize: 14,
     lineHeight: 21,
     marginTop: 13,
@@ -459,7 +460,7 @@ const styles = StyleSheet.create({
     marginBottom: 13,
   },
   contactTitle: {
-    color: '#FFFFFF',
+    color: theme.colors.textOnAction,
     fontSize: 19,
     fontWeight: '700',
     marginBottom: 7,
@@ -477,12 +478,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
     alignSelf: 'stretch',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.surface,
     borderRadius: 12,
     paddingVertical: 13,
   },
   contactButtonText: {
-    color: '#2E7D32',
+    color: theme.colors.primaryOnLight,
     fontSize: 15,
     fontWeight: '700',
   },

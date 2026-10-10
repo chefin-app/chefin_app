@@ -24,6 +24,7 @@ import {
   type MenuOptionSelectionState,
 } from '@/src/utils/menuOptions';
 import MenuOptionSelector from './MenuOptionSelector';
+import theme from '@/src/styles/theme';
 
 export interface DishOrderItem {
   id: string;
@@ -268,7 +269,7 @@ export default function DishOrderModal({
                   <Ionicons
                     name="add"
                     size={25}
-                    color={quantity >= safeMaximum ? '#AEB6B0' : '#FFFFFF'}
+                    color={quantity >= safeMaximum ? '#AEB6B0' : theme.colors.surface}
                   />
                 </TouchableOpacity>
               </View>
@@ -319,8 +320,8 @@ export default function DishOrderModal({
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFFFFF' },
-  topSafeArea: { flex: 1, backgroundColor: '#FFFFFF' },
+  container: { flex: 1, backgroundColor: theme.colors.surface },
+  topSafeArea: { flex: 1, backgroundColor: theme.colors.surface },
   scrollView: { flex: 1 },
   scrollContent: { paddingBottom: 28 },
   hero: { height: 205, backgroundColor: '#E9ECEA' },
@@ -455,7 +456,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 21,
     color: '#2B342E',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.surface,
   },
   characterCount: {
     marginTop: 6,
@@ -501,12 +502,12 @@ const styles = StyleSheet.create({
     fontFamily: 'mon-sb',
     fontSize: 12,
     lineHeight: 18,
-    color: '#B42318',
+    color: theme.colors.error,
   },
   footerSafeArea: {
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: '#E4E8E5',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.surface,
   },
   footer: { paddingHorizontal: 18, paddingTop: 13, paddingBottom: 10 },
   addButton: {
@@ -520,7 +521,7 @@ const styles = StyleSheet.create({
   addButtonText: {
     fontFamily: 'mon-b',
     fontSize: 16,
-    color: '#FFFFFF',
+    color: theme.colors.textOnAction,
   },
   addButtonTextDisabled: { color: '#959D97' },
 });

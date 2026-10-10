@@ -27,6 +27,7 @@ import {
   type FulfillmentType,
   type OrderStatus,
 } from '@/src/utils/orderStatus';
+import theme from '@/src/styles/theme';
 
 interface OrderStatusRow {
   id: string;
@@ -148,7 +149,7 @@ export default function OrderStatusScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color="#4CAF50" />
+          <ActivityIndicator size="large" color={theme.colors.primary} />
         </View>
       </SafeAreaView>
     );
@@ -158,7 +159,7 @@ export default function OrderStatusScreen() {
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton} hitSlop={8}>
-          <Ionicons name="chevron-back" size={24} color="#000" />
+          <Ionicons name="chevron-back" size={24} color={theme.colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>
           {isPickup ? 'Pickup status' : 'Delivery status'}
@@ -169,7 +170,7 @@ export default function OrderStatusScreen() {
 
       {!order ? (
         <View style={styles.centered}>
-          <Ionicons name="alert-circle-outline" size={38} color="#C62828" />
+          <Ionicons name="alert-circle-outline" size={38} color={theme.colors.error} />
           <Text style={styles.errorText}>We couldn&apos;t find this order.</Text>
         </View>
       ) : (
@@ -182,7 +183,7 @@ export default function OrderStatusScreen() {
           {/* ETA / outcome hero */}
           {isCancelled ? (
             <View style={[styles.hero, styles.heroCancelled]}>
-              <Ionicons name="close-circle" size={30} color="#C62828" />
+              <Ionicons name="close-circle" size={30} color={theme.colors.error} />
               <View style={styles.heroCopy}>
                 <Text style={styles.heroCancelledTitle}>Order cancelled</Text>
                 <Text style={styles.heroCancelledBody}>
@@ -199,7 +200,7 @@ export default function OrderStatusScreen() {
                 <Ionicons
                   name={isPickup ? 'bag-handle-outline' : 'bicycle-outline'}
                   size={26}
-                  color="#1B5E20"
+                  color={theme.colors.primaryOnLight}
                 />
               </View>
               <View style={styles.heroCopy}>
@@ -253,7 +254,11 @@ export default function OrderStatusScreen() {
                           isCurrent && styles.stepDotCurrent,
                         ]}
                       >
-                        <Ionicons name={step.icon} size={16} color={reached ? '#fff' : '#A5ADA8'} />
+                        <Ionicons
+                          name={step.icon}
+                          size={16}
+                          color={reached ? theme.colors.surface : '#A5ADA8'}
+                        />
                       </View>
                       {!isLast && (
                         <View
@@ -390,7 +395,7 @@ export default function OrderStatusScreen() {
                 router.push({ pathname: '/review/[orderId]', params: { orderId: order.id } })
               }
             >
-              <Ionicons name="star" size={18} color="#fff" />
+              <Ionicons name="star" size={18} color={theme.colors.textOnAction} />
               <Text style={styles.reviewButtonText}>Rate your order</Text>
             </TouchableOpacity>
           ) : null}
@@ -406,9 +411,9 @@ export default function OrderStatusScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
+  container: { flex: 1, backgroundColor: theme.colors.surface },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40, gap: 10 },
-  errorText: { fontSize: 15, color: '#888' },
+  errorText: { fontSize: 15, color: theme.colors.textMuted },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -417,7 +422,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   backButton: { padding: 8, width: 40 },
-  headerTitle: { fontSize: 17, fontWeight: '700', color: '#1A1A1A' },
+  headerTitle: { fontSize: 17, fontWeight: '700', color: theme.colors.text },
   content: { padding: 20, paddingBottom: 40 },
 
   hero: {
@@ -438,10 +443,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   heroCopy: { flex: 1 },
-  heroTitle: { fontSize: 18, fontWeight: '800', color: '#1B5E20' },
+  heroTitle: { fontSize: 18, fontWeight: '800', color: theme.colors.primaryOnLight },
   heroSubtitle: { fontSize: 13, color: '#4A6B50', marginTop: 3 },
-  heroCancelled: { backgroundColor: '#FDECEA' },
-  heroCancelledTitle: { fontSize: 17, fontWeight: '800', color: '#C62828' },
+  heroCancelled: { backgroundColor: theme.colors.errorSoft },
+  heroCancelledTitle: { fontSize: 17, fontWeight: '800', color: theme.colors.error },
   heroCancelledBody: { fontSize: 13, color: '#8C4A45', marginTop: 3, lineHeight: 18 },
 
   timeline: { marginBottom: 28 },
@@ -478,26 +483,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  stepDotReached: { backgroundColor: '#4CAF50' },
+  stepDotReached: { backgroundColor: theme.colors.primary },
   stepDotCurrent: {
-    shadowColor: '#4CAF50',
+    shadowColor: theme.colors.primary,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.5,
     shadowRadius: 6,
     elevation: 4,
   },
   stepLine: { width: 2, flex: 1, minHeight: 18, backgroundColor: '#E3E8E4', marginVertical: 3 },
-  stepLineReached: { backgroundColor: '#4CAF50' },
+  stepLineReached: { backgroundColor: theme.colors.primary },
   stepCopy: { flex: 1, paddingBottom: 20 },
   stepTitle: { fontSize: 15, fontWeight: '600', color: '#A5ADA8', marginTop: 6 },
-  stepTitleReached: { color: '#1A1A1A' },
+  stepTitleReached: { color: theme.colors.text },
   stepDescription: { fontSize: 13, color: '#6B7369', marginTop: 3, lineHeight: 18 },
 
   section: { marginBottom: 24 },
   sectionLabel: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#888',
+    color: theme.colors.textMuted,
     letterSpacing: 0.6,
     marginBottom: 10,
   },
@@ -514,20 +519,20 @@ const styles = StyleSheet.create({
   summaryImage: { width: 56, height: 56, borderRadius: 12, backgroundColor: '#EFF2EF' },
   summaryImagePlaceholder: { alignItems: 'center', justifyContent: 'center' },
   summaryCopy: { flex: 1 },
-  summaryTitle: { fontSize: 15, fontWeight: '700', color: '#1A1A1A' },
-  summarySubtitle: { fontSize: 13, color: '#666', marginTop: 3 },
+  summaryTitle: { fontSize: 15, fontWeight: '700', color: theme.colors.text },
+  summarySubtitle: { fontSize: 13, color: theme.colors.textSecondary, marginTop: 3 },
   summaryOptions: { fontSize: 12, color: '#8B928D', marginTop: 4, lineHeight: 16 },
   summaryNote: { fontSize: 12, color: '#8B928D', marginTop: 4, fontStyle: 'italic' },
-  summaryPrice: { fontSize: 15, fontWeight: '700', color: '#1A1A1A' },
+  summaryPrice: { fontSize: 15, fontWeight: '700', color: theme.colors.text },
 
   reviewButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: '#237A3B',
+    backgroundColor: theme.colors.primaryAction,
     borderRadius: 12,
     paddingVertical: 15,
   },
-  reviewButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  reviewButtonText: { color: theme.colors.textOnAction, fontSize: 16, fontWeight: '600' },
 });

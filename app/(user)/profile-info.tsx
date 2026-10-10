@@ -18,6 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { supabase } from '@/src/utils/supabaseClient';
 import { useAuth } from '@/src/services/auth-context';
+import theme from '@/src/styles/theme';
 
 const AVATAR_BUCKET = 'avatars';
 
@@ -191,20 +192,20 @@ const EditProfileScreen = () => {
                 keyboardType={opts?.keyboardType ?? 'default'}
                 autoCapitalize={opts?.autoCapitalize ?? 'sentences'}
                 placeholder={opts?.placeholder}
-                placeholderTextColor="#aaa"
+                placeholderTextColor={theme.colors.placeholder}
                 editable={!saving}
                 returnKeyType="done"
                 onSubmitEditing={saveEdit}
               />
               <View style={styles.editButtons}>
                 <TouchableOpacity onPress={cancelEdit} disabled={saving} style={styles.iconBtn}>
-                  <Ionicons name="close" size={22} color="#999" />
+                  <Ionicons name="close" size={22} color={theme.colors.placeholder} />
                 </TouchableOpacity>
                 <TouchableOpacity onPress={saveEdit} disabled={saving} style={styles.iconBtn}>
                   {saving ? (
-                    <ActivityIndicator size="small" color="#4CAF50" />
+                    <ActivityIndicator size="small" color={theme.colors.primary} />
                   ) : (
-                    <Ionicons name="checkmark" size={24} color="#4CAF50" />
+                    <Ionicons name="checkmark" size={24} color={theme.colors.primary} />
                   )}
                 </TouchableOpacity>
               </View>
@@ -215,7 +216,7 @@ const EditProfileScreen = () => {
           <View style={styles.inputRow}>
             <Text style={styles.inputValue}>{value || '—'}</Text>
             <TouchableOpacity onPress={() => startEdit(fieldKey, value)}>
-              <Ionicons name="pencil" size={18} color="#000" />
+              <Ionicons name="pencil" size={18} color={theme.colors.text} />
             </TouchableOpacity>
           </View>
         )}
@@ -228,7 +229,7 @@ const EditProfileScreen = () => {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.centerContent}>
-          <ActivityIndicator size="large" color="#4CAF50" />
+          <ActivityIndicator size="large" color={theme.colors.primary} />
         </View>
       </SafeAreaView>
     );
@@ -253,7 +254,7 @@ const EditProfileScreen = () => {
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <Ionicons name="chevron-back" size={24} color="#000" />
+            <Ionicons name="chevron-back" size={24} color={theme.colors.text} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Profile Information</Text>
           <View style={{ width: 40 }} />
@@ -274,11 +275,11 @@ const EditProfileScreen = () => {
                 {avatarUrl ? (
                   <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
                 ) : (
-                  <Ionicons name="person" size={60} color="#999" />
+                  <Ionicons name="person" size={60} color={theme.colors.placeholder} />
                 )}
                 {uploadingAvatar && (
                   <View style={styles.avatarOverlay}>
-                    <ActivityIndicator color="#fff" />
+                    <ActivityIndicator color={theme.colors.textOnAction} />
                   </View>
                 )}
               </View>
@@ -288,7 +289,7 @@ const EditProfileScreen = () => {
               onPress={pickAndUploadAvatar}
               disabled={uploadingAvatar}
             >
-              <Ionicons name="camera" size={16} color="#333" />
+              <Ionicons name="camera" size={16} color={theme.colors.textStrong} />
               <Text style={styles.editAvatarText}>{uploadingAvatar ? 'Uploading…' : 'Edit'}</Text>
             </TouchableOpacity>
           </View>
@@ -324,7 +325,7 @@ const EditProfileScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
   },
   centerContent: {
     flex: 1,
@@ -333,7 +334,7 @@ const styles = StyleSheet.create({
   },
   signedOutText: {
     fontSize: 16,
-    color: '#666',
+    color: theme.colors.textSecondary,
   },
   header: {
     flexDirection: 'row',
@@ -345,7 +346,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#000',
+    color: theme.colors.text,
   },
   backButton: {
     padding: 5,
@@ -362,7 +363,7 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: '#e0e0e0',
+    backgroundColor: theme.colors.border,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 10,
@@ -381,7 +382,7 @@ const styles = StyleSheet.create({
   editAvatarButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.colors.surfaceMuted,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
@@ -390,7 +391,7 @@ const styles = StyleSheet.create({
   editAvatarText: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#333',
+    color: theme.colors.textStrong,
   },
   form: {
     width: '100%',
@@ -401,7 +402,7 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#999',
+    color: theme.colors.placeholder,
     marginBottom: 8,
     letterSpacing: 0.5,
   },
@@ -412,7 +413,7 @@ const styles = StyleSheet.create({
   },
   inputValue: {
     fontSize: 18,
-    color: '#000',
+    color: theme.colors.text,
     flex: 1,
   },
   editingRow: {
@@ -422,7 +423,7 @@ const styles = StyleSheet.create({
   editInput: {
     flex: 1,
     fontSize: 18,
-    color: '#000',
+    color: theme.colors.text,
     paddingVertical: 4,
   },
   editButtons: {
@@ -435,13 +436,13 @@ const styles = StyleSheet.create({
   },
   helperText: {
     fontSize: 12,
-    color: '#888',
+    color: theme.colors.textMuted,
     marginTop: 6,
     fontStyle: 'italic',
   },
   divider: {
     height: 1,
-    backgroundColor: '#e0e0e0',
+    backgroundColor: theme.colors.border,
     marginTop: 15,
   },
   deleteButton: {
@@ -450,7 +451,7 @@ const styles = StyleSheet.create({
   deleteButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#ff4d4d',
+    color: theme.colors.destructive,
   },
 });
 

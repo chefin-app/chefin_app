@@ -1,5 +1,6 @@
 import { StyleSheet, View, Text, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import theme from '@/src/styles/theme';
 
 type SocialButtonName = 'facebook' | 'apple' | 'google' | 'email';
 type SocialMediaButtonsProps = {
@@ -21,7 +22,7 @@ const SocialMediaButtons: React.FC<SocialMediaButtonsProps> = ({
         accessibilityState={{ disabled }}
       >
         <View style={styles.socialButtonContent}>
-          <Ionicons name="logo-facebook" size={20} color="#fff" />
+          <Ionicons name="logo-facebook" size={20} color={theme.colors.textOnAction} />
           <Text style={styles.facebookButtonText}>Continue with Facebook</Text>
         </View>
       </TouchableOpacity>
@@ -37,7 +38,7 @@ const SocialMediaButtons: React.FC<SocialMediaButtonsProps> = ({
         accessibilityState={{ disabled }}
       >
         <View style={styles.socialButtonContent}>
-          <Ionicons name="logo-apple" size={20} color="#fff" />
+          <Ionicons name="logo-apple" size={20} color={theme.colors.textOnAction} />
           <Text style={styles.appleButtonText}>Continue with Apple</Text>
         </View>
       </TouchableOpacity>
@@ -64,7 +65,7 @@ const SocialMediaButtons: React.FC<SocialMediaButtonsProps> = ({
     return (
       <TouchableOpacity style={styles.emailButton} onPress={onPress}>
         <View style={styles.socialButtonContent}>
-          <Ionicons name="mail" size={20} color="#fff" />
+          <Ionicons name="mail" size={20} color={theme.colors.textOnAction} />
           <Text style={styles.emailButtonText}>Continue with email</Text>
         </View>
       </TouchableOpacity>
@@ -75,14 +76,14 @@ const SocialMediaButtons: React.FC<SocialMediaButtonsProps> = ({
 
 const styles = StyleSheet.create({
   emailButton: {
-    backgroundColor: '#237A3B',
+    backgroundColor: theme.colors.primaryAction,
     paddingVertical: 16,
     paddingHorizontal: 24,
     borderRadius: 12,
     alignItems: 'center',
   },
   emailButtonText: {
-    color: '#fff',
+    color: theme.colors.textOnAction,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -100,33 +101,33 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   facebookButtonText: {
-    color: '#fff',
+    color: theme.colors.textOnAction,
     fontSize: 16,
     fontWeight: '600',
   },
   googleButton: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
     paddingVertical: 16,
     paddingHorizontal: 24,
     borderRadius: 12,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: theme.colors.border,
   },
   googleButtonText: {
-    color: '#333',
+    color: theme.colors.textStrong,
     fontSize: 16,
     fontWeight: '600',
   },
   appleButton: {
-    backgroundColor: '#000',
+    backgroundColor: theme.colors.text,
     paddingVertical: 16,
     paddingHorizontal: 24,
     borderRadius: 12,
     alignItems: 'center',
   },
   appleButtonText: {
-    color: '#fff',
+    color: theme.colors.textOnAction,
     fontSize: 16,
     fontWeight: '600',
   },

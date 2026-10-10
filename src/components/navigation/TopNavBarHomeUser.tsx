@@ -12,6 +12,7 @@ import {
   formatCustomerOrderTime,
   useCustomerLocation,
 } from '@/src/context/CustomerLocationContext';
+import theme from '@/src/styles/theme';
 
 interface NavBarProps {
   options?: {
@@ -86,7 +87,7 @@ export default function TopNavBarHomeUser({
     return (
       <View style={styles.buttonRow}>
         <TouchableOpacity style={styles.iconButton} onPress={handleFavouritesPress}>
-          <Ionicons name="heart-outline" size={24} color="#333" />
+          <Ionicons name="heart-outline" size={24} color={theme.colors.textStrong} />
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.iconButton}
@@ -94,7 +95,7 @@ export default function TopNavBarHomeUser({
           accessibilityRole="button"
           accessibilityLabel="Past food orders"
         >
-          <Ionicons name="receipt-outline" size={24} color="#333" />
+          <Ionicons name="receipt-outline" size={24} color={theme.colors.textStrong} />
         </TouchableOpacity>
       </View>
     );
@@ -114,7 +115,7 @@ export default function TopNavBarHomeUser({
           }
         >
           <View style={styles.locationIcon}>
-            <Ionicons name="location-outline" size={24} color="#216E39" />
+            <Ionicons name="location-outline" size={24} color={theme.colors.primaryOnLight} />
           </View>
           <View style={styles.locationCopy}>
             <View style={styles.locationLabelRow}>
@@ -155,7 +156,7 @@ export default function TopNavBarHomeUser({
 
 const styles = StyleSheet.create({
   safeArea: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
   },
   locationRow: {
     flexDirection: 'row',

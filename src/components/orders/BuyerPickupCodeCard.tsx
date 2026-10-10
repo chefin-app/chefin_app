@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import theme from '@/src/styles/theme';
 
 export default function BuyerPickupCodeCard({
   orderId,
@@ -146,7 +147,7 @@ const styles = StyleSheet.create({
     marginTop: 14,
     minHeight: 58,
     borderRadius: 14,
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
     borderWidth: 1,
     borderColor: '#B9CCEF',
     flexDirection: 'row',

@@ -2,6 +2,7 @@ import React from 'react';
 import { TouchableOpacity, StyleSheet, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { type IconProps } from '@expo/vector-icons/build/createIconSet';
+import theme from '@/src/styles/theme';
 
 type IconButtonProps = {
   iconName: keyof typeof Ionicons.glyphMap;
@@ -14,7 +15,7 @@ type IconButtonProps = {
 export const IconButton = ({
   iconName,
   size = 24, // Default size
-  color = '#333', // Default color
+  color = theme.colors.textStrong, // Default color
   onPress,
   style,
 }: IconButtonProps) => {

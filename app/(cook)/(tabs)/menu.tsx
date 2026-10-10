@@ -23,6 +23,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 
 import { useAuth } from '@/src/services/auth-context';
 import { supabase } from '@/src/utils/supabaseClient';
+import theme from '@/src/styles/theme';
 
 type MenuTab = 'items' | 'options';
 type StatusFilter = 'all' | 'approved' | 'pending' | 'rejected';
@@ -786,7 +787,7 @@ export default function CookMenuScreen() {
               openStockEditor(dish);
             }}
           >
-            <Ionicons name="cube-outline" size={13} color="#1473E6" />
+            <Ionicons name="cube-outline" size={13} color={theme.colors.link} />
             <Text style={styles.stockChipText}>
               {dishAvailability.dailyStockLimit == null
                 ? 'Stock: unlimited'
@@ -799,10 +800,10 @@ export default function CookMenuScreen() {
           <Ionicons
             name={selected ? 'checkbox' : 'square-outline'}
             size={26}
-            color={selected ? '#20A84F' : '#B4BBB7'}
+            color={selected ? theme.colors.primary : '#B4BBB7'}
           />
         ) : busyId === dish.id ? (
-          <ActivityIndicator color="#00A651" />
+          <ActivityIndicator color={theme.colors.primary} />
         ) : (
           <Switch
             value={switchValue}
@@ -815,9 +816,9 @@ export default function CookMenuScreen() {
                 setStockOutStatus(null);
               }
             }}
-            trackColor={{ false: '#D9DEDB', true: '#80D8A1' }}
-            thumbColor={switchValue ? '#00A651' : '#F7F8F7'}
-            ios_backgroundColor="#D9DEDB"
+            trackColor={{ false: theme.colors.border, true: '#80D8A1' }}
+            thumbColor={switchValue ? theme.colors.primary : theme.colors.surfaceAlt}
+            ios_backgroundColor={theme.colors.border}
           />
         )}
       </TouchableOpacity>
@@ -828,7 +829,7 @@ export default function CookMenuScreen() {
     return (
       <SafeAreaView style={styles.page} edges={['left', 'right']}>
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color="#00A651" />
+          <ActivityIndicator size="large" color={theme.colors.primary} />
         </View>
       </SafeAreaView>
     );
@@ -852,7 +853,7 @@ export default function CookMenuScreen() {
           {dishSelectionMode && (
             <View style={styles.selectionHeader}>
               <TouchableOpacity onPress={exitDishSelection} hitSlop={10}>
-                <Ionicons name="close" size={24} color="#242A26" />
+                <Ionicons name="close" size={24} color={theme.colors.text} />
               </TouchableOpacity>
               <Text style={styles.selectionHeaderText}>
                 {selectedDishIds.size} item{selectedDishIds.size === 1 ? '' : 's'} selected
@@ -885,12 +886,12 @@ export default function CookMenuScreen() {
                   <Text style={styles.filterText}>
                     {statusFilter === 'all' ? 'Item status' : statusFilter}
                   </Text>
-                  <Ionicons name="chevron-down" size={18} color="#343A36" />
+                  <Ionicons name="chevron-down" size={18} color={theme.colors.textStrong} />
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.filterChip} onPress={() => setScheduleModal(true)}>
-                  <Ionicons name="time-outline" size={18} color="#343A36" />
+                  <Ionicons name="time-outline" size={18} color={theme.colors.textStrong} />
                   <Text style={styles.filterText}>{scheduleFilterLabel}</Text>
-                  <Ionicons name="chevron-down" size={18} color="#343A36" />
+                  <Ionicons name="chevron-down" size={18} color={theme.colors.textStrong} />
                 </TouchableOpacity>
               </View>
             </ScrollView>
@@ -908,12 +909,12 @@ export default function CookMenuScreen() {
               <View style={styles.promotionCopy}>
                 <Text style={styles.promotionTitle}>Free-delivery offer</Text>
                 <Text style={styles.promotionText}>
-                    {threshold == null
-                      ? 'Choose how much customers must spend with you to get free delivery'
-                      : `Free delivery when customers spend RM ${threshold.toFixed(2)} or more with you`}
+                  {threshold == null
+                    ? 'Choose how much customers must spend with you to get free delivery'
+                    : `Free delivery when customers spend RM ${threshold.toFixed(2)} or more with you`}
                 </Text>
               </View>
-                <Ionicons name="chevron-forward" size={19} color="#59615C" />
+              <Ionicons name="chevron-forward" size={19} color="#59615C" />
             </TouchableOpacity>
 
             {categories.length === 0 ? (
@@ -1070,7 +1071,7 @@ export default function CookMenuScreen() {
                             })
                           }
                         >
-                          <Ionicons name="create-outline" size={17} color="#1473E6" />
+                          <Ionicons name="create-outline" size={17} color={theme.colors.link} />
                           <Text style={styles.optionActionText}>Edit group</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
@@ -1082,7 +1083,7 @@ export default function CookMenuScreen() {
                             })
                           }
                         >
-                          <Ionicons name="link-outline" size={17} color="#1473E6" />
+                          <Ionicons name="link-outline" size={17} color={theme.colors.link} />
                           <Text style={styles.optionActionText}>Linked dishes</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
@@ -1092,7 +1093,7 @@ export default function CookMenuScreen() {
                             setSelectedOptionIds(new Set());
                           }}
                         >
-                          <Ionicons name="checkbox-outline" size={17} color="#1473E6" />
+                          <Ionicons name="checkbox-outline" size={17} color={theme.colors.link} />
                           <Text style={styles.optionActionText}>Manage</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
@@ -1124,7 +1125,11 @@ export default function CookMenuScreen() {
                                   selectedOptionIds.has(option.id) ? 'checkbox' : 'square-outline'
                                 }
                                 size={25}
-                                color={selectedOptionIds.has(option.id) ? '#20A84F' : '#B4BBB7'}
+                                color={
+                                  selectedOptionIds.has(option.id)
+                                    ? theme.colors.primary
+                                    : '#B4BBB7'
+                                }
                               />
                             </TouchableOpacity>
                           ) : null}
@@ -1145,8 +1150,10 @@ export default function CookMenuScreen() {
                             <Switch
                               value={option.is_available}
                               onValueChange={next => toggleOption(option, next)}
-                              trackColor={{ false: '#D9DEDB', true: '#80D8A1' }}
-                              thumbColor={option.is_available ? '#00A651' : '#F7F8F7'}
+                              trackColor={{ false: theme.colors.border, true: '#80D8A1' }}
+                              thumbColor={
+                                option.is_available ? theme.colors.primary : theme.colors.surfaceAlt
+                              }
                             />
                           ) : null}
                         </View>
@@ -1198,7 +1205,7 @@ export default function CookMenuScreen() {
             }}
           >
             <Text style={styles.addChoiceText}>Add item</Text>
-            <Ionicons name="restaurant-outline" size={20} color="#4CAF50" />
+            <Ionicons name="restaurant-outline" size={20} color={theme.colors.primary} />
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.addChoice}
@@ -1208,14 +1215,18 @@ export default function CookMenuScreen() {
             }}
           >
             <Text style={styles.addChoiceText}>Add option group</Text>
-            <Ionicons name="options-outline" size={20} color="#4CAF50" />
+            <Ionicons name="options-outline" size={20} color={theme.colors.primary} />
           </TouchableOpacity>
         </View>
       )}
       {!dishSelectionMode && (
         <TouchableOpacity style={styles.fab} onPress={() => setAddMenuOpen(open => !open)}>
-          <Ionicons name={addMenuOpen ? 'close' : 'add'} size={30} color="#fff" />
-          <Ionicons name="chevron-down" size={18} color="#fff" />
+          <Ionicons
+            name={addMenuOpen ? 'close' : 'add'}
+            size={30}
+            color={theme.colors.textOnAction}
+          />
+          <Ionicons name="chevron-down" size={18} color={theme.colors.textOnAction} />
         </TouchableOpacity>
       )}
 
@@ -1265,7 +1276,9 @@ export default function CookMenuScreen() {
                 <Ionicons
                   name={optionStockStatus === value ? 'radio-button-on' : 'radio-button-off'}
                   size={28}
-                  color={optionStockStatus === value ? '#00B85A' : '#B7BDB9'}
+                  color={
+                    optionStockStatus === value ? theme.colors.primary : theme.colors.placeholder
+                  }
                 />
               </TouchableOpacity>
             ))}
@@ -1280,7 +1293,7 @@ export default function CookMenuScreen() {
               }
             >
               {optionStatusSaving ? (
-                <ActivityIndicator color="#FFFFFF" />
+                <ActivityIndicator color={theme.colors.textOnAction} />
               ) : (
                 <Text style={styles.statusConfirmText}>Confirm</Text>
               )}
@@ -1305,7 +1318,7 @@ export default function CookMenuScreen() {
                   </Text>
                 </View>
                 <TouchableOpacity onPress={() => setThresholdModal(false)}>
-                  <Ionicons name="close" size={24} color="#242A26" />
+                  <Ionicons name="close" size={24} color={theme.colors.text} />
                 </TouchableOpacity>
               </View>
               <View style={styles.amountRow}>
@@ -1365,7 +1378,7 @@ export default function CookMenuScreen() {
               <Ionicons
                 name={stockOutStatus === 'today' ? 'radio-button-on' : 'radio-button-off'}
                 size={28}
-                color={stockOutStatus === 'today' ? '#00B85A' : '#B7BDB9'}
+                color={stockOutStatus === 'today' ? theme.colors.primary : theme.colors.placeholder}
               />
             </TouchableOpacity>
             <TouchableOpacity
@@ -1380,7 +1393,9 @@ export default function CookMenuScreen() {
               <Ionicons
                 name={stockOutStatus === 'indefinite' ? 'radio-button-on' : 'radio-button-off'}
                 size={28}
-                color={stockOutStatus === 'indefinite' ? '#00B85A' : '#B7BDB9'}
+                color={
+                  stockOutStatus === 'indefinite' ? theme.colors.primary : theme.colors.placeholder
+                }
               />
             </TouchableOpacity>
             <TouchableOpacity
@@ -1392,7 +1407,7 @@ export default function CookMenuScreen() {
               disabled={!stockOutStatus || statusSaving}
             >
               {statusSaving ? (
-                <ActivityIndicator color="#FFFFFF" />
+                <ActivityIndicator color={theme.colors.textOnAction} />
               ) : (
                 <Text style={styles.statusConfirmText}>Confirm</Text>
               )}
@@ -1447,7 +1462,9 @@ export default function CookMenuScreen() {
                 <Ionicons
                   name={dishStatusChoice === value ? 'radio-button-on' : 'radio-button-off'}
                   size={28}
-                  color={dishStatusChoice === value ? '#00B85A' : '#B7BDB9'}
+                  color={
+                    dishStatusChoice === value ? theme.colors.primary : theme.colors.placeholder
+                  }
                 />
               </TouchableOpacity>
             ))}
@@ -1460,7 +1477,7 @@ export default function CookMenuScreen() {
               onPress={applyDishStatusToSelection}
             >
               {dishStatusSaving ? (
-                <ActivityIndicator color="#FFFFFF" />
+                <ActivityIndicator color={theme.colors.textOnAction} />
               ) : (
                 <Text style={styles.statusConfirmText}>Confirm</Text>
               )}
@@ -1494,7 +1511,7 @@ export default function CookMenuScreen() {
               they never extend them.
             </Text>
             {dishScheduleSaving ? (
-              <ActivityIndicator color="#00A651" style={styles.scheduleSpinner} />
+              <ActivityIndicator color={theme.colors.primary} style={styles.scheduleSpinner} />
             ) : (
               <ScrollView style={styles.scheduleList}>
                 <TouchableOpacity
@@ -1505,7 +1522,7 @@ export default function CookMenuScreen() {
                     <Text style={styles.scheduleTitle}>All opening hours</Text>
                     <Text style={styles.scheduleMeta}>{openingHoursSummary}</Text>
                   </View>
-                  <Ionicons name="radio-button-off" size={25} color="#B9C0BC" />
+                  <Ionicons name="radio-button-off" size={25} color={theme.colors.placeholder} />
                 </TouchableOpacity>
                 {sellingSchedules.map(schedule => (
                   <TouchableOpacity
@@ -1517,7 +1534,7 @@ export default function CookMenuScreen() {
                       <Text style={styles.scheduleTitle}>{schedule.name}</Text>
                       <Text style={styles.scheduleMeta}>{scheduleSummary(schedule)}</Text>
                     </View>
-                    <Ionicons name="radio-button-off" size={25} color="#B9C0BC" />
+                    <Ionicons name="radio-button-off" size={25} color={theme.colors.placeholder} />
                   </TouchableOpacity>
                 ))}
                 <TouchableOpacity
@@ -1527,7 +1544,7 @@ export default function CookMenuScreen() {
                     router.push('/(cook)/add-selling-schedule');
                   }}
                 >
-                  <Ionicons name="add" size={24} color="#1473E6" />
+                  <Ionicons name="add" size={24} color={theme.colors.link} />
                   <Text style={styles.createScheduleText}>Create new schedule</Text>
                 </TouchableOpacity>
               </ScrollView>
@@ -1554,7 +1571,7 @@ export default function CookMenuScreen() {
                   </Text>
                 </View>
                 <TouchableOpacity onPress={() => setStockDish(null)}>
-                  <Ionicons name="close" size={24} color="#242A26" />
+                  <Ionicons name="close" size={24} color={theme.colors.text} />
                 </TouchableOpacity>
               </View>
               <TouchableOpacity
@@ -1568,7 +1585,9 @@ export default function CookMenuScreen() {
                 <Ionicons
                   name={stockMode === 'unlimited' ? 'radio-button-on' : 'radio-button-off'}
                   size={25}
-                  color={stockMode === 'unlimited' ? '#4CAF50' : '#B7BDB9'}
+                  color={
+                    stockMode === 'unlimited' ? theme.colors.primary : theme.colors.placeholder
+                  }
                 />
               </TouchableOpacity>
               <TouchableOpacity style={styles.stockChoice} onPress={() => setStockMode('limited')}>
@@ -1581,7 +1600,7 @@ export default function CookMenuScreen() {
                 <Ionicons
                   name={stockMode === 'limited' ? 'radio-button-on' : 'radio-button-off'}
                   size={25}
-                  color={stockMode === 'limited' ? '#4CAF50' : '#B7BDB9'}
+                  color={stockMode === 'limited' ? theme.colors.primary : theme.colors.placeholder}
                 />
               </TouchableOpacity>
               {stockMode === 'limited' && (
@@ -1611,7 +1630,7 @@ export default function CookMenuScreen() {
                 disabled={stockSaving}
               >
                 {stockSaving ? (
-                  <ActivityIndicator color="#fff" />
+                  <ActivityIndicator color={theme.colors.textOnAction} />
                 ) : (
                   <Text style={styles.primaryButtonText}>Save daily stock</Text>
                 )}
@@ -1632,7 +1651,7 @@ export default function CookMenuScreen() {
                 </Text>
               </View>
               <TouchableOpacity onPress={() => setScheduleModal(false)}>
-                <Ionicons name="close" size={24} color="#242A26" />
+                <Ionicons name="close" size={24} color={theme.colors.text} />
               </TouchableOpacity>
             </View>
             <ScrollView style={styles.scheduleList}>
@@ -1650,7 +1669,7 @@ export default function CookMenuScreen() {
                 <Ionicons
                   name={scheduleFilter === 'all' ? 'radio-button-on' : 'radio-button-off'}
                   size={25}
-                  color={scheduleFilter === 'all' ? '#4CAF50' : '#B9C0BC'}
+                  color={scheduleFilter === 'all' ? theme.colors.primary : theme.colors.placeholder}
                 />
               </TouchableOpacity>
               <TouchableOpacity
@@ -1667,7 +1686,11 @@ export default function CookMenuScreen() {
                 <Ionicons
                   name={scheduleFilter === 'opening-hours' ? 'radio-button-on' : 'radio-button-off'}
                   size={25}
-                  color={scheduleFilter === 'opening-hours' ? '#4CAF50' : '#B9C0BC'}
+                  color={
+                    scheduleFilter === 'opening-hours'
+                      ? theme.colors.primary
+                      : theme.colors.placeholder
+                  }
                 />
               </TouchableOpacity>
               {sellingSchedules.map(schedule => (
@@ -1697,7 +1720,11 @@ export default function CookMenuScreen() {
                   <Ionicons
                     name={scheduleFilter === schedule.id ? 'radio-button-on' : 'radio-button-off'}
                     size={25}
-                    color={scheduleFilter === schedule.id ? '#4CAF50' : '#B9C0BC'}
+                    color={
+                      scheduleFilter === schedule.id
+                        ? theme.colors.primary
+                        : theme.colors.placeholder
+                    }
                     onPress={() => {
                       setScheduleFilter(schedule.id);
                       setScheduleModal(false);
@@ -1712,7 +1739,7 @@ export default function CookMenuScreen() {
                   router.push('/(cook)/add-selling-schedule');
                 }}
               >
-                <Ionicons name="add" size={24} color="#1473E6" />
+                <Ionicons name="add" size={24} color={theme.colors.link} />
                 <Text style={styles.createScheduleText}>Create new schedule</Text>
               </TouchableOpacity>
             </ScrollView>
@@ -1724,17 +1751,17 @@ export default function CookMenuScreen() {
 }
 
 const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: '#FFFFFF' },
+  page: { flex: 1, backgroundColor: theme.colors.surface },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   tabs: {
     flexDirection: 'row',
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#DDE2DF',
+    borderBottomColor: theme.colors.border,
   },
   tab: { flex: 1, alignItems: 'center', paddingTop: 17 },
   tabText: { fontSize: 16, fontWeight: '500', color: '#4F5752', paddingBottom: 15 },
-  tabTextActive: { color: '#4CAF50', fontWeight: '800' },
-  tabIndicator: { height: 3, width: '100%', backgroundColor: '#4CAF50' },
+  tabTextActive: { color: theme.colors.primary, fontWeight: '800' },
+  tabIndicator: { height: 3, width: '100%', backgroundColor: theme.colors.primary },
   content: { paddingBottom: 140 },
   filters: { flexDirection: 'row', gap: 9, padding: 16 },
   filterChip: {
@@ -1746,18 +1773,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 15,
     gap: 8,
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
   },
   searchChip: { width: 150 },
   searchInput: { width: 88, fontSize: 14, color: '#252A27', paddingVertical: 0 },
-  filterText: { fontSize: 14, color: '#343A36', textTransform: 'capitalize' },
+  filterText: { fontSize: 14, color: theme.colors.textStrong, textTransform: 'capitalize' },
   promotionCard: {
     marginHorizontal: 18,
     marginBottom: 6,
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E1E6E3',
+    borderColor: theme.colors.border,
     borderRadius: 15,
     padding: 13,
     backgroundColor: '#FAFCFB',
@@ -1772,7 +1799,7 @@ const styles = StyleSheet.create({
     marginRight: 11,
   },
   promotionCopy: { flex: 1 },
-  promotionTitle: { fontSize: 13, fontWeight: '800', color: '#202622' },
+  promotionTitle: { fontSize: 13, fontWeight: '800', color: theme.colors.text },
   promotionText: { fontSize: 11, color: '#6E7771', marginTop: 2 },
   categorySection: { paddingHorizontal: 18, paddingTop: 12 },
   categoryHeader: {
@@ -1795,23 +1822,23 @@ const styles = StyleSheet.create({
   dishRow: {
     minHeight: 92,
     borderWidth: 1,
-    borderColor: '#DDE2DF',
+    borderColor: theme.colors.border,
     borderRadius: 17,
     flexDirection: 'row',
     alignItems: 'center',
     padding: 10,
     gap: 12,
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
   },
   dishImage: { width: 68, height: 68, borderRadius: 12 },
   imagePlaceholder: { backgroundColor: '#F1F3F2', alignItems: 'center', justifyContent: 'center' },
   dishCopy: { flex: 1 },
-  dishTitle: { fontSize: 15, fontWeight: '800', color: '#202522' },
+  dishTitle: { fontSize: 15, fontWeight: '800', color: theme.colors.text },
   dishPrice: { fontSize: 14, color: '#4F5752', marginTop: 4 },
-  dishState: { fontSize: 10, color: '#4CAF50', marginTop: 4, fontWeight: '600' },
-  dishStatePending: { color: '#B26A00' },
-  dishStateRejected: { color: '#C62828' },
-  dishStateSoldOut: { color: '#B42318' },
+  dishState: { fontSize: 10, color: theme.colors.primary, marginTop: 4, fontWeight: '600' },
+  dishStatePending: { color: theme.colors.warning },
+  dishStateRejected: { color: theme.colors.error },
+  dishStateSoldOut: { color: theme.colors.error },
   dishStateWarning: { color: '#9A6700' },
   stockChip: {
     flexDirection: 'row',
@@ -1828,12 +1855,16 @@ const styles = StyleSheet.create({
   },
   stockChipText: { color: '#1B60B8', fontSize: 11, fontWeight: '700' },
   stockChipEdit: {
-    color: '#1473E6',
+    color: theme.colors.link,
     fontSize: 11,
     fontWeight: '800',
     textDecorationLine: 'underline',
   },
-  dishRowSelected: { borderColor: '#20A84F', borderWidth: 1.5, backgroundColor: '#F2FBF5' },
+  dishRowSelected: {
+    borderColor: theme.colors.primary,
+    borderWidth: 1.5,
+    backgroundColor: '#F2FBF5',
+  },
   selectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1842,9 +1873,9 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#E4E8E5',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.surface,
   },
-  selectionHeaderText: { fontSize: 15, fontWeight: '800', color: '#242A26' },
+  selectionHeaderText: { fontSize: 15, fontWeight: '800', color: theme.colors.text },
   selectionBar: {
     position: 'absolute',
     left: 0,
@@ -1854,7 +1885,7 @@ const styles = StyleSheet.create({
     gap: 9,
     padding: 14,
     paddingBottom: 26,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.surface,
     borderTopWidth: 1,
     borderTopColor: '#E4E8E5',
   },
@@ -1864,9 +1895,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 13,
     borderRadius: 24,
-    backgroundColor: '#00A651',
+    backgroundColor: theme.colors.primary,
   },
-  selectionActionText: { fontSize: 13, fontWeight: '800', color: '#FFFFFF' },
+  selectionActionText: { fontSize: 13, fontWeight: '800', color: theme.colors.textOnAction },
   selectionActionSecondary: {
     flex: 1,
     alignItems: 'center',
@@ -1884,14 +1915,14 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     backgroundColor: '#F2F4F3',
     borderTopWidth: 1,
-    borderTopColor: '#DDE2DF',
+    borderTopColor: theme.colors.border,
   },
-  keyboardAccessoryDone: { fontSize: 16, fontWeight: '700', color: '#1473E6' },
+  keyboardAccessoryDone: { fontSize: 16, fontWeight: '700', color: theme.colors.link },
   emptyState: { alignItems: 'center', paddingVertical: 70, paddingHorizontal: 36 },
   emptyTitle: { fontSize: 17, fontWeight: '800', color: '#2D342F', marginTop: 13 },
   emptyText: { fontSize: 13, lineHeight: 19, color: '#737D76', textAlign: 'center', marginTop: 5 },
   refreshButton: { alignSelf: 'center', paddingHorizontal: 22, paddingVertical: 13, marginTop: 20 },
-  refreshText: { color: '#4CAF50', fontSize: 13, fontWeight: '800' },
+  refreshText: { color: theme.colors.primary, fontSize: 13, fontWeight: '800' },
   optionContent: { padding: 18, gap: 14, paddingBottom: 140 },
   optionCard: { borderWidth: 1, borderColor: '#D8DDDA', borderRadius: 18, overflow: 'hidden' },
   optionHeader: { minHeight: 88, padding: 18, flexDirection: 'row', alignItems: 'center' },
@@ -1908,7 +1939,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAF8',
   },
   optionAction: { flexDirection: 'row', alignItems: 'center', gap: 5, padding: 6 },
-  optionActionText: { fontSize: 11, fontWeight: '700', color: '#1473E6' },
+  optionActionText: { fontSize: 11, fontWeight: '700', color: theme.colors.link },
   deleteActionText: { color: '#C94A4A' },
   optionRow: {
     minHeight: 74,
@@ -1919,7 +1950,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   optionRowCopy: { flex: 1 },
-  optionName: { fontSize: 15, color: '#242A26' },
+  optionName: { fontSize: 15, color: theme.colors.text },
   optionPrice: { fontSize: 13, color: '#68716B', marginTop: 3 },
   manageFooter: { flexDirection: 'row', gap: 10, padding: 14, backgroundColor: '#F8FAF8' },
   manageCancel: {
@@ -1937,9 +1968,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 12,
-    backgroundColor: '#20A84F',
+    backgroundColor: theme.colors.primary,
   },
-  manageStatusText: { fontSize: 13, fontWeight: '800', color: '#FFFFFF' },
+  manageStatusText: { fontSize: 13, fontWeight: '800', color: theme.colors.textOnAction },
   fab: {
     position: 'absolute',
     right: 22,
@@ -1947,7 +1978,7 @@ const styles = StyleSheet.create({
     height: 64,
     minWidth: 118,
     borderRadius: 32,
-    backgroundColor: '#4CAF50',
+    backgroundColor: theme.colors.primary,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -1963,7 +1994,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
     borderWidth: 1,
     borderColor: '#D5DDD8',
     borderRadius: 24,
@@ -1979,7 +2010,7 @@ const styles = StyleSheet.create({
   modalBackdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(20,28,23,0.45)' },
   sheet: {
     maxHeight: '90%',
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
     borderTopLeftRadius: 25,
     borderTopRightRadius: 25,
     padding: 22,
@@ -1987,7 +2018,7 @@ const styles = StyleSheet.create({
   },
   sheetHeader: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 20 },
   sheetHeaderCopy: { flex: 1, paddingRight: 12 },
-  sheetTitle: { fontSize: 20, fontWeight: '900', color: '#202622' },
+  sheetTitle: { fontSize: 20, fontWeight: '900', color: theme.colors.text },
   sheetSubtitle: { fontSize: 12, color: '#6D766F', lineHeight: 18, marginTop: 4 },
   sheetHandle: {
     width: 42,
@@ -1996,7 +2027,7 @@ const styles = StyleSheet.create({
     marginTop: -8,
     marginBottom: 24,
     borderRadius: 2,
-    backgroundColor: '#DDE2DF',
+    backgroundColor: theme.colors.border,
   },
   statusSheet: { minHeight: 360, paddingBottom: 42 },
   statusSheetTitle: { color: '#171C19', fontSize: 26, fontWeight: '900', marginBottom: 14 },
@@ -2008,7 +2039,7 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   statusChoiceCopy: { flex: 1 },
-  statusChoiceTitle: { color: '#202622', fontSize: 17, fontWeight: '800' },
+  statusChoiceTitle: { color: theme.colors.text, fontSize: 17, fontWeight: '800' },
   statusChoiceHint: { color: '#717A74', fontSize: 12, marginTop: 4 },
   statusConfirm: {
     minHeight: 58,
@@ -2016,19 +2047,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 29,
-    backgroundColor: '#00B85A',
+    backgroundColor: theme.colors.primary,
   },
-  statusConfirmText: { color: '#FFFFFF', fontSize: 18, fontWeight: '800' },
+  statusConfirmText: { color: theme.colors.textOnAction, fontSize: 18, fontWeight: '800' },
   primaryButton: {
     marginTop: 18,
     minHeight: 50,
-    backgroundColor: '#237A3B',
+    backgroundColor: theme.colors.primaryAction,
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
   },
   buttonDisabled: { opacity: 0.55 },
-  primaryButtonText: { color: '#fff', fontSize: 14, fontWeight: '800' },
+  primaryButtonText: { color: theme.colors.textOnAction, fontSize: 14, fontWeight: '800' },
   fieldLabel: {
     fontSize: 10,
     fontWeight: '800',
@@ -2043,14 +2074,14 @@ const styles = StyleSheet.create({
     padding: 13,
     marginTop: 7,
     fontSize: 15,
-    color: '#242A26',
+    color: theme.colors.text,
   },
   optionInput: { minHeight: 120, textAlignVertical: 'top' },
   inputHint: { fontSize: 11, color: '#7C857F', marginTop: 5 },
   multipleRow: { flexDirection: 'row', alignItems: 'center', marginVertical: 16 },
   multipleCopy: { flex: 1 },
   multipleTitle: { fontSize: 14, fontWeight: '700', color: '#2B322E' },
-  multipleHint: { fontSize: 11, color: '#747D77', marginTop: 2 },
+  multipleHint: { fontSize: 11, color: theme.colors.textSecondary, marginTop: 2 },
   amountRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -2060,17 +2091,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
   },
   amountCurrency: { fontSize: 18, fontWeight: '800', color: '#5F6862' },
-  amountInput: { flex: 1, fontSize: 22, fontWeight: '800', padding: 14, color: '#202622' },
+  amountInput: { flex: 1, fontSize: 22, fontWeight: '800', padding: 14, color: theme.colors.text },
   stockChoice: {
     minHeight: 68,
     flexDirection: 'row',
     alignItems: 'center',
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#E1E6E3',
+    borderBottomColor: theme.colors.border,
   },
   stockChoiceCopy: { flex: 1, paddingRight: 12 },
-  stockChoiceTitle: { fontSize: 15, color: '#242A26', fontWeight: '800' },
-  stockChoiceHint: { fontSize: 11, color: '#747D77', marginTop: 3 },
+  stockChoiceTitle: { fontSize: 15, color: theme.colors.text, fontWeight: '800' },
+  stockChoiceHint: { fontSize: 11, color: theme.colors.textSecondary, marginTop: 3 },
   stockInputRow: { flexDirection: 'row', alignItems: 'center', marginTop: 18, gap: 10 },
   stockInput: {
     width: 112,
@@ -2080,7 +2111,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 18,
-    color: '#202522',
+    color: theme.colors.text,
     fontWeight: '800',
   },
   stockUnit: { color: '#555E58', fontSize: 13 },
@@ -2091,13 +2122,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#E1E6E3',
+    borderBottomColor: theme.colors.border,
     paddingVertical: 13,
   },
   scheduleCopy: { flex: 1, paddingRight: 14 },
   scheduleTitle: { fontSize: 16, fontWeight: '800', color: '#232925' },
   scheduleMeta: { fontSize: 12, color: '#707A73', marginTop: 5, lineHeight: 17 },
-  scheduleEdit: { fontSize: 13, color: '#1473E6', fontWeight: '800', marginTop: 7 },
+  scheduleEdit: { fontSize: 13, color: theme.colors.link, fontWeight: '800', marginTop: 7 },
   createSchedule: { flexDirection: 'row', gap: 10, alignItems: 'center', paddingVertical: 22 },
-  createScheduleText: { color: '#1473E6', fontSize: 16, fontWeight: '800' },
+  createScheduleText: { color: theme.colors.link, fontSize: 16, fontWeight: '800' },
 });

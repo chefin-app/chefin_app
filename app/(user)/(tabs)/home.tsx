@@ -37,6 +37,7 @@ import { useAuth } from '@/src/services/auth-context';
 import { supabase } from '@/src/utils/supabaseClient';
 import { filterDiscoveryListings, hasActiveDiscoveryFilters } from '@/src/utils/discoveryFilters';
 import { useScheduledDiscovery } from '@/src/hooks/useScheduledDiscovery';
+import theme from '@/src/styles/theme';
 
 interface ListingWithProfile extends Listing {
   profiles: Profile;
@@ -364,7 +365,7 @@ export default function HomeScreen() {
           <Text style={styles.stateTitle}>Something went wrong</Text>
           <Text style={styles.stateSubtitle}>{error}</Text>
           <TouchableOpacity style={styles.retryButton} onPress={fetchData}>
-            <Ionicons name="refresh" size={18} color="#fff" />
+            <Ionicons name="refresh" size={18} color={theme.colors.textOnAction} />
             <Text style={styles.retryButtonText}>Try again</Text>
           </TouchableOpacity>
         </View>
@@ -418,7 +419,7 @@ export default function HomeScreen() {
               <Ionicons
                 name={hasFeaturedAvailability ? 'flash' : 'sparkles'}
                 size={13}
-                color="#1B5E20"
+                color={theme.colors.primaryOnLight}
               />
               <Text style={styles.promoEyebrow}>
                 {hasFeaturedAvailability ? 'AVAILABLE NOW' : 'LOCAL PICKS'}
@@ -432,7 +433,7 @@ export default function HomeScreen() {
             </Text>
             <View style={styles.promoButton}>
               <Text style={styles.promoButtonText}>{promoCallToAction}</Text>
-              <Ionicons name="arrow-forward" size={16} color="#2E7D32" />
+              <Ionicons name="arrow-forward" size={16} color={theme.colors.primaryOnLight} />
             </View>
           </View>
           <View style={styles.promoVisual}>
@@ -446,7 +447,7 @@ export default function HomeScreen() {
               accessible={false}
             />
             <View style={styles.promoImagePill}>
-              <Ionicons name="time-outline" size={12} color="#1B5E20" />
+              <Ionicons name="time-outline" size={12} color={theme.colors.primaryOnLight} />
               <Text style={styles.promoImagePillText}>
                 {hasFeaturedAvailability ? 'Today' : 'Fresh'}
               </Text>
@@ -475,12 +476,12 @@ export default function HomeScreen() {
 
         {!filteringDiscovery && renderHorizontalSection('Order Again', orderAgain)}
         <View style={styles.restaurantFeed}>
-          <View style={styles.feedHeader}></View>
+          <View style={styles.feedHeader} />
           {!location && (
             <TouchableOpacity style={styles.nearestCta} onPress={openLocationPrompt}>
-              <Ionicons name="location-outline" size={22} color="#216E39" />
+              <Ionicons name="location-outline" size={22} color={theme.colors.primaryOnLight} />
               <Text style={styles.nearestCtaText}>Choose your area to find nearby kitchens</Text>
-              <Ionicons name="chevron-forward" size={20} color="#216E39" />
+              <Ionicons name="chevron-forward" size={20} color={theme.colors.primaryOnLight} />
             </TouchableOpacity>
           )}
           {!!nearestError && (
@@ -492,7 +493,7 @@ export default function HomeScreen() {
           )}
           {scheduled && (scheduledPopular.loading || scheduledNearest.loading) ? (
             <View style={styles.nearestStatusCard}>
-              <ActivityIndicator color="#216E39" />
+              <ActivityIndicator color={theme.colors.primaryOnLight} />
               <Text style={styles.nearestStatusText}>Checking your selected time…</Text>
             </View>
           ) : restaurantFeed.length ? (
@@ -549,7 +550,7 @@ const styles = StyleSheet.create({
   popularRail: { paddingHorizontal: 20, paddingBottom: 12, gap: 14 },
   restaurantFeed: {
     width: '100%',
-    backgroundColor: '#f8f9fa',
+    backgroundColor: theme.colors.surfaceAlt,
     paddingTop: 20,
     paddingBottom: 24,
   },
@@ -567,7 +568,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   noDataText: {
-    color: '#666',
+    color: theme.colors.textSecondary,
     fontSize: 14,
     textAlign: 'center',
     fontStyle: 'italic',
@@ -575,7 +576,7 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa', // Slightly off-white background
+    backgroundColor: theme.colors.surfaceAlt, // Slightly off-white background
   },
   scrollView: {
     flex: 1,
@@ -592,18 +593,18 @@ const styles = StyleSheet.create({
   },
   greeting: {
     fontSize: 16,
-    color: '#666',
+    color: theme.colors.textSecondary,
   },
   userName: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#333',
+    color: theme.colors.textStrong,
   },
   notificationButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
@@ -622,10 +623,10 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#FF5252',
+    backgroundColor: theme.colors.destructive,
   },
   welcomeCard: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
     borderRadius: 16,
     padding: 20,
     marginBottom: 24,
@@ -640,17 +641,17 @@ const styles = StyleSheet.create({
   welcomeTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#333',
+    color: theme.colors.textStrong,
     marginBottom: 8,
   },
   welcomeSubtitle: {
     fontSize: 14,
-    color: '#666',
+    color: theme.colors.textSecondary,
     lineHeight: 20,
     marginBottom: 16,
   },
   joinButton: {
-    backgroundColor: '#237A3B',
+    backgroundColor: theme.colors.primaryAction,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -661,15 +662,15 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   joinButtonText: {
-    color: '#fff',
+    color: theme.colors.textOnAction,
     fontSize: 14,
     fontWeight: '600',
   },
- 
+
   locationSelector: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: '#DFE8E1',
@@ -717,7 +718,12 @@ const styles = StyleSheet.create({
   nearestEmptyCopy: { flex: 1 },
   nearestEmptyTitle: { color: '#29432F', fontSize: 14, fontWeight: '700' },
   nearestEmptyText: { color: '#627065', fontSize: 11, lineHeight: 16, marginTop: 2 },
-  nearestActionText: { color: '#2E7D32', fontSize: 12, fontWeight: '700', padding: 6 },
+  nearestActionText: {
+    color: theme.colors.primaryOnLight,
+    fontSize: 12,
+    fontWeight: '700',
+    padding: 6,
+  },
   nearestCta: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -732,7 +738,7 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 21,
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 11,
@@ -755,12 +761,12 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
+    color: theme.colors.textStrong,
     marginTop: 20,
     marginBottom: 2,
   },
   seeAllText: {
-    color: '#4CAF50',
+    color: theme.colors.primary,
     fontSize: 14,
     fontWeight: '500',
     paddingHorizontal: 10,
@@ -778,7 +784,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#D3ECD7',
     ...createShadowStyle({
-      shadowColor: '#1B5E20',
+      shadowColor: theme.colors.primaryOnLight,
       shadowOffset: { width: 0, height: 5 },
       shadowOpacity: 0.12,
       shadowRadius: 12,
@@ -813,11 +819,11 @@ const styles = StyleSheet.create({
   promoEyebrow: {
     fontSize: 10,
     fontWeight: '800',
-    color: '#1B5E20',
+    color: theme.colors.primaryOnLight,
     letterSpacing: 0.8,
   },
   promoTitle: {
-    color: '#153E1B',
+    color: theme.colors.primaryOnLight,
     marginBottom: 5,
   },
   promoDescription: {
@@ -830,14 +836,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-start',
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
     paddingHorizontal: 12,
     paddingVertical: 7,
     borderRadius: 20,
     gap: 6,
   },
   promoButtonText: {
-    color: '#2E7D32',
+    color: theme.colors.primaryOnLight,
     fontSize: 12,
     fontWeight: '700',
   },
@@ -861,12 +867,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 3,
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
     borderRadius: 20,
     paddingHorizontal: 9,
     paddingVertical: 5,
     ...createShadowStyle({
-      shadowColor: '#153E1B',
+      shadowColor: theme.colors.primaryOnLight,
       shadowOffset: { width: 0, height: 2 },
       shadowOpacity: 0.14,
       shadowRadius: 5,
@@ -874,20 +880,20 @@ const styles = StyleSheet.create({
     }),
   },
   promoImagePillText: {
-    color: '#1B5E20',
+    color: theme.colors.primaryOnLight,
     fontSize: 10,
     fontWeight: '700',
   },
   stateTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
+    color: theme.colors.textStrong,
     marginTop: 16,
     textAlign: 'center',
   },
   stateSubtitle: {
     fontSize: 14,
-    color: '#666',
+    color: theme.colors.textSecondary,
     marginTop: 6,
     textAlign: 'center',
     lineHeight: 20,
@@ -895,7 +901,7 @@ const styles = StyleSheet.create({
   retryButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#237A3B',
+    backgroundColor: theme.colors.primaryAction,
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 24,
@@ -903,7 +909,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   retryButtonText: {
-    color: '#fff',
+    color: theme.colors.textOnAction,
     fontSize: 14,
     fontWeight: '600',
   },

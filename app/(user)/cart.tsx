@@ -29,6 +29,7 @@ import {
   type CheckoutDeliveryQuote,
   type CheckoutFulfillmentType,
 } from '@/src/utils/checkout-state';
+import theme from '@/src/styles/theme';
 
 type FulfillmentType = CheckoutFulfillmentType;
 type DeliveryQuote = CheckoutDeliveryQuote;
@@ -476,7 +477,7 @@ function RestaurantCartScreen({ cookId }: { cookId: string }) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.emptyStateContainer}>
-          <ActivityIndicator size="large" color="#4CAF50" />
+          <ActivityIndicator size="large" color={theme.colors.primary} />
         </View>
       </SafeAreaView>
     );
@@ -487,7 +488,7 @@ function RestaurantCartScreen({ cookId }: { cookId: string }) {
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <Ionicons name="chevron-back" size={24} color="#1A1A1A" />
+            <Ionicons name="chevron-back" size={24} color={theme.colors.text} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Restaurant basket</Text>
           <View style={{ width: 40 }} />
@@ -514,7 +515,7 @@ function RestaurantCartScreen({ cookId }: { cookId: string }) {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="chevron-back" size={24} color="#1A1A1A" />
+          <Ionicons name="chevron-back" size={24} color={theme.colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{cartItems[0]?.cookName || 'Order summary'}</Text>
         <TouchableOpacity
@@ -560,7 +561,7 @@ function RestaurantCartScreen({ cookId }: { cookId: string }) {
                   {item.title}
                 </Text>
                 <TouchableOpacity onPress={() => removeFromCart(item.lineId)}>
-                  <Ionicons name="trash-outline" size={18} color="#FF4D4D" />
+                  <Ionicons name="trash-outline" size={18} color={theme.colors.destructive} />
                 </TouchableOpacity>
               </View>
               {item.cookName && <Text style={styles.cartItemChef}>by {item.cookName}</Text>}
@@ -631,7 +632,11 @@ function RestaurantCartScreen({ cookId }: { cookId: string }) {
               <Ionicons
                 name="bag-handle-outline"
                 size={18}
-                color={fulfillmentType === 'pickup' ? '#216E39' : '#666'}
+                color={
+                  fulfillmentType === 'pickup'
+                    ? theme.colors.primaryOnLight
+                    : theme.colors.textSecondary
+                }
               />
               <Text
                 style={[
@@ -652,7 +657,11 @@ function RestaurantCartScreen({ cookId }: { cookId: string }) {
               <Ionicons
                 name="bicycle-outline"
                 size={18}
-                color={fulfillmentType === 'delivery' ? '#216E39' : '#666'}
+                color={
+                  fulfillmentType === 'delivery'
+                    ? theme.colors.primaryOnLight
+                    : theme.colors.textSecondary
+                }
               />
               <Text
                 style={[
@@ -667,7 +676,7 @@ function RestaurantCartScreen({ cookId }: { cookId: string }) {
 
           {fulfillmentType === 'delivery' ? (
             <TouchableOpacity style={styles.addressCard} onPress={() => setAddressOpen(true)}>
-              <Ionicons name="location-outline" size={21} color="#216E39" />
+              <Ionicons name="location-outline" size={21} color={theme.colors.primaryOnLight} />
               <View style={{ flex: 1 }}>
                 <Text style={styles.addressTitle}>
                   {address ? 'Deliver to' : 'Add exact delivery address'}
@@ -708,7 +717,7 @@ function RestaurantCartScreen({ cookId }: { cookId: string }) {
           )}
           {fulfillmentType === 'delivery' && quoting ? (
             <View style={styles.quoteStatus}>
-              <ActivityIndicator size="small" color="#216E39" />
+              <ActivityIndicator size="small" color={theme.colors.primaryOnLight} />
               <Text style={styles.thresholdNote}>Getting live Lalamove price…</Text>
             </View>
           ) : null}
@@ -774,7 +783,7 @@ function RestaurantCartScreen({ cookId }: { cookId: string }) {
           accessibilityState={{ disabled: placingOrder || !paymentReady }}
         >
           {placingOrder ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={theme.colors.textOnAction} />
           ) : (
             <Text style={styles.placeOrderText}>
               {fulfillmentType === 'pickup' ? 'Place Order · Pickup' : 'Place Order · Delivery'}
@@ -836,9 +845,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: theme.colors.separator,
   },
   backButton: {
     width: 40,
@@ -846,15 +855,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 20,
-    backgroundColor: '#F0F0F0',
+    backgroundColor: theme.colors.separator,
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#1A1A1A',
+    color: theme.colors.text,
   },
   clearAllText: {
-    color: '#FF4D4D',
+    color: theme.colors.destructive,
     fontWeight: '600',
     fontSize: 14,
   },
@@ -877,30 +886,30 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 24,
     fontWeight: '800',
-    color: '#1A1A1A',
+    color: theme.colors.text,
     marginBottom: 10,
   },
   emptySubtitle: {
     fontSize: 16,
-    color: '#888',
+    color: theme.colors.textMuted,
     textAlign: 'center',
     lineHeight: 24,
     marginBottom: 32,
   },
   startShoppingBtn: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: theme.colors.primary,
     paddingHorizontal: 32,
     paddingVertical: 16,
     borderRadius: 16,
   },
   startShoppingText: {
-    color: '#fff',
+    color: theme.colors.textOnAction,
     fontSize: 16,
     fontWeight: '700',
   },
   itemCount: {
     fontSize: 14,
-    color: '#888',
+    color: theme.colors.textMuted,
     fontWeight: '500',
     paddingHorizontal: 20,
     paddingVertical: 12,
@@ -925,7 +934,7 @@ const styles = StyleSheet.create({
   },
   cartCard: {
     flexDirection: 'row',
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
     marginHorizontal: 16,
     marginBottom: 12,
     borderRadius: 20,
@@ -954,13 +963,13 @@ const styles = StyleSheet.create({
   cartItemTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: theme.colors.text,
     flex: 1,
     marginRight: 8,
   },
   cartItemChef: {
     fontSize: 13,
-    color: '#888',
+    color: theme.colors.textMuted,
     marginBottom: 4,
   },
   cartOptions: {
@@ -974,7 +983,7 @@ const styles = StyleSheet.create({
   },
   cartItemDate: {
     fontSize: 12,
-    color: '#AAA',
+    color: theme.colors.placeholder,
     marginBottom: 10,
   },
   cartItemFooter: {
@@ -985,7 +994,7 @@ const styles = StyleSheet.create({
   cartItemPrice: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: theme.colors.text,
   },
   quantityRow: {
     flexDirection: 'row',
@@ -996,7 +1005,7 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: '#F0F0F0',
+    backgroundColor: theme.colors.separator,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1006,23 +1015,23 @@ const styles = StyleSheet.create({
   qtyBtnText: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#1A1A1A',
+    color: theme.colors.text,
     lineHeight: 22,
   },
   maxQtyNote: {
     fontSize: 11,
-    color: '#999',
+    color: theme.colors.placeholder,
     marginTop: 4,
   },
   qtyValue: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: theme.colors.text,
     minWidth: 20,
     textAlign: 'center',
   },
   footer: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     padding: 24,
@@ -1032,7 +1041,7 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 10,
   },
-  checkoutDetails: { backgroundColor: '#fff', padding: 24, borderRadius: 24 },
+  checkoutDetails: { backgroundColor: theme.colors.surface, padding: 24, borderRadius: 24 },
   pickupNotice: {
     flexDirection: 'row',
     gap: 12,
@@ -1043,7 +1052,7 @@ const styles = StyleSheet.create({
   },
   fulfillmentToggle: {
     flexDirection: 'row-reverse',
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
     borderRadius: 14,
     padding: 4,
     marginBottom: 16,
@@ -1064,10 +1073,10 @@ const styles = StyleSheet.create({
   fulfillmentOptionText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#666',
+    color: theme.colors.textSecondary,
   },
   fulfillmentOptionTextActive: {
-    color: '#216E39',
+    color: theme.colors.primaryOnLight,
   },
   addressCard: {
     flexDirection: 'row',
@@ -1082,17 +1091,17 @@ const styles = StyleSheet.create({
   },
   addressTitle: { fontSize: 13, fontWeight: '800', color: '#214D2B' },
   addressText: { fontSize: 12, color: '#5D6A60', marginTop: 2 },
-  addressEdit: { fontSize: 13, fontWeight: '800', color: '#216E39' },
+  addressEdit: { fontSize: 13, fontWeight: '800', color: theme.colors.primaryOnLight },
   quoteStatus: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
   quoteButton: {
     borderWidth: 1,
-    borderColor: '#4CAF50',
+    borderColor: theme.colors.primary,
     borderRadius: 12,
     alignItems: 'center',
     paddingVertical: 10,
     marginBottom: 8,
   },
-  quoteButtonText: { color: '#216E39', fontSize: 13, fontWeight: '800' },
+  quoteButtonText: { color: theme.colors.primaryOnLight, fontSize: 13, fontWeight: '800' },
   summaryRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -1100,12 +1109,12 @@ const styles = StyleSheet.create({
   },
   summaryLabel: {
     fontSize: 15,
-    color: '#888',
+    color: theme.colors.textMuted,
     fontWeight: '500',
   },
   summaryValue: {
     fontSize: 15,
-    color: '#1A1A1A',
+    color: theme.colors.text,
     fontWeight: '600',
   },
   thresholdNote: {
@@ -1117,14 +1126,14 @@ const styles = StyleSheet.create({
   },
   freeDeliveryNote: {
     fontSize: 12,
-    color: '#2E7D32',
+    color: theme.colors.primaryOnLight,
     fontWeight: '600',
     marginTop: 2,
     marginBottom: 4,
   },
   totalRow: {
     borderTopWidth: 1,
-    borderTopColor: '#F0F0F0',
+    borderTopColor: theme.colors.separator,
     paddingTop: 12,
     marginTop: 4,
     marginBottom: 16,
@@ -1132,21 +1141,21 @@ const styles = StyleSheet.create({
   totalLabel: {
     fontSize: 17,
     fontWeight: '800',
-    color: '#1A1A1A',
+    color: theme.colors.text,
   },
   totalValue: {
     fontSize: 17,
     fontWeight: '800',
-    color: '#1A1A1A',
+    color: theme.colors.text,
   },
   placeOrderBtn: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: theme.colors.primary,
     paddingVertical: 16,
     borderRadius: 16,
     alignItems: 'center',
   },
   placeOrderText: {
-    color: '#fff',
+    color: theme.colors.textOnAction,
     fontSize: 16,
     fontWeight: '700',
   },

@@ -20,6 +20,7 @@ import {
 import { Calendar, DateData } from 'react-native-calendars';
 import { Ionicons } from '@expo/vector-icons';
 import { getLocalDateKey, isAvailabilityRecordBookable } from '@/src/utils/listingAvailability';
+import theme from '@/src/styles/theme';
 
 interface AvailabilityRecord {
   id: string;
@@ -156,10 +157,10 @@ const AvailabilityPicker = forwardRef<AvailabilityPickerHandle, AvailabilityPick
         if (!marks[dateStr]) {
           marks[dateStr] = {
             marked: true,
-            dotColor: isOpen ? '#4CAF50' : '#CCC',
+            dotColor: isOpen ? theme.colors.primary : '#CCC',
             disabled: !isOpen,
             disableTouchEvent: !isOpen,
-            selectedColor: '#4CAF50',
+            selectedColor: theme.colors.primary,
           };
         } else if (isOpen) {
           // If ANY slot on this date is open, the date is available
@@ -173,8 +174,8 @@ const AvailabilityPicker = forwardRef<AvailabilityPickerHandle, AvailabilityPick
         marks[selectedDate] = {
           ...marks[selectedDate],
           selected: true,
-          selectedColor: '#4CAF50',
-          selectedTextColor: '#fff',
+          selectedColor: theme.colors.primary,
+          selectedTextColor: theme.colors.surface,
         };
       }
 
@@ -226,7 +227,7 @@ const AvailabilityPicker = forwardRef<AvailabilityPickerHandle, AvailabilityPick
     if (loading) {
       return (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="small" color="#4CAF50" />
+          <ActivityIndicator size="small" color={theme.colors.primary} />
           <Text style={styles.loadingText}>Loading availability...</Text>
         </View>
       );
@@ -250,10 +251,10 @@ const AvailabilityPicker = forwardRef<AvailabilityPickerHandle, AvailabilityPick
           minDate={getLocalDateKey()}
           maxDate={maximumOrderDate}
           theme={{
-            selectedDayBackgroundColor: '#4CAF50',
-            todayTextColor: '#4CAF50',
-            dotColor: '#4CAF50',
-            arrowColor: '#1A1A1A',
+            selectedDayBackgroundColor: theme.colors.primary,
+            todayTextColor: theme.colors.primary,
+            dotColor: theme.colors.primary,
+            arrowColor: theme.colors.text,
             textDayFontWeight: '500',
             textMonthFontWeight: '700',
             textDayHeaderFontWeight: '600',
@@ -345,7 +346,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   loadingText: {
-    color: '#888',
+    color: theme.colors.textMuted,
     fontSize: 14,
   },
   emptyContainer: {
@@ -354,7 +355,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   emptyText: {
-    color: '#888',
+    color: theme.colors.textMuted,
     fontSize: 14,
   },
   calendar: {
@@ -368,11 +369,11 @@ const styles = StyleSheet.create({
   timeSlotsTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: theme.colors.text,
     marginBottom: 12,
   },
   noSlotsText: {
-    color: '#888',
+    color: theme.colors.textMuted,
     fontSize: 14,
     fontStyle: 'italic',
   },
@@ -397,13 +398,13 @@ const styles = StyleSheet.create({
   },
   capacityNote: {
     fontSize: 12,
-    color: '#4CAF50',
+    color: theme.colors.primary,
     fontWeight: '600',
     marginTop: -6,
     marginBottom: 12,
   },
   capacityNoteFull: {
-    color: '#C62828',
+    color: theme.colors.error,
   },
   slotChip: {
     paddingHorizontal: 16,
@@ -416,29 +417,29 @@ const styles = StyleSheet.create({
     minWidth: 96,
   },
   slotChipDisabled: {
-    backgroundColor: '#F5F5F5',
-    borderColor: '#E0E0E0',
+    backgroundColor: theme.colors.surfaceMuted,
+    borderColor: theme.colors.border,
   },
   slotChipSelected: {
-    backgroundColor: '#4CAF50',
-    borderColor: '#4CAF50',
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
   },
   slotTime: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#2E7D32',
+    color: theme.colors.primaryOnLight,
     marginBottom: 2,
   },
   slotTimeDisabled: {
-    color: '#BBB',
+    color: theme.colors.placeholder,
   },
   slotTimeSelected: {
-    color: '#fff',
+    color: theme.colors.textOnAction,
   },
   slotCapacity: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#4CAF50',
+    color: theme.colors.primary,
   },
   slotCapacityDisabled: {
     color: '#CCC',

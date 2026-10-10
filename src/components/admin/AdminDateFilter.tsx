@@ -77,11 +77,11 @@ export default function AdminDateFilter<T extends string>({
         accessibilityLabel={`Filter by date, currently ${label}`}
         accessibilityState={{ expanded: open }}
       >
-        <Ionicons name="calendar-outline" size={16} color="#667085" />
+        <Ionicons name="calendar-outline" size={16} color={ADMIN_THEME.colors.slate} />
         <Text style={styles.buttonText} numberOfLines={1}>
           {label}
         </Text>
-        <Ionicons name="chevron-down" size={15} color="#667085" />
+        <Ionicons name="chevron-down" size={15} color={ADMIN_THEME.colors.slate} />
       </TouchableOpacity>
 
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
@@ -134,7 +134,7 @@ export default function AdminDateFilter<T extends string>({
                       [exactDate]: {
                         selected: true,
                         selectedColor: '#35A853',
-                        selectedTextColor: '#FFFFFF',
+                        selectedTextColor: ADMIN_THEME.colors.surface,
                       },
                     }
                   : undefined
@@ -168,10 +168,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     borderWidth: 1,
-    borderColor: '#DDE3DF',
+    borderColor: ADMIN_THEME.colors.border,
     borderRadius: 11,
     paddingHorizontal: 13,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: ADMIN_THEME.colors.surface,
   },
   buttonText: {
     flex: 1,
@@ -189,9 +189,9 @@ const styles = StyleSheet.create({
     maxWidth: 410,
     padding: 18,
     borderWidth: 1,
-    borderColor: '#DDE3DF',
+    borderColor: ADMIN_THEME.colors.border,
     borderRadius: 18,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: ADMIN_THEME.colors.surface,
     shadowColor: '#17211B',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.2,
@@ -220,13 +220,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 11,
     borderWidth: 1,
-    borderColor: '#DDE3DF',
+    borderColor: ADMIN_THEME.colors.border,
     borderRadius: 9,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: ADMIN_THEME.colors.surface,
   },
-  rangeButtonSelected: { borderColor: '#4CAF50', backgroundColor: '#EAF8EE' },
+  rangeButtonSelected: {
+    borderColor: ADMIN_THEME.colors.green,
+    backgroundColor: ADMIN_THEME.colors.greenSoft,
+  },
   rangeText: { fontFamily: 'mon-sb', fontSize: 9, color: '#68736C' },
-  rangeTextSelected: { color: '#237A3B' },
+  rangeTextSelected: { color: ADMIN_THEME.colors.greenDark },
   helper: {
     marginTop: 8,
     textAlign: 'center',

@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import theme from '@/src/styles/theme';
 
 type Method = 'cook_qr' | 'pay_on_collection';
 type Props = {
@@ -62,7 +63,7 @@ export default function PaymentMethodSelector(props: Props) {
       </View>
       {props.loading ? (
         <View style={styles.row}>
-          <ActivityIndicator color="#216E39" />
+          <ActivityIndicator color={theme.colors.primaryOnLight} />
           <Text style={styles.body}>Loading payment options…</Text>
         </View>
       ) : props.error ? (
@@ -98,7 +99,7 @@ export default function PaymentMethodSelector(props: Props) {
               <Ionicons
                 name={props.value === 'cook_qr' ? 'qr-code-outline' : 'cash-outline'}
                 size={26}
-                color="#216E39"
+                color={theme.colors.primaryOnLight}
               />
               <View style={styles.flex}>
                 <Text style={styles.title}>
@@ -148,7 +149,7 @@ export default function PaymentMethodSelector(props: Props) {
                         <Ionicons
                           name={method.icon}
                           size={25}
-                          color={selected ? '#216E39' : '#64748B'}
+                          color={selected ? theme.colors.primaryOnLight : '#64748B'}
                         />
                         <View style={styles.flex}>
                           <Text style={styles.title}>{method.title}</Text>
@@ -157,7 +158,7 @@ export default function PaymentMethodSelector(props: Props) {
                         <Ionicons
                           name={selected ? 'radio-button-on' : 'radio-button-off'}
                           size={23}
-                          color={selected ? '#216E39' : '#94A3B8'}
+                          color={selected ? theme.colors.primaryOnLight : '#94A3B8'}
                         />
                       </View>
                     </TouchableOpacity>
@@ -204,7 +205,7 @@ export default function PaymentMethodSelector(props: Props) {
             <Ionicons
               name={props.acknowledged ? 'checkbox' : 'square-outline'}
               size={25}
-              color={props.acknowledged ? '#216E39' : '#64748B'}
+              color={props.acknowledged ? theme.colors.primaryOnLight : '#64748B'}
             />
             <Text style={[styles.body, styles.flex]}>
               I understand that I pay the cook directly and the cook handles any approved refund.
@@ -222,7 +223,7 @@ export default function PaymentMethodSelector(props: Props) {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#fff' },
+  screen: { flex: 1, backgroundColor: theme.colors.surface },
   modalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -240,14 +241,14 @@ const styles = StyleSheet.create({
     borderColor: '#E2E8F0',
     borderRadius: 14,
     padding: 16,
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
     gap: 12,
   },
-  selected: { borderColor: '#216E39', backgroundColor: '#F2FAF4' },
+  selected: { borderColor: theme.colors.primaryOnLight, backgroundColor: '#F2FAF4' },
   title: { fontSize: 14, fontWeight: '600', color: '#1E293B', flexShrink: 1 },
   body: { fontSize: 13, lineHeight: 20, color: '#64748B' },
   detail: { borderTopWidth: 1, borderTopColor: '#DCEBDD', paddingTop: 12 },
-  detailText: { fontSize: 13, lineHeight: 20, color: '#216E39' },
+  detailText: { fontSize: 13, lineHeight: 20, color: theme.colors.primaryOnLight },
   notice: { padding: 14, borderRadius: 12, backgroundColor: '#F1F5F9', gap: 8 },
   acknowledgement: {
     flexDirection: 'row',
@@ -259,5 +260,5 @@ const styles = StyleSheet.create({
   hint: { fontSize: 12, color: '#64748B', lineHeight: 18 },
   error: { fontSize: 13, color: '#B91C1C', lineHeight: 20 },
   retry: { minHeight: 44, justifyContent: 'center', alignSelf: 'flex-start' },
-  link: { color: '#216E39', fontWeight: '600' },
+  link: { color: theme.colors.primaryOnLight, fontWeight: '600' },
 });

@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { BaseText } from '@/src/components/typography';
+import theme from '@/src/styles/theme';
 
 type CheckboxProps = {
   label: string;
@@ -14,7 +15,9 @@ export const Checkbox = ({ label, isChecked, onPress, style }: CheckboxProps) =>
   return (
     <TouchableOpacity style={[styles.container, style]} onPress={onPress} activeOpacity={0.7}>
       <View style={[styles.outerBox, isChecked && styles.checkedBox]}>
-        {isChecked && <Ionicons name="checkmark-sharp" size={16} color="#fff" />}
+        {isChecked && (
+          <Ionicons name="checkmark-sharp" size={16} color={theme.colors.textOnAction} />
+        )}
       </View>
       <BaseText style={styles.labelText}>{label}</BaseText>
     </TouchableOpacity>
@@ -38,12 +41,12 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   checkedBox: {
-    backgroundColor: '#4CAF50',
-    borderColor: '#4CAF50',
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
   },
   labelText: {
     fontSize: 16,
-    color: '#333',
+    color: theme.colors.textStrong,
     fontWeight: '500',
   },
 });

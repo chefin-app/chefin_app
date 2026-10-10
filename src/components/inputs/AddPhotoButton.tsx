@@ -2,6 +2,7 @@ import React from 'react';
 import { TouchableOpacity, StyleSheet, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { createShadowStyle } from '../../utils/platform-utils';
+import theme from '@/src/styles/theme';
 
 type AddPhotoButtonProps = {
   onPress: () => void;
@@ -11,7 +12,7 @@ type AddPhotoButtonProps = {
 export const AddPhotoButton = ({ onPress, style }: AddPhotoButtonProps) => {
   return (
     <TouchableOpacity style={[styles.button, style]} onPress={onPress} activeOpacity={0.8}>
-      <Ionicons name="add-circle" size={48} color="#4CAF50" />
+      <Ionicons name="add-circle" size={48} color={theme.colors.primary} />
     </TouchableOpacity>
   );
 };
@@ -23,7 +24,7 @@ const styles = StyleSheet.create({
     borderRadius: 30,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
     ...createShadowStyle({
       shadowColor: '#000',
       shadowOffset: { width: 0, height: 2 },

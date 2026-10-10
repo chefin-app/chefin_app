@@ -1,6 +1,7 @@
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import React from 'react';
 import { Ionicons } from '@expo/vector-icons';
+import theme from '@/src/styles/theme';
 
 interface HistoryCard {
   query: string;
@@ -46,7 +47,7 @@ const styles = StyleSheet.create({
   },
   text: {
     fontSize: 16,
-    color: '#000',
+    color: theme.colors.text,
     marginLeft: 12,
   },
 });

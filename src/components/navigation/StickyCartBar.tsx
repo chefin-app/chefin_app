@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { useCart } from '@/src/context/CartContext';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import theme from '@/src/styles/theme';
 
 const StickyCartBar = ({ cookId }: { cookId: string }) => {
   const router = useRouter();
@@ -31,7 +32,7 @@ const StickyCartBar = ({ cookId }: { cookId: string }) => {
 
           <View style={styles.rightSection}>
             <Text style={styles.totalText}>RM {cartTotal.toFixed(2)}</Text>
-            <Ionicons name="arrow-forward" size={20} color="#fff" />
+            <Ionicons name="arrow-forward" size={20} color={theme.colors.textOnAction} />
           </View>
         </View>
       </TouchableOpacity>
@@ -48,7 +49,7 @@ const styles = StyleSheet.create({
     zIndex: 1000,
   },
   container: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: theme.colors.primary,
     marginHorizontal: 16,
     marginBottom: Platform.OS === 'ios' ? 0 : 16,
     borderRadius: 16,
@@ -81,12 +82,12 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.5)',
   },
   badgeText: {
-    color: '#fff',
+    color: theme.colors.textOnAction,
     fontSize: 14,
     fontWeight: '700',
   },
   viewCartText: {
-    color: '#fff',
+    color: theme.colors.textOnAction,
     fontSize: 16,
     fontWeight: '700',
     letterSpacing: -0.3,
@@ -96,7 +97,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   totalText: {
-    color: '#fff',
+    color: theme.colors.textOnAction,
     fontSize: 16,
     fontWeight: '700',
     marginRight: 8,

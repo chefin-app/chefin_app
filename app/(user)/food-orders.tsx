@@ -14,6 +14,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 
 import { supabase } from '@/src/utils/supabaseClient';
 import { useAuth } from '@/src/services/auth-context';
+import theme from '@/src/styles/theme';
 
 interface FoodOrderRow {
   id: string;
@@ -162,18 +163,18 @@ export default function FoodOrdersScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} hitSlop={10}>
-          <Ionicons name="arrow-back" size={26} color="#1A1A1A" />
+          <Ionicons name="arrow-back" size={26} color={theme.colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Food Orders</Text>
       </View>
 
       {loading ? (
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color="#4CAF50" />
+          <ActivityIndicator size="large" color={theme.colors.primary} />
         </View>
       ) : loadError ? (
         <View style={styles.centered}>
-          <Ionicons name="alert-circle-outline" size={38} color="#C62828" />
+          <Ionicons name="alert-circle-outline" size={38} color={theme.colors.error} />
           <Text style={styles.stateText}>{loadError}</Text>
           <TouchableOpacity style={styles.retryButton} onPress={load}>
             <Text style={styles.retryText}>Try again</Text>
@@ -202,7 +203,7 @@ export default function FoodOrdersScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFFFFF' },
+  container: { flex: 1, backgroundColor: theme.colors.surface },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -210,13 +211,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 14,
   },
-  headerTitle: { fontSize: 24, fontWeight: '800', color: '#1A1A1A' },
+  headerTitle: { fontSize: 24, fontWeight: '800', color: theme.colors.text },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 },
   content: { paddingHorizontal: 20, paddingBottom: 40 },
   monthHeading: {
     fontSize: 17,
     fontWeight: '700',
-    color: '#5F6368',
+    color: theme.colors.textSecondary,
     marginTop: 20,
     marginBottom: 14,
   },
@@ -225,23 +226,29 @@ const styles = StyleSheet.create({
   orderImagePlaceholder: { alignItems: 'center', justifyContent: 'center' },
   orderCopy: { flex: 1 },
   orderTitleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
-  orderTitle: { flex: 1, fontSize: 17, fontWeight: '600', color: '#1A1A1A', lineHeight: 23 },
-  orderPrice: { fontSize: 17, fontWeight: '600', color: '#1A1A1A' },
+  orderTitle: {
+    flex: 1,
+    fontSize: 17,
+    fontWeight: '600',
+    color: theme.colors.text,
+    lineHeight: 23,
+  },
+  orderPrice: { fontSize: 17, fontWeight: '600', color: theme.colors.text },
   orderMeta: { fontSize: 13, color: '#8B928D', marginTop: 5, lineHeight: 18 },
-  cancelledTag: { fontSize: 12, fontWeight: '700', color: '#C62828', marginTop: 6 },
+  cancelledTag: { fontSize: 12, fontWeight: '700', color: theme.colors.error, marginTop: 6 },
   starsRow: { flexDirection: 'row', gap: 8, marginTop: 12 },
   retryButton: {
-    backgroundColor: '#237A3B',
+    backgroundColor: theme.colors.primaryAction,
     borderRadius: 20,
     marginTop: 14,
     paddingHorizontal: 20,
     paddingVertical: 10,
   },
-  retryText: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
-  stateTitle: { fontSize: 17, fontWeight: '700', color: '#1A1A1A', marginTop: 12 },
+  retryText: { color: theme.colors.textOnAction, fontSize: 13, fontWeight: '700' },
+  stateTitle: { fontSize: 17, fontWeight: '700', color: theme.colors.text, marginTop: 12 },
   stateText: {
     fontSize: 13,
-    color: '#666',
+    color: theme.colors.textSecondary,
     textAlign: 'center',
     lineHeight: 19,
     marginTop: 8,

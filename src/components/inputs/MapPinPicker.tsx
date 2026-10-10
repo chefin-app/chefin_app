@@ -10,6 +10,7 @@ import MapView, {
   PROVIDER_GOOGLE,
 } from 'react-native-maps';
 import Entypo from '@expo/vector-icons/Entypo';
+import theme from '@/src/styles/theme';
 
 type Props = {
   value?: LatLng | null;
@@ -160,7 +161,7 @@ const styles = StyleSheet.create({
     right: RESERVED_FOR_NATIVE_MYLOCATION + GAP,
     left: 16,
     bottom: 16,
-    backgroundColor: '#4caf50',
+    backgroundColor: theme.colors.primary,
     paddingVertical: 12,
     borderRadius: 12,
     alignItems: 'center',

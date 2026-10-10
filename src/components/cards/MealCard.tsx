@@ -10,6 +10,7 @@ import { useAuth } from '@/src/services/auth-context';
 import VerifiedBadge from '@/src/components/feedback/VerifiedBadge';
 import { formatRating, getListingsRatingSummary, getRatingSummary } from '@/src/utils/ratings';
 import { formatAvailabilityLabel, type AvailabilitySummary } from '@/src/utils/listingAvailability';
+import theme from '@/src/styles/theme';
 
 export interface MealCardProps extends Listing {
   layout?: 'rail' | 'feed';
@@ -249,8 +250,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 18,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#DDE2DF',
-    backgroundColor: '#FFFFFF',
+    borderBottomColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
   },
   feedImage: { width: 124, height: 124, borderRadius: 16, backgroundColor: '#EDF0EE' },
   feedCopy: { flex: 1, justifyContent: 'flex-start', paddingTop: 2, gap: 7 },
@@ -275,7 +276,7 @@ const styles = StyleSheet.create({
   card: {
     width: 252,
     minHeight: 230,
-    backgroundColor: '#ffffff',
+    backgroundColor: theme.colors.surface,
     borderRadius: 18,
     overflow: 'hidden',
     borderWidth: 1,
@@ -350,7 +351,7 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   unavailable: {
-    color: '#666666',
+    color: theme.colors.textSecondary,
   },
   distanceRow: {
     flexDirection: 'row',

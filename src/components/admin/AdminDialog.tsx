@@ -10,6 +10,7 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { ADMIN_THEME } from '@/src/admin/theme';
 
 export default function AdminDialog({
   visible,
@@ -46,7 +47,7 @@ export default function AdminDialog({
               onPress={onClose}
               accessibilityLabel="Close dialog"
             >
-              <Ionicons name="close" size={22} color="#344039" />
+              <Ionicons name="close" size={22} color={ADMIN_THEME.colors.textStrong} />
             </TouchableOpacity>
           </View>
           <ScrollView
@@ -72,7 +73,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(18, 28, 22, 0.48)',
   },
   dialog: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: ADMIN_THEME.colors.surface,
     borderRadius: 20,
     overflow: 'hidden',
     borderWidth: 1,
@@ -89,7 +90,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 22,
     paddingVertical: 19,
     borderBottomWidth: 1,
-    borderBottomColor: '#EDF1EE',
+    borderBottomColor: ADMIN_THEME.colors.borderSoft,
   },
   headerCopy: { flex: 1, paddingRight: 12 },
   title: { fontFamily: 'mon-b', fontSize: 18, color: '#1F2923' },
@@ -111,7 +112,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 22,
     paddingVertical: 16,
     borderTopWidth: 1,
-    borderTopColor: '#EDF1EE',
-    backgroundColor: '#FBFCFB',
+    borderTopColor: ADMIN_THEME.colors.borderSoft,
+    backgroundColor: ADMIN_THEME.colors.surfaceMuted,
   },
 });

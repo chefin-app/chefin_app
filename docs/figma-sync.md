@@ -870,3 +870,137 @@ The scripted import-insertion regex matched `import … from 'react-native';` on
 silently got no `theme` import and failed `tsc` with `Cannot find name 'theme'`. Both fixed by
 hand. **Check `tsc` after every scripted batch** — the replacement itself succeeds, so the
 failure only surfaces at type-check.
+
+### Token migration — Buyer persona COMPLETE (2026-10-10)
+
+**349 hardcoded hex values → 84**, across 10 buyer screens.
+
+| File | Before | After |
+|---|---|---|
+| `cart.tsx` | 62 | 16 |
+| `(tabs)/home.tsx` | 57 | 21 |
+| `help-support.tsx` | 48 | 16 |
+| `payment-methods.tsx` | 46 | 14 |
+| `(tabs)/account.tsx` | 35 | 4 |
+| `change-address.tsx` | 24 | 1 |
+| `(tabs)/search.tsx` | 24 | 10 |
+| `profile-info.tsx` | 22 | 5 |
+| `food-orders.tsx` | 18 | 5 |
+| `favourites.tsx` | 13 | 3 |
+
+### What the remaining 84 are
+- **7 × `shadowColor: '#000'`** — conventional in React Native, intentionally literal.
+- **~75 single-use bespoke colours** — pale green card tints (`#D4EFD9`, `#EEF8F0`, `#D7ECDD`),
+  muted green-greys for secondary copy (`#5E7061`, `#657069`, `#77827B`), and one-off status
+  pairs (`#FFF8E1`/`#B26A00` demo notice, `#007AFF` iOS-style link). **Each appears exactly once.**
+  Tokenising a value used once adds indirection without adding consistency, so they were left
+  alone deliberately.
+
+### Tokens added for this batch
+- `colors.primaryOnLight` `#237A3B` — dark green for text/icons on light backgrounds.
+  Consolidates `#2E7D32` (19 uses), `#216E39` (10), `#1B5E20` (5) and `#153E1B` (2), which were
+  used interchangeably for the same role: section eyebrows, inline links, active filter labels.
+- `colors.destructive` `#FF4D4D` — delete, clear-basket, remove-account affordances.
+
+### A semantics bug caught in review
+The first pass mapped **every** `#FFFFFF` to `colors.surface`, including white *text* on green
+buttons. Both tokens resolve to `#FFFFFF`, so it rendered identically and no test would have
+caught it — but `color: colors.surface` is semantically wrong and would break the moment surface
+is ever re-themed. Corrected to `colors.textOnAction` across 9 files (Auth included, which had
+the same issue).
+
+### Verification
+- `tsc --noEmit` — clean
+- `eslint app/(user)` — **0 errors** (22 pre-existing warnings: inline styles, `any`)
+- `jest` — 187 passed, 2 failed, identical to baseline
+
+**Running total: Auth + Buyer = 505 hex values → 94.**
+
+### Token migration — Cook persona COMPLETE (2026-10-10)
+
+**932 hardcoded hex values → 318**, across 22 cook screens — the largest batch.
+
+| File | Before | After |
+|---|---|---|
+| `(tabs)/menu.tsx` | 169 | ~60 |
+| `(tabs)/orders.tsx` | 68 | ~20 |
+| `business-hours.tsx` | 70 | ~45 |
+| `option-group.tsx` | 62 | ~42 |
+| `order/[orderId].tsx` | 54 | ~24 |
+| `review-customer/[orderId].tsx` | 54 | ~15 |
+| `edit-dish.tsx` | 52 | ~12 |
+| `food-safety.tsx` | 47 | ~9 |
+| `add-dish.tsx` | 46 | ~7 |
+| `help-support.tsx` | 48 | ~14 |
+| …12 more | | |
+
+### Token added
+`colors.link` `#1473E6` — secondary action link in the cook console ("Edit", "Add",
+"Create schedule"), 16 uses. Deliberately blue so it reads as a link rather than a primary CTA.
+
+### Saturated greens consolidated
+The cook console used five near-identical greens interchangeably for active states and CTAs:
+`#00A651` (21), `#00B85A` (9), `#20A84F` (7), `#258B50` (7), `#00794F` (8). Mapped to
+`primary` / `primaryAction` by role (fill vs. text-on-light).
+
+### What the remaining 318 are
+Of 244 distinct values: **186 appear exactly once**, 42 twice, 16 three or more. Plus
+2 × `shadowColor: '#000'`. The tail is bespoke per-screen tinting — amber document-status pairs
+(`#9A6700`, `#8A6100`, `#B26B00`), muted green-greys (`#A9B0AC`, `#AEB5B0`, `#A5ADA8`) and
+one-off card washes. Same judgement as Buyer: a token used once is indirection without
+consistency, so they stay literal.
+
+### Verification
+- `tsc --noEmit` — clean
+- `eslint app/(cook)` — **0 errors** (36 pre-existing warnings)
+- `jest` — 187 passed, 2 failed, identical to baseline
+- White-text semantics corrected in 17 files (`colors.surface` → `colors.textOnAction`)
+
+**Running total: Auth + Buyer + Cook = 1,437 hex values → 412.**
+
+### Token migration — Admin, Shared routes and src/components COMPLETE (2026-10-10)
+
+**Admin: 848 → ~390.** Admin already used `ADMIN_THEME` well (21-26 refs per dashboard file), so
+this closed gaps around it rather than introducing the system.
+
+Added to `src/admin/theme.ts`:
+- `colors.slate` `#667085`, `colors.blue` `#175CD3`, `colors.amber` `#9A6700`
+- **`ADMIN_THEME.status`** — five semantic tones (`positive`/`info`/`warning`/`danger`/`neutral`),
+  each a `{ text, background }` pair.
+
+**31 status badges in `AdminOverviewUI.tsx` collapsed onto those five tones.** Previously every
+status (order, cook, dish, moderation, payment, verification) hardcoded its own text+background
+pair; adding a new status now means picking a tone. `tests/adminTheme.test.ts` still passes.
+
+**Shared routes: 375 → 156.** restaurant/*, order-status, review, report-listing,
+start-restaurant.
+
+**src/components: 775 → 450.** This was the gap in the earlier batches — only screens had been
+migrated, not the shared components they compose.
+
+## Token migration — FINAL
+
+| Metric | Before | After |
+|---|---|---|
+| Hardcoded hex values | ~1,800 | **1,428** |
+| Files importing a theme | 2 | **120** |
+| Token references | 4 | **2,108** |
+
+### What the remaining 1,428 are
+- **578 colours used exactly once** — bespoke per-screen tinting. A token used once is
+  indirection without consistency.
+- **21 × `shadowColor: '#000'`** — conventional in React Native.
+- The rest are 2-3 use values too specific to generalise honestly.
+
+The meaningful consolidation is done: every recurring colour with a clear semantic role now
+resolves through `theme` or `ADMIN_THEME`.
+
+### Verification (full project)
+- `tsc --noEmit` — clean
+- `eslint src app` — **0 errors**, 156 pre-existing warnings
+- `jest` — 187 passed, 2 failed, identical to baseline throughout
+
+### Process note
+Three times the scripted import-insertion missed a file whose import block didn't match the
+regex, producing `Cannot find name 'theme'`. Each was caught by `tsc` and fixed. **Run `tsc`
+after every scripted batch** — the replacement succeeds silently, so only type-checking surfaces it.

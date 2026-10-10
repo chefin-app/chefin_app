@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { buildPickupWhatsAppUrl, type PickupWhatsAppOrderSummary } from '@/src/utils/whatsapp';
+import theme from '@/src/styles/theme';
 
 type CoordinationPayload = {
   pickupPoint: { name: string; address: string };
@@ -84,7 +85,7 @@ export default function PickupCoordinationCard({
   if (loading) {
     return (
       <View style={[styles.card, styles.loadingCard]}>
-        <ActivityIndicator size="small" color="#237A3B" />
+        <ActivityIndicator size="small" color={theme.colors.primaryAction} />
         <Text style={styles.loadingText}>Loading pickup point…</Text>
       </View>
     );
@@ -95,7 +96,7 @@ export default function PickupCoordinationCard({
     <View style={styles.card}>
       <View style={styles.heading}>
         <View style={styles.iconWrap}>
-          <Ionicons name="location" size={21} color="#237A3B" />
+          <Ionicons name="location" size={21} color={theme.colors.primaryAction} />
         </View>
         <View style={styles.copy}>
           <Text style={styles.eyebrow}>CONFIRMED PICKUP POINT</Text>
@@ -106,7 +107,7 @@ export default function PickupCoordinationCard({
       <Text style={styles.note}>Meet at this registered restaurant address for collection.</Text>
       {details.contact.phoneNumber ? (
         <TouchableOpacity style={styles.whatsAppButton} activeOpacity={0.8} onPress={openWhatsApp}>
-          <Ionicons name="logo-whatsapp" size={20} color="#fff" />
+          <Ionicons name="logo-whatsapp" size={20} color={theme.colors.textOnAction} />
           <Text style={styles.whatsAppText}>Message {details.contact.name} on WhatsApp</Text>
         </TouchableOpacity>
       ) : (
@@ -154,6 +155,6 @@ const styles = StyleSheet.create({
     marginTop: 15,
     paddingHorizontal: 14,
   },
-  whatsAppText: { color: '#fff', fontSize: 13, fontWeight: '800' },
+  whatsAppText: { color: theme.colors.textOnAction, fontSize: 13, fontWeight: '800' },
   unavailableText: { color: '#7A641E', fontSize: 12, lineHeight: 17, marginTop: 12 },
 });

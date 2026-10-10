@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, Modal, StyleSheet, FlatList } 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { MALAYSIAN_BANKS } from '@/src/constants/banks';
+import theme from '@/src/styles/theme';
 
 type BankSelectProps = {
   value: string;
@@ -37,11 +38,16 @@ export const BankSelect = ({
   return (
     <>
       <TouchableOpacity style={styles.field} onPress={() => setOpen(true)} activeOpacity={0.7}>
-        <Ionicons name="business-outline" size={20} color="#666" style={styles.fieldIcon} />
+        <Ionicons
+          name="business-outline"
+          size={20}
+          color={theme.colors.textSecondary}
+          style={styles.fieldIcon}
+        />
         <Text style={[styles.fieldText, !value && styles.placeholder]} numberOfLines={1}>
           {value || placeholder}
         </Text>
-        <Ionicons name="chevron-down" size={20} color="#666" />
+        <Ionicons name="chevron-down" size={20} color={theme.colors.textSecondary} />
       </TouchableOpacity>
 
       <Modal
@@ -54,15 +60,20 @@ export const BankSelect = ({
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Select your bank</Text>
             <TouchableOpacity onPress={() => setOpen(false)} style={styles.closeButton}>
-              <Ionicons name="close" size={24} color="#1A1A1A" />
+              <Ionicons name="close" size={24} color={theme.colors.text} />
             </TouchableOpacity>
           </View>
 
           <View style={styles.searchWrapper}>
-            <Ionicons name="search" size={18} color="#888" style={{ marginRight: 8 }} />
+            <Ionicons
+              name="search"
+              size={18}
+              color={theme.colors.textMuted}
+              style={{ marginRight: 8 }}
+            />
             <TextInput
               placeholder="Search banks"
-              placeholderTextColor="#999"
+              placeholderTextColor={theme.colors.placeholder}
               style={styles.searchInput}
               value={query}
               onChangeText={setQuery}
@@ -88,7 +99,7 @@ export const BankSelect = ({
                   <Text style={[styles.optionText, selected && styles.optionTextSelected]}>
                     {item}
                   </Text>
-                  {selected && <Ionicons name="checkmark" size={20} color="#4CAF50" />}
+                  {selected && <Ionicons name="checkmark" size={20} color={theme.colors.primary} />}
                 </TouchableOpacity>
               );
             }}
@@ -104,17 +115,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: theme.colors.border,
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 12,
     marginBottom: 18,
   },
   fieldIcon: { marginRight: 10 },
-  fieldText: { flex: 1, fontSize: 16, color: '#1A1A1A' },
-  placeholder: { color: '#999' },
+  fieldText: { flex: 1, fontSize: 16, color: theme.colors.text },
+  placeholder: { color: theme.colors.placeholder },
 
-  modalContainer: { flex: 1, backgroundColor: '#fff' },
+  modalContainer: { flex: 1, backgroundColor: theme.colors.surface },
   modalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -122,7 +133,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 14,
   },
-  modalTitle: { fontSize: 18, fontWeight: '700', color: '#1A1A1A' },
+  modalTitle: { fontSize: 18, fontWeight: '700', color: theme.colors.text },
   closeButton: { padding: 4 },
 
   searchWrapper: {
@@ -131,14 +142,14 @@ const styles = StyleSheet.create({
     marginHorizontal: 20,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: theme.colors.border,
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
-  searchInput: { flex: 1, fontSize: 15, color: '#1A1A1A' },
+  searchInput: { flex: 1, fontSize: 15, color: theme.colors.text },
 
-  separator: { height: 1, backgroundColor: '#F0F0F0', marginLeft: 20 },
+  separator: { height: 1, backgroundColor: theme.colors.separator, marginLeft: 20 },
   optionRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -147,7 +158,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     gap: 12,
   },
-  optionText: { flex: 1, fontSize: 15, color: '#333' },
-  optionTextSelected: { fontWeight: '700', color: '#1A1A1A' },
-  emptyText: { fontSize: 14, color: '#888', textAlign: 'center', marginTop: 32 },
+  optionText: { flex: 1, fontSize: 15, color: theme.colors.textStrong },
+  optionTextSelected: { fontWeight: '700', color: theme.colors.text },
+  emptyText: { fontSize: 14, color: theme.colors.textMuted, textAlign: 'center', marginTop: 32 },
 });

@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, Modal, StyleSheet, FlatList } 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COUNTRY_CODES, Country } from '@/src/constants/countryCodes';
+import theme from '@/src/styles/theme';
 
 type CountryCodeSelectorProps = {
   value: Country;
@@ -35,7 +36,7 @@ export const CountryCodeSelector = ({ value, onChange }: CountryCodeSelectorProp
       <TouchableOpacity style={styles.selector} onPress={() => setOpen(true)} activeOpacity={0.7}>
         <Text style={styles.flag}>{value.flag}</Text>
         <Text style={styles.code}>{value.code}</Text>
-        <Ionicons name="chevron-down" size={16} color="#666" />
+        <Ionicons name="chevron-down" size={16} color={theme.colors.textSecondary} />
       </TouchableOpacity>
 
       <Modal visible={open} animationType="slide" presentationStyle="pageSheet">
@@ -49,13 +50,13 @@ export const CountryCodeSelector = ({ value, onChange }: CountryCodeSelectorProp
           </View>
 
           <View style={styles.searchContainer}>
-            <Ionicons name="search" size={20} color="#666" />
+            <Ionicons name="search" size={20} color={theme.colors.textSecondary} />
             <TextInput
               style={styles.searchInput}
               placeholder="Search countries..."
               value={query}
               onChangeText={setQuery}
-              placeholderTextColor="#999"
+              placeholderTextColor={theme.colors.placeholder}
               autoCorrect={false}
             />
           </View>
@@ -74,7 +75,7 @@ export const CountryCodeSelector = ({ value, onChange }: CountryCodeSelectorProp
                     <Text style={styles.countryName}>{item.name}</Text>
                     <Text style={styles.countryCode}>{item.code}</Text>
                   </View>
-                  {selected && <Ionicons name="checkmark" size={20} color="#4CAF50" />}
+                  {selected && <Ionicons name="checkmark" size={20} color={theme.colors.primary} />}
                 </TouchableOpacity>
               );
             }}
@@ -93,12 +94,12 @@ const styles = StyleSheet.create({
     paddingRight: 10,
     marginRight: 10,
     borderRightWidth: 1,
-    borderRightColor: '#E0E0E0',
+    borderRightColor: theme.colors.border,
   },
   flag: { fontSize: 22 },
-  code: { fontSize: 16, color: '#333', fontWeight: '500' },
+  code: { fontSize: 16, color: theme.colors.textStrong, fontWeight: '500' },
 
-  modalContainer: { flex: 1, backgroundColor: '#fff' },
+  modalContainer: { flex: 1, backgroundColor: theme.colors.surface },
   modalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -106,34 +107,34 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    borderBottomColor: theme.colors.border,
   },
   modalCloseButton: { padding: 4 },
-  modalCloseText: { color: '#4CAF50', fontSize: 16 },
-  modalTitle: { fontSize: 18, fontWeight: '600', color: '#333' },
+  modalCloseText: { color: theme.colors.primary, fontSize: 16 },
+  modalTitle: { fontSize: 18, fontWeight: '600', color: theme.colors.textStrong },
   modalPlaceholder: { width: 60 },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F5F5F5',
+    backgroundColor: theme.colors.surfaceMuted,
     margin: 20,
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: 12,
     gap: 12,
   },
-  searchInput: { flex: 1, fontSize: 16, color: '#333' },
+  searchInput: { flex: 1, fontSize: 16, color: theme.colors.textStrong },
   list: { flex: 1, paddingHorizontal: 20 },
   countryItem: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: theme.colors.separator,
     gap: 16,
   },
   countryFlag: { fontSize: 24 },
   countryInfo: { flex: 1 },
-  countryName: { fontSize: 16, color: '#333', fontWeight: '500' },
-  countryCode: { fontSize: 14, color: '#666', marginTop: 2 },
+  countryName: { fontSize: 16, color: theme.colors.textStrong, fontWeight: '500' },
+  countryCode: { fontSize: 14, color: theme.colors.textSecondary, marginTop: 2 },
 });

@@ -17,6 +17,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/src/utils/supabaseClient';
 import { useAuth } from '@/src/services/auth-context';
+import theme from '@/src/styles/theme';
 
 interface OrderDetails {
   id: string;
@@ -153,7 +154,7 @@ export default function ReviewOrderScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color="#4CAF50" />
+          <ActivityIndicator size="large" color={theme.colors.primary} />
         </View>
       </SafeAreaView>
     );
@@ -163,7 +164,7 @@ export default function ReviewOrderScreen() {
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="chevron-back" size={24} color="#000" />
+          <Ionicons name="chevron-back" size={24} color={theme.colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Rate your order</Text>
         <View style={{ width: 40 }} />
@@ -197,7 +198,7 @@ export default function ReviewOrderScreen() {
             {existingReview ? (
               // Already reviewed — show what they gave, read-only.
               <View style={styles.reviewedCard}>
-                <Ionicons name="checkmark-circle" size={40} color="#4CAF50" />
+                <Ionicons name="checkmark-circle" size={40} color={theme.colors.primary} />
                 <Text style={styles.reviewedTitle}>You reviewed this order</Text>
                 <View style={styles.starsRow}>
                   {[1, 2, 3, 4, 5].map(star => (
@@ -235,7 +236,7 @@ export default function ReviewOrderScreen() {
                 <TextInput
                   style={styles.commentInput}
                   placeholder="How was the taste, portion, packaging…?"
-                  placeholderTextColor="#999"
+                  placeholderTextColor={theme.colors.placeholder}
                   value={comment}
                   onChangeText={t => setComment(t.slice(0, 500))}
                   multiline
@@ -250,7 +251,7 @@ export default function ReviewOrderScreen() {
                   disabled={rating < 1 || submitting}
                 >
                   {submitting ? (
-                    <ActivityIndicator color="#fff" />
+                    <ActivityIndicator color={theme.colors.textOnAction} />
                   ) : (
                     <Text style={styles.submitText}>Submit review</Text>
                   )}
@@ -265,9 +266,9 @@ export default function ReviewOrderScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
+  container: { flex: 1, backgroundColor: theme.colors.surface },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 },
-  errorText: { fontSize: 16, color: '#888' },
+  errorText: { fontSize: 16, color: theme.colors.textMuted },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -276,7 +277,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   backButton: { padding: 8, width: 40 },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: '#1A1A1A' },
+  headerTitle: { fontSize: 18, fontWeight: '700', color: theme.colors.text },
   content: { padding: 20 },
 
   dishCard: {
@@ -291,13 +292,13 @@ const styles = StyleSheet.create({
   dishImage: { width: 64, height: 64, borderRadius: 12 },
   dishImagePlaceholder: { backgroundColor: '#E5E5E5' },
   dishInfo: { flex: 1 },
-  dishTitle: { fontSize: 16, fontWeight: '700', color: '#1A1A1A', marginBottom: 4 },
-  dishSubtitle: { fontSize: 13, color: '#666' },
+  dishTitle: { fontSize: 16, fontWeight: '700', color: theme.colors.text, marginBottom: 4 },
+  dishSubtitle: { fontSize: 13, color: theme.colors.textSecondary },
 
   sectionLabel: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#888',
+    color: theme.colors.textMuted,
     letterSpacing: 0.6,
     marginBottom: 10,
   },
@@ -311,34 +312,34 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 14,
     fontWeight: '600',
-    color: '#B26A00',
+    color: theme.colors.warning,
     marginBottom: 24,
     minHeight: 18,
   },
   commentInput: {
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: theme.colors.border,
     borderRadius: 12,
     padding: 14,
     fontSize: 15,
     minHeight: 120,
-    color: '#1A1A1A',
+    color: theme.colors.text,
   },
   charCount: {
     fontSize: 11,
-    color: '#AAA',
+    color: theme.colors.placeholder,
     textAlign: 'right',
     marginTop: 4,
     marginBottom: 20,
   },
   submitButton: {
-    backgroundColor: '#237A3B',
+    backgroundColor: theme.colors.primaryAction,
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
   },
-  submitDisabled: { backgroundColor: '#a5d6a7' },
-  submitText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  submitDisabled: { backgroundColor: theme.colors.primaryDisabled },
+  submitText: { color: theme.colors.textOnAction, fontSize: 16, fontWeight: '600' },
 
   reviewedCard: {
     alignItems: 'center',
@@ -347,10 +348,10 @@ const styles = StyleSheet.create({
     padding: 24,
     gap: 12,
   },
-  reviewedTitle: { fontSize: 17, fontWeight: '700', color: '#1A1A1A' },
+  reviewedTitle: { fontSize: 17, fontWeight: '700', color: theme.colors.text },
   reviewedComment: {
     fontSize: 14,
-    color: '#555',
+    color: theme.colors.textSecondary,
     fontStyle: 'italic',
     textAlign: 'center',
     lineHeight: 20,

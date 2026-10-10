@@ -34,7 +34,7 @@ export const TextInputField = ({
         onChangeText={onChangeText}
         keyboardType={keyboardType}
         secureTextEntry={secureTextEntry}
-        placeholderTextColor="#999"
+        placeholderTextColor={theme.colors.placeholder}
       />
     </View>
   );

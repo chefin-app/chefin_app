@@ -21,6 +21,7 @@ import {
   type FulfillmentType,
   type OrderStatus,
 } from '@/src/utils/orderStatus';
+import theme from '@/src/styles/theme';
 
 interface ActiveOrderRow {
   id: string;
@@ -151,7 +152,7 @@ export default function ActiveOrderBanner() {
                         : 'bag-handle-outline'
                     }
                     size={20}
-                    color="#fff"
+                    color={theme.colors.textOnAction}
                   />
                 </View>
                 <View style={styles.copy}>
@@ -194,7 +195,7 @@ const isBannerExpired = (order: ActiveOrderRow, now: number): boolean => {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#f8f9fa',
+    backgroundColor: theme.colors.surfaceAlt,
     paddingTop: 9,
     paddingBottom: 8,
   },
@@ -227,7 +228,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   copy: { flex: 1 },
-  title: { color: '#fff', fontSize: 13, fontWeight: '700' },
+  title: { color: theme.colors.textOnAction, fontSize: 13, fontWeight: '700' },
   eta: { color: '#D7D7D7', fontSize: 12, marginTop: 2 },
   pagination: {
     height: 6,

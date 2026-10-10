@@ -16,6 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuth } from '@/src/services/auth-context';
+import theme from '@/src/styles/theme';
 
 type ReviewOrder = {
   id: string;
@@ -221,7 +222,7 @@ export default function ReviewCustomerScreen() {
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.headerButton} hitSlop={8}>
-          <Ionicons name="chevron-back" size={24} color="#1A1A1A" />
+          <Ionicons name="chevron-back" size={24} color={theme.colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Review customer</Text>
         <View style={styles.headerButton} />
@@ -229,11 +230,11 @@ export default function ReviewCustomerScreen() {
 
       {loading ? (
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color="#4CAF50" />
+          <ActivityIndicator size="large" color={theme.colors.primary} />
         </View>
       ) : error || !order ? (
         <View style={styles.centered}>
-          <Ionicons name="alert-circle-outline" size={44} color="#C62828" />
+          <Ionicons name="alert-circle-outline" size={44} color={theme.colors.error} />
           <Text style={styles.errorTitle}>Review unavailable</Text>
           <Text style={styles.errorText}>{error ?? 'The order could not be found.'}</Text>
           <TouchableOpacity style={styles.retryButton} onPress={load}>
@@ -255,7 +256,7 @@ export default function ReviewCustomerScreen() {
                 <Image source={{ uri: order.customerImageUrl }} style={styles.customerAvatar} />
               ) : (
                 <View style={styles.customerAvatar}>
-                  <Ionicons name="person" size={26} color="#4CAF50" />
+                  <Ionicons name="person" size={26} color={theme.colors.primary} />
                 </View>
               )}
               <View style={styles.flexOne}>
@@ -273,7 +274,11 @@ export default function ReviewCustomerScreen() {
             </View>
 
             <View style={styles.privacyNote}>
-              <Ionicons name="information-circle-outline" size={17} color="#237A3B" />
+              <Ionicons
+                name="information-circle-outline"
+                size={17}
+                color={theme.colors.primaryAction}
+              />
               <Text style={styles.privacyText}>
                 This review contributes to the buyer’s aggregate score. Other cooks may see your
                 written feedback before accepting a future order.
@@ -283,7 +288,7 @@ export default function ReviewCustomerScreen() {
             {existingReview ? (
               <>
                 <View style={styles.reviewedBanner}>
-                  <Ionicons name="checkmark-circle" size={24} color="#2E7D32" />
+                  <Ionicons name="checkmark-circle" size={24} color={theme.colors.primaryOnLight} />
                   <View style={styles.flexOne}>
                     <Text style={styles.reviewedTitle}>You reviewed this customer</Text>
                     <Text style={styles.reviewedSubtitle}>
@@ -329,7 +334,7 @@ export default function ReviewCustomerScreen() {
               </>
             ) : order.status !== 'completed' ? (
               <View style={styles.centeredInline}>
-                <Ionicons name="time-outline" size={38} color="#B26A00" />
+                <Ionicons name="time-outline" size={38} color={theme.colors.warning} />
                 <Text style={styles.errorTitle}>Complete the order first</Text>
                 <Text style={styles.errorText}>
                   Customer feedback opens after the order has been marked completed.
@@ -375,7 +380,9 @@ export default function ReviewCustomerScreen() {
                           <Ionicons
                             name={tag.icon}
                             size={16}
-                            color={selected ? '#237A3B' : '#666'}
+                            color={
+                              selected ? theme.colors.primaryAction : theme.colors.textSecondary
+                            }
                           />
                           <Text style={[styles.tagText, selected && styles.tagTextSelected]}>
                             {tag.label}
@@ -389,7 +396,7 @@ export default function ReviewCustomerScreen() {
                     value={comment}
                     onChangeText={text => setComment(text.slice(0, 500))}
                     placeholder="Add a private note for context"
-                    placeholderTextColor="#999"
+                    placeholderTextColor={theme.colors.placeholder}
                     submitBehavior="blurAndSubmit"
                     textAlignVertical="top"
                     // onSubmitEditing={Keyboard.dismiss}44
@@ -407,7 +414,7 @@ export default function ReviewCustomerScreen() {
                   disabled={!punctuality || !communication || !handover || submitting}
                 >
                   {submitting ? (
-                    <ActivityIndicator color="#fff" />
+                    <ActivityIndicator color={theme.colors.textOnAction} />
                   ) : (
                     <Text style={styles.submitText}>Submit private review</Text>
                   )}
@@ -422,7 +429,7 @@ export default function ReviewCustomerScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
+  container: { flex: 1, backgroundColor: theme.colors.surface },
   flexOne: { flex: 1 },
   header: {
     flexDirection: 'row',
@@ -434,7 +441,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#E8E8E8',
   },
   headerButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { fontSize: 18, fontWeight: '800', color: '#1A1A1A' },
+  headerTitle: { fontSize: 18, fontWeight: '800', color: theme.colors.text },
   centered: {
     flex: 1,
     alignItems: 'center',
@@ -443,16 +450,21 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   centeredInline: { alignItems: 'center', paddingVertical: 44, paddingHorizontal: 20, gap: 8 },
-  errorTitle: { fontSize: 18, fontWeight: '800', color: '#1A1A1A' },
-  errorText: { fontSize: 14, color: '#666', lineHeight: 20, textAlign: 'center' },
+  errorTitle: { fontSize: 18, fontWeight: '800', color: theme.colors.text },
+  errorText: {
+    fontSize: 14,
+    color: theme.colors.textSecondary,
+    lineHeight: 20,
+    textAlign: 'center',
+  },
   retryButton: {
-    backgroundColor: '#237A3B',
+    backgroundColor: theme.colors.primaryAction,
     borderRadius: 22,
     paddingHorizontal: 22,
     paddingVertical: 11,
     marginTop: 8,
   },
-  retryText: { color: '#fff', fontWeight: '700' },
+  retryText: { color: theme.colors.textOnAction, fontWeight: '700' },
   content: { padding: 16, paddingBottom: 40, gap: 14 },
   orderSummary: {
     flexDirection: 'row',
@@ -468,17 +480,17 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#E8F5E9',
+    backgroundColor: theme.colors.primarySoft,
   },
-  customerName: { fontSize: 16, fontWeight: '800', color: '#1A1A1A' },
-  orderMeta: { fontSize: 12, color: '#666', marginTop: 3 },
+  customerName: { fontSize: 16, fontWeight: '800', color: theme.colors.text },
+  orderMeta: { fontSize: 12, color: theme.colors.textSecondary, marginTop: 3 },
   completedBadge: {
-    backgroundColor: '#E8F5E9',
+    backgroundColor: theme.colors.primarySoft,
     paddingHorizontal: 9,
     paddingVertical: 5,
     borderRadius: 12,
   },
-  completedText: { color: '#2E7D32', fontSize: 10, fontWeight: '800' },
+  completedText: { color: theme.colors.primaryOnLight, fontSize: 10, fontWeight: '800' },
   privacyNote: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -494,13 +506,18 @@ const styles = StyleSheet.create({
     gap: 10,
     padding: 14,
     borderRadius: 14,
-    backgroundColor: '#E8F5E9',
+    backgroundColor: theme.colors.primarySoft,
   },
   reviewedTitle: { fontSize: 14, fontWeight: '800', color: '#235C2A' },
   reviewedSubtitle: { fontSize: 11, color: '#54825A', marginTop: 2 },
-  questionCard: { borderWidth: 1, borderColor: '#E0E0E0', borderRadius: 16, padding: 16 },
-  questionTitle: { fontSize: 15, fontWeight: '800', color: '#1A1A1A' },
-  questionDescription: { fontSize: 12, color: '#777', lineHeight: 17, marginTop: 3 },
+  questionCard: { borderWidth: 1, borderColor: theme.colors.border, borderRadius: 16, padding: 16 },
+  questionTitle: { fontSize: 15, fontWeight: '800', color: theme.colors.text },
+  questionDescription: {
+    fontSize: 12,
+    color: theme.colors.textSecondary,
+    lineHeight: 17,
+    marginTop: 3,
+  },
   ratingRow: { flexDirection: 'row', justifyContent: 'center', marginTop: 15 },
   starButton: { paddingHorizontal: 5, paddingVertical: 3 },
   ratingLabel: {
@@ -510,9 +527,14 @@ const styles = StyleSheet.create({
     color: '#9A6700',
     minHeight: 16,
   },
-  section: { borderWidth: 1, borderColor: '#E0E0E0', borderRadius: 16, padding: 16 },
-  sectionTitle: { fontSize: 15, fontWeight: '800', color: '#1A1A1A' },
-  sectionDescription: { fontSize: 12, color: '#777', marginTop: 3, marginBottom: 12 },
+  section: { borderWidth: 1, borderColor: theme.colors.border, borderRadius: 16, padding: 16 },
+  sectionTitle: { fontSize: 15, fontWeight: '800', color: theme.colors.text },
+  sectionDescription: {
+    fontSize: 12,
+    color: theme.colors.textSecondary,
+    marginTop: 3,
+    marginBottom: 12,
+  },
   tagGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 14 },
   tag: {
     flexDirection: 'row',
@@ -524,9 +546,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 8,
   },
-  tagSelected: { borderColor: '#4CAF50', backgroundColor: '#E8F5E9' },
-  tagText: { fontSize: 12, color: '#555', fontWeight: '600' },
-  tagTextSelected: { color: '#237A3B' },
+  tagSelected: { borderColor: theme.colors.primary, backgroundColor: theme.colors.primarySoft },
+  tagText: { fontSize: 12, color: theme.colors.textSecondary, fontWeight: '600' },
+  tagTextSelected: { color: theme.colors.primaryAction },
   commentInput: {
     borderWidth: 1,
     borderColor: '#DADDE1',
@@ -534,17 +556,22 @@ const styles = StyleSheet.create({
     minHeight: 100,
     padding: 12,
     fontSize: 14,
-    color: '#1A1A1A',
+    color: theme.colors.text,
   },
-  characterCount: { fontSize: 11, color: '#999', textAlign: 'right', marginTop: 4 },
+  characterCount: {
+    fontSize: 11,
+    color: theme.colors.placeholder,
+    textAlign: 'right',
+    marginTop: 4,
+  },
   submitButton: {
-    backgroundColor: '#237A3B',
+    backgroundColor: theme.colors.primaryAction,
     borderRadius: 25,
     paddingVertical: 15,
     alignItems: 'center',
   },
-  submitButtonDisabled: { backgroundColor: '#A5D6A7' },
-  submitText: { color: '#fff', fontSize: 15, fontWeight: '800' },
+  submitButtonDisabled: { backgroundColor: theme.colors.primaryDisabled },
+  submitText: { color: theme.colors.textOnAction, fontSize: 15, fontWeight: '800' },
   savedTags: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   savedTag: {
     backgroundColor: '#F0F2F4',
@@ -552,8 +579,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 7,
   },
-  savedTagText: { fontSize: 12, color: '#555', fontWeight: '600' },
+  savedTagText: { fontSize: 12, color: theme.colors.textSecondary, fontWeight: '600' },
   savedComment: { borderRadius: 14, backgroundColor: '#F7F9FC', padding: 14 },
-  savedCommentLabel: { fontSize: 10, fontWeight: '800', color: '#888', letterSpacing: 0.5 },
+  savedCommentLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: theme.colors.textMuted,
+    letterSpacing: 0.5,
+  },
   savedCommentText: { fontSize: 14, color: '#444', lineHeight: 20, marginTop: 6 },
 });

@@ -16,6 +16,7 @@ import {
   type RestaurantOpeningHour,
   type RestaurantProfilePayload,
 } from '@/src/utils/restaurantProfile';
+import theme from '@/src/styles/theme';
 
 const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
@@ -35,7 +36,10 @@ const groupOpeningHours = (
     const windows = openingHours
       .filter(window => window.enabled && window.isoWeekday === day)
       .sort((a, b) => (a.opensAt < b.opensAt ? -1 : 1))
-      .map(window => `${formatClock(window.opensAt.slice(0, 5))} – ${formatClock(window.closesAt.slice(0, 5))}`);
+      .map(
+        window =>
+          `${formatClock(window.opensAt.slice(0, 5))} – ${formatClock(window.closesAt.slice(0, 5))}`
+      );
     byDay.set(day, windows.length ? windows.join(', ') : 'Closed');
   }
   const groups: { startDay: number; endDay: number; hours: string }[] = [];
@@ -93,7 +97,7 @@ export default function RestaurantDetailsScreen() {
     return (
       <SafeAreaView style={styles.page}>
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color="#4CAF50" />
+          <ActivityIndicator size="large" color={theme.colors.primary} />
         </View>
       </SafeAreaView>
     );
@@ -140,7 +144,7 @@ export default function RestaurantDetailsScreen() {
     <SafeAreaView style={styles.page}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} hitSlop={10}>
-          <Ionicons name="close" size={26} color="#1A1A1A" />
+          <Ionicons name="close" size={26} color={theme.colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle} numberOfLines={1}>
           {displayName}
@@ -190,7 +194,7 @@ export default function RestaurantDetailsScreen() {
               <Text style={styles.sectionTitle}>Food safety</Text>
               {achievementRows.map(row => (
                 <View key={row.title} style={styles.achievementRow}>
-                  <Ionicons name="shield-checkmark" size={20} color="#2E7D32" />
+                  <Ionicons name="shield-checkmark" size={20} color={theme.colors.primaryOnLight} />
                   <View style={styles.achievementCopy}>
                     <Text style={styles.achievementTitle}>{row.title}</Text>
                     <Text style={styles.achievementSubtitle}>{row.subtitle}</Text>
@@ -218,7 +222,7 @@ export default function RestaurantDetailsScreen() {
 }
 
 const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: '#FFFFFF' },
+  page: { flex: 1, backgroundColor: theme.colors.surface },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 },
   header: {
     flexDirection: 'row',
@@ -229,37 +233,42 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: '#E4E6E4',
   },
-  headerTitle: { flex: 1, fontSize: 17, fontWeight: '700', color: '#1A1A1A' },
+  headerTitle: { flex: 1, fontSize: 17, fontWeight: '700', color: theme.colors.text },
   content: { padding: 20, paddingBottom: 44 },
   section: { flexDirection: 'row', gap: 14, marginBottom: 28 },
   sectionIcon: { width: 26, alignItems: 'center', paddingTop: 2 },
   sectionBody: { flex: 1 },
-  sectionTitle: { fontSize: 16, fontWeight: '800', color: '#1A1A1A', marginBottom: 6 },
+  sectionTitle: { fontSize: 16, fontWeight: '800', color: theme.colors.text, marginBottom: 6 },
   sectionText: { fontSize: 14, color: '#333B36', lineHeight: 21 },
   sectionHint: { fontSize: 12, color: '#8B928D', marginTop: 6, lineHeight: 17 },
-  openNow: { fontSize: 13, fontWeight: '700', color: '#2E7D32', marginBottom: 8 },
-  closedNow: { color: '#C62828' },
+  openNow: { fontSize: 13, fontWeight: '700', color: theme.colors.primaryOnLight, marginBottom: 8 },
+  closedNow: { color: theme.colors.error },
   hoursRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 5 },
   hoursDays: { fontSize: 14, color: '#333B36' },
-  hoursTime: { fontSize: 14, color: '#5F6368' },
+  hoursTime: { fontSize: 14, color: theme.colors.textSecondary },
   achievementRow: { flexDirection: 'row', gap: 10, marginBottom: 12, alignItems: 'flex-start' },
   achievementCopy: { flex: 1 },
-  achievementTitle: { fontSize: 14, fontWeight: '700', color: '#1A1A1A' },
-  achievementSubtitle: { fontSize: 12, color: '#5F6368', marginTop: 2, lineHeight: 17 },
+  achievementTitle: { fontSize: 14, fontWeight: '700', color: theme.colors.text },
+  achievementSubtitle: {
+    fontSize: 12,
+    color: theme.colors.textSecondary,
+    marginTop: 2,
+    lineHeight: 17,
+  },
   stateText: {
     fontSize: 13,
-    color: '#666',
+    color: theme.colors.textSecondary,
     textAlign: 'center',
     lineHeight: 19,
     maxWidth: 260,
     marginTop: 6,
   },
   stateButton: {
-    backgroundColor: '#237A3B',
+    backgroundColor: theme.colors.primaryAction,
     borderRadius: 20,
     marginTop: 14,
     paddingHorizontal: 20,
     paddingVertical: 10,
   },
-  stateButtonText: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
+  stateButtonText: { color: theme.colors.textOnAction, fontSize: 13, fontWeight: '700' },
 });

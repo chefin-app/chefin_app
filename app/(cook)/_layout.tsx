@@ -3,6 +3,7 @@ import { View, Text, ActivityIndicator, StyleSheet, TouchableOpacity } from 'rea
 import { Stack, useRouter } from 'expo-router';
 import { useAuth } from '@/src/services/auth-context';
 import { supabase } from '@/src/utils/supabaseClient';
+import theme from '@/src/styles/theme';
 
 type RoleStatus = 'checking' | 'cook' | 'not-cook' | 'unauthenticated';
 
@@ -43,7 +44,7 @@ export default function CookLayout() {
   if (roleStatus === 'checking' || initializing) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#4CAF50" />
+        <ActivityIndicator size="large" color={theme.colors.primary} />
       </View>
     );
   }
@@ -105,22 +106,22 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
     padding: 32,
   },
-  gateTitle: { fontSize: 20, fontWeight: '800', color: '#1A1A1A', marginBottom: 8 },
+  gateTitle: { fontSize: 20, fontWeight: '800', color: theme.colors.text, marginBottom: 8 },
   gateBody: {
     fontSize: 14,
-    color: '#666',
+    color: theme.colors.textSecondary,
     textAlign: 'center',
     lineHeight: 20,
     marginBottom: 24,
   },
   gateBtn: {
-    backgroundColor: '#237A3B',
+    backgroundColor: theme.colors.primaryAction,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 24,
   },
-  gateBtnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
+  gateBtnText: { color: theme.colors.textOnAction, fontWeight: '700', fontSize: 14 },
 });

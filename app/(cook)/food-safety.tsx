@@ -30,6 +30,7 @@ import {
   recordFoodComplianceAcceptance,
 } from '@/src/utils/foodCompliance';
 import { useCookApplication } from '@/src/hooks/useCookApplication';
+import theme from '@/src/styles/theme';
 
 type HostingType = 'private' | 'business' | null;
 
@@ -50,9 +51,9 @@ interface PendingAsset {
 }
 
 const STATUS_META: Record<VerificationDocStatus, { label: string; color: string; bg: string }> = {
-  pending: { label: 'Pending review', color: '#B26A00', bg: '#FFF3E0' },
-  approved: { label: 'Verified', color: '#2E7D32', bg: '#E8F5E9' },
-  rejected: { label: 'Rejected', color: '#C62828', bg: '#FFEBEE' },
+  pending: { label: 'Pending review', color: theme.colors.warning, bg: theme.colors.warningSoft },
+  approved: { label: 'Verified', color: theme.colors.primaryOnLight, bg: theme.colors.primarySoft },
+  rejected: { label: 'Rejected', color: theme.colors.error, bg: '#FFEBEE' },
   more_info_requested: { label: 'More information needed', color: '#175CD3', bg: '#EFF8FF' },
 };
 
@@ -287,7 +288,7 @@ export default function FoodSafetyScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color="#4CAF50" />
+          <ActivityIndicator size="large" color={theme.colors.primary} />
         </View>
       </SafeAreaView>
     );
@@ -298,7 +299,7 @@ export default function FoodSafetyScreen() {
       <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
         <View style={styles.lockedState}>
           <View style={styles.lockedIcon}>
-            <Ionicons name="checkmark-circle" size={36} color="#237A3B" />
+            <Ionicons name="checkmark-circle" size={36} color={theme.colors.primaryAction} />
           </View>
           <Text style={styles.lockedTitle}>Food-document stage submitted</Text>
           <Text style={styles.lockedBody}>
@@ -343,7 +344,7 @@ export default function FoodSafetyScreen() {
 
         {/* Optional Tier 1 verification documents */}
         <View style={styles.tierCallout}>
-          <Ionicons name="shield-checkmark" size={20} color="#4CAF50" />
+          <Ionicons name="shield-checkmark" size={20} color={theme.colors.primary} />
           <View style={{ flex: 1 }}>
             <Text style={styles.tierCalloutTitle}>Get a platform Verified badge (optional)</Text>
             <Text style={styles.tierCalloutBody}>
@@ -414,7 +415,11 @@ export default function FoodSafetyScreen() {
                     {pending ? (
                       pending.isPdf ? (
                         <View style={styles.pdfBadge}>
-                          <Ionicons name="document-text-outline" size={32} color="#1A1A1A" />
+                          <Ionicons
+                            name="document-text-outline"
+                            size={32}
+                            color={theme.colors.text}
+                          />
                           <Text style={styles.pdfBadgeText} numberOfLines={1}>
                             {pending.name}
                           </Text>
@@ -425,7 +430,7 @@ export default function FoodSafetyScreen() {
                       )
                     ) : (
                       <View style={styles.pdfBadge}>
-                        <Ionicons name="add" size={32} color="#888" />
+                        <Ionicons name="add" size={32} color={theme.colors.textMuted} />
                         <Text style={styles.pdfBadgeHint}>Upload a photo, scan or PDF</Text>
                       </View>
                     )}
@@ -471,7 +476,7 @@ export default function FoodSafetyScreen() {
             style={[styles.nextBtn, (!canAdvance || saving) && styles.nextBtnDisabled]}
           >
             {saving ? (
-              <ActivityIndicator color="#fff" />
+              <ActivityIndicator color={theme.colors.textOnAction} />
             ) : (
               <Text style={styles.nextBtnText}>
                 {isReverification && Object.keys(pendingAssets).length === 0
@@ -517,26 +522,38 @@ function RadioRow({
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
+  container: { flex: 1, backgroundColor: theme.colors.surface },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 
   topRow: { paddingHorizontal: 24, paddingTop: 8 },
   saveExitChip: {
     alignSelf: 'flex-start',
     borderWidth: 1.5,
-    borderColor: '#1A1A1A',
+    borderColor: theme.colors.text,
     borderRadius: 24,
     paddingHorizontal: 14,
     paddingVertical: 6,
   },
-  saveExitText: { fontSize: 13, fontWeight: '700', color: '#1A1A1A' },
+  saveExitText: { fontSize: 13, fontWeight: '700', color: theme.colors.text },
 
   scrollContent: { paddingHorizontal: 24, paddingTop: 24, paddingBottom: 24 },
-  title: { fontSize: 28, fontWeight: '800', color: '#1A1A1A', lineHeight: 34, marginBottom: 24 },
-  question: { fontSize: 16, fontWeight: '700', color: '#1A1A1A', marginBottom: 12, marginTop: 8 },
+  title: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: theme.colors.text,
+    lineHeight: 34,
+    marginBottom: 24,
+  },
+  question: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: theme.colors.text,
+    marginBottom: 12,
+    marginTop: 8,
+  },
   questionSubtitle: {
     fontSize: 13,
-    color: '#888',
+    color: theme.colors.textMuted,
     marginBottom: 16,
     marginTop: -6,
     lineHeight: 18,
@@ -548,8 +565,8 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     gap: 12,
   },
-  radioTitle: { fontSize: 15, fontWeight: '700', color: '#1A1A1A' },
-  radioSubtitle: { fontSize: 12, color: '#888', lineHeight: 16 },
+  radioTitle: { fontSize: 15, fontWeight: '700', color: theme.colors.text },
+  radioSubtitle: { fontSize: 12, color: theme.colors.textMuted, lineHeight: 16 },
   radioOuter: {
     width: 22,
     height: 22,
@@ -559,22 +576,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  radioOuterSelected: { borderColor: '#4CAF50' },
-  radioInner: { width: 12, height: 12, borderRadius: 6, backgroundColor: '#4CAF50' },
+  radioOuterSelected: { borderColor: theme.colors.primary },
+  radioInner: { width: 12, height: 12, borderRadius: 6, backgroundColor: theme.colors.primary },
 
-  divider: { height: 1, backgroundColor: '#E0E0E0', marginVertical: 16 },
+  divider: { height: 1, backgroundColor: theme.colors.border, marginVertical: 16 },
 
   tierCallout: {
     flexDirection: 'row',
     gap: 10,
-    backgroundColor: '#E8F5E9',
+    backgroundColor: theme.colors.primarySoft,
     borderRadius: 12,
     padding: 14,
     marginBottom: 12,
     alignItems: 'flex-start',
   },
-  tierCalloutTitle: { fontSize: 14, fontWeight: '700', color: '#1A1A1A', marginBottom: 2 },
-  tierCalloutBody: { fontSize: 12, color: '#555', lineHeight: 17 },
+  tierCalloutTitle: { fontSize: 14, fontWeight: '700', color: theme.colors.text, marginBottom: 2 },
+  tierCalloutBody: { fontSize: 12, color: theme.colors.textSecondary, lineHeight: 17 },
 
   docBlock: { marginBottom: 8 },
   docHeaderRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
@@ -585,10 +602,10 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   statusChipText: { fontSize: 12, fontWeight: '700' },
-  rejectionNote: { fontSize: 12, color: '#C62828', marginBottom: 8, lineHeight: 17 },
+  rejectionNote: { fontSize: 12, color: theme.colors.error, marginBottom: 8, lineHeight: 17 },
   removeDocText: {
     fontSize: 13,
-    color: '#FF5252',
+    color: theme.colors.destructive,
     fontWeight: '600',
     textDecorationLine: 'underline',
     marginTop: -2,
@@ -608,39 +625,39 @@ const styles = StyleSheet.create({
   },
   uploadPreview: { width: '100%', height: '100%' },
   pdfBadge: { alignItems: 'center', gap: 4 },
-  pdfBadgeText: { fontSize: 13, fontWeight: '700', color: '#1A1A1A' },
-  pdfBadgeHint: { fontSize: 11, color: '#888' },
-  uploadFootnote: { fontSize: 12, color: '#888', lineHeight: 17, marginTop: 8 },
-  link: { color: '#1A1A1A', textDecorationLine: 'underline', fontWeight: '600' },
+  pdfBadgeText: { fontSize: 13, fontWeight: '700', color: theme.colors.text },
+  pdfBadgeHint: { fontSize: 11, color: theme.colors.textMuted },
+  uploadFootnote: { fontSize: 12, color: theme.colors.textMuted, lineHeight: 17, marginTop: 8 },
+  link: { color: theme.colors.text, textDecorationLine: 'underline', fontWeight: '600' },
 
   footer: { paddingHorizontal: 24, paddingTop: 8, paddingBottom: 16 },
   progressRow: { flexDirection: 'row', gap: 6, marginBottom: 16 },
-  progressSegment: { flex: 1, height: 5, borderRadius: 3, backgroundColor: '#E0E0E0' },
-  progressSegmentFilled: { backgroundColor: '#4CAF50' },
+  progressSegment: { flex: 1, height: 5, borderRadius: 3, backgroundColor: theme.colors.border },
+  progressSegmentFilled: { backgroundColor: theme.colors.primary },
   navRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   backLink: { paddingVertical: 12, paddingRight: 12 },
   backLinkText: {
     fontSize: 15,
-    color: '#1A1A1A',
+    color: theme.colors.text,
     textDecorationLine: 'underline',
     fontWeight: '600',
   },
   nextBtn: {
-    backgroundColor: '#237A3B',
+    backgroundColor: theme.colors.primaryAction,
     borderRadius: 28,
     paddingVertical: 14,
     paddingHorizontal: 36,
     minWidth: 140,
     alignItems: 'center',
   },
-  nextBtnDisabled: { backgroundColor: '#A5D6A7' },
-  nextBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  nextBtnDisabled: { backgroundColor: theme.colors.primaryDisabled },
+  nextBtnText: { color: theme.colors.textOnAction, fontSize: 16, fontWeight: '700' },
   lockedState: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 30 },
   lockedIcon: {
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: '#EAF7ED',
+    backgroundColor: theme.colors.primarySoft,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -663,10 +680,10 @@ const styles = StyleSheet.create({
     marginTop: 22,
     minHeight: 48,
     borderRadius: 24,
-    backgroundColor: '#237A3B',
+    backgroundColor: theme.colors.primaryAction,
     paddingHorizontal: 24,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  lockedButtonText: { color: '#fff', fontSize: 14, fontWeight: '800' },
+  lockedButtonText: { color: theme.colors.textOnAction, fontSize: 14, fontWeight: '800' },
 });

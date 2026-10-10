@@ -47,6 +47,7 @@ import {
   type ListingScheduleMatch,
   type RestaurantOrderSelection,
 } from '@/src/utils/restaurantOrderSchedule';
+import theme from '@/src/styles/theme';
 
 interface RestaurantAvailabilityPayload {
   records?: AvailabilityRecord[];
@@ -520,7 +521,7 @@ export default function RestaurantScreen() {
             accessibilityRole="button"
             accessibilityLabel="Go back"
           >
-            <Ionicons name="chevron-back" size={25} color="#FFFFFF" />
+            <Ionicons name="chevron-back" size={25} color={theme.colors.textOnAction} />
           </TouchableOpacity>
 
           <View style={[styles.heroRightControls, { top: insets.top + 10 }]}>
@@ -535,7 +536,7 @@ export default function RestaurantScreen() {
               <Ionicons
                 name={isFavourite(profile.id) ? 'heart' : 'heart-outline'}
                 size={24}
-                color={isFavourite(profile.id) ? '#FF6B6B' : '#FFFFFF'}
+                color={isFavourite(profile.id) ? '#FF6B6B' : theme.colors.surface}
               />
             </TouchableOpacity>
           </View>
@@ -849,7 +850,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 22,
     paddingVertical: 12,
   },
-  unavailableButtonText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
+  unavailableButtonText: { color: theme.colors.textOnAction, fontSize: 14, fontWeight: '700' },
   hero: { height: 200, backgroundColor: '#DCE4DE' },
   heroImage: { width: '100%', height: '100%', resizeMode: 'cover' },
   heroShade: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(13, 20, 16, 0.25)' },
@@ -880,7 +881,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(24, 30, 26, 0.68)',
     paddingHorizontal: 14,
   },
-  fulfillmentText: { color: '#FFFFFF', fontSize: 12, fontWeight: '800' },
+  fulfillmentText: { color: theme.colors.textOnAction, fontSize: 12, fontWeight: '800' },
   summaryStack: { zIndex: 4, marginTop: -52, paddingHorizontal: 16 },
   unavailableBanner: {
     minHeight: 58,
@@ -935,7 +936,7 @@ const styles = StyleSheet.create({
   summaryCard: {
     flexDirection: 'row',
     borderRadius: 24,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.surface,
     padding: 16,
     shadowColor: '#1B2A20',
     shadowOffset: { width: 0, height: 8 },
@@ -975,7 +976,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#DDE2DE',
     borderRadius: 22,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.surface,
     paddingHorizontal: 16,
     shadowColor: '#272727ff',
   },
@@ -1022,7 +1023,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#DBE5DD',
     borderRadius: 18,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.surface,
     paddingHorizontal: 14,
   },
   promoIcon: {
@@ -1058,14 +1059,14 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: '#E0E5E1',
     borderRadius: 20,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.surface,
   },
   emptyMenuCard: {
     alignItems: 'center',
     marginHorizontal: 16,
     marginTop: 26,
     borderRadius: 20,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.surface,
     padding: 25,
   },
   emptyMenuTitle: { marginTop: 10, color: '#2C3430', fontSize: 16, fontWeight: '800' },

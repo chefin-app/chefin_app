@@ -23,6 +23,7 @@ import {
   type ReportReason,
   type ReportTargetType,
 } from '@/src/utils/reporting';
+import theme from '@/src/styles/theme';
 
 type StatusState = 'idle' | 'checking' | 'available' | 'reported' | 'error' | 'authExpired';
 
@@ -60,7 +61,7 @@ const ReportHeader = ({ title, onClose }: { title: string; onClose: () => void }
       accessibilityRole="button"
       accessibilityLabel="Close report screen"
     >
-      <Ionicons name="close" size={25} color="#1F2937" />
+      <Ionicons name="close" size={25} color={theme.colors.text} />
     </TouchableOpacity>
     <Text style={styles.headerTitle}>{title}</Text>
     <View style={styles.headerButton} />
@@ -214,7 +215,7 @@ export default function ReportListingScreen() {
         <ReportHeader title={headerTitle} onClose={() => router.back()} />
         <View style={styles.stateContainer}>
           <View style={[styles.stateIcon, styles.errorStateIcon]}>
-            <Ionicons name="alert-circle-outline" size={38} color="#B42318" />
+            <Ionicons name="alert-circle-outline" size={38} color={theme.colors.error} />
           </View>
           <Text style={styles.stateTitle}>
             {targetType === 'restaurant' ? 'Restaurant unavailable' : 'Dish unavailable'}
@@ -236,7 +237,7 @@ export default function ReportListingScreen() {
       <SafeAreaView style={styles.container}>
         <ReportHeader title={headerTitle} onClose={() => router.back()} />
         <View style={styles.stateContainer}>
-          <ActivityIndicator size="large" color="#2E7D32" />
+          <ActivityIndicator size="large" color={theme.colors.primaryOnLight} />
           <Text style={styles.loadingText}>Checking your account…</Text>
         </View>
       </SafeAreaView>
@@ -249,7 +250,7 @@ export default function ReportListingScreen() {
         <ReportHeader title={headerTitle} onClose={() => router.back()} />
         <View style={styles.stateContainer}>
           <View style={styles.stateIcon}>
-            <Ionicons name="person-circle-outline" size={42} color="#2E7D32" />
+            <Ionicons name="person-circle-outline" size={42} color={theme.colors.primaryOnLight} />
           </View>
           <Text style={styles.stateTitle}>Sign in to report</Text>
           <Text style={styles.stateText}>
@@ -276,7 +277,7 @@ export default function ReportListingScreen() {
         <ReportHeader title={headerTitle} onClose={() => router.back()} />
         <View style={styles.stateContainer}>
           <View style={[styles.stateIcon, styles.errorStateIcon]}>
-            <Ionicons name="lock-closed-outline" size={38} color="#B42318" />
+            <Ionicons name="lock-closed-outline" size={38} color={theme.colors.error} />
           </View>
           <Text style={styles.stateTitle}>Your session has expired</Text>
           <Text style={styles.stateText}>
@@ -298,7 +299,7 @@ export default function ReportListingScreen() {
       <SafeAreaView style={styles.container}>
         <ReportHeader title={headerTitle} onClose={() => router.back()} />
         <View style={styles.stateContainer}>
-          <ActivityIndicator size="large" color="#2E7D32" />
+          <ActivityIndicator size="large" color={theme.colors.primaryOnLight} />
           <Text style={styles.loadingText}>Checking previous reports…</Text>
         </View>
       </SafeAreaView>
@@ -311,7 +312,7 @@ export default function ReportListingScreen() {
         <ReportHeader title={headerTitle} onClose={() => router.back()} />
         <ScrollView contentContainerStyle={styles.stateContainer}>
           <View style={styles.successIcon}>
-            <Ionicons name="checkmark" size={42} color="#FFFFFF" />
+            <Ionicons name="checkmark" size={42} color={theme.colors.textOnAction} />
           </View>
           <Text style={styles.stateEyebrow}>
             {wasDuplicate ? 'ALREADY RECEIVED' : 'REPORT SENT'}
@@ -355,7 +356,7 @@ export default function ReportListingScreen() {
               <Ionicons
                 name={targetType === 'restaurant' ? 'storefront-outline' : 'restaurant-outline'}
                 size={25}
-                color="#2E7D32"
+                color={theme.colors.primaryOnLight}
               />
             </View>
             <View style={styles.targetCopy}>
@@ -366,7 +367,7 @@ export default function ReportListingScreen() {
                 {targetName}
               </Text>
             </View>
-            <Ionicons name="flag-outline" size={21} color="#B42318" />
+            <Ionicons name="flag-outline" size={21} color={theme.colors.error} />
           </View>
 
           {statusState === 'error' && (
@@ -409,7 +410,7 @@ export default function ReportListingScreen() {
                     <Ionicons
                       name={reason.icon}
                       size={21}
-                      color={selected ? '#2E7D32' : '#59636E'}
+                      color={selected ? theme.colors.primaryOnLight : '#59636E'}
                     />
                   </View>
                   <View style={styles.reasonCopy}>
@@ -421,7 +422,7 @@ export default function ReportListingScreen() {
                   <Ionicons
                     name={selected ? 'radio-button-on' : 'radio-button-off'}
                     size={22}
-                    color={selected ? '#4CAF50' : '#B9BEC4'}
+                    color={selected ? theme.colors.primary : '#B9BEC4'}
                   />
                 </TouchableOpacity>
               );
@@ -454,14 +455,14 @@ export default function ReportListingScreen() {
 
           {attemptedSubmit && validationError && (
             <View style={styles.validationMessage} accessibilityLiveRegion="assertive">
-              <Ionicons name="alert-circle" size={18} color="#B42318" />
+              <Ionicons name="alert-circle" size={18} color={theme.colors.error} />
               <Text style={styles.validationText}>{validationError}</Text>
             </View>
           )}
 
           {submitError && (
             <View style={styles.submitError} accessibilityLiveRegion="assertive">
-              <Ionicons name="alert-circle-outline" size={20} color="#B42318" />
+              <Ionicons name="alert-circle-outline" size={20} color={theme.colors.error} />
               <Text style={styles.submitErrorText}>{submitError}</Text>
             </View>
           )}
@@ -481,10 +482,10 @@ export default function ReportListingScreen() {
             accessibilityState={{ disabled: submitting, busy: submitting }}
           >
             {submitting ? (
-              <ActivityIndicator color="#FFFFFF" />
+              <ActivityIndicator color={theme.colors.textOnAction} />
             ) : (
               <>
-                <Ionicons name="flag" size={19} color="#FFFFFF" />
+                <Ionicons name="flag" size={19} color={theme.colors.textOnAction} />
                 <Text style={styles.submitButtonText}>Submit report</Text>
               </>
             )}
@@ -498,7 +499,7 @@ export default function ReportListingScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F7F8F7',
+    backgroundColor: theme.colors.surfaceAlt,
   },
   keyboardView: {
     flex: 1,
@@ -509,9 +510,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 10,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.surface,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: theme.colors.border,
   },
   headerButton: {
     width: 44,
@@ -520,7 +521,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   headerTitle: {
-    color: '#1F2937',
+    color: theme.colors.text,
     fontSize: 18,
     fontWeight: '700',
   },
@@ -532,7 +533,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 13,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.surface,
     borderWidth: 1,
     borderColor: '#E3E7E3',
     borderRadius: 17,
@@ -543,7 +544,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 14,
-    backgroundColor: '#E8F5E9',
+    backgroundColor: theme.colors.primarySoft,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -567,7 +568,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 10,
-    backgroundColor: '#FFF8E1',
+    backgroundColor: theme.colors.warningSoft,
     borderRadius: 13,
     padding: 13,
     marginBottom: 22,
@@ -593,13 +594,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   formTitle: {
-    color: '#1F2937',
+    color: theme.colors.text,
     fontSize: 22,
     fontWeight: '800',
     marginBottom: 5,
   },
   formSubtitle: {
-    color: '#6B7280',
+    color: theme.colors.textSecondary,
     fontSize: 14,
     marginBottom: 17,
   },
@@ -613,7 +614,7 @@ const styles = StyleSheet.create({
     gap: 12,
     minHeight: 72,
     padding: 13,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.surface,
     borderWidth: 1,
     borderColor: '#E2E5E8',
     borderRadius: 15,
@@ -675,7 +676,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#DDE1E4',
     borderRadius: 15,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.surface,
     paddingHorizontal: 14,
     paddingVertical: 13,
     color: '#252A30',
@@ -690,7 +691,7 @@ const styles = StyleSheet.create({
   },
   validationText: {
     flex: 1,
-    color: '#B42318',
+    color: theme.colors.error,
     fontSize: 12,
     lineHeight: 17,
   },
@@ -731,7 +732,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 9,
-    backgroundColor: '#B42318',
+    backgroundColor: theme.colors.error,
     borderRadius: 14,
     paddingHorizontal: 18,
   },
@@ -739,7 +740,7 @@ const styles = StyleSheet.create({
     opacity: 0.65,
   },
   submitButtonText: {
-    color: '#FFFFFF',
+    color: theme.colors.textOnAction,
     fontSize: 16,
     fontWeight: '700',
   },
@@ -754,7 +755,7 @@ const styles = StyleSheet.create({
     width: 82,
     height: 82,
     borderRadius: 26,
-    backgroundColor: '#E8F5E9',
+    backgroundColor: theme.colors.primarySoft,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 22,
@@ -766,20 +767,20 @@ const styles = StyleSheet.create({
     width: 82,
     height: 82,
     borderRadius: 41,
-    backgroundColor: '#4CAF50',
+    backgroundColor: theme.colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 20,
   },
   stateEyebrow: {
-    color: '#2E7D32',
+    color: theme.colors.primaryOnLight,
     fontSize: 10,
     fontWeight: '800',
     letterSpacing: 1,
     marginBottom: 8,
   },
   stateTitle: {
-    color: '#1F2937',
+    color: theme.colors.text,
     fontSize: 23,
     lineHeight: 30,
     fontWeight: '800',
@@ -820,12 +821,12 @@ const styles = StyleSheet.create({
     minHeight: 52,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#2E7D32',
+    backgroundColor: theme.colors.primaryOnLight,
     borderRadius: 14,
     paddingHorizontal: 20,
   },
   primaryActionText: {
-    color: '#FFFFFF',
+    color: theme.colors.textOnAction,
     fontSize: 15,
     fontWeight: '700',
   },

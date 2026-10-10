@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import theme from '@/src/styles/theme';
 
 interface CuisineItem {
   id: string;
@@ -95,7 +96,7 @@ const styles = StyleSheet.create({
   },
   selectedCuisineIconContainer: {
     borderWidth: 3,
-    borderColor: '#2E7D32',
+    borderColor: theme.colors.primaryOnLight,
   },
   cuisineIcon: { fontSize: 29 },
   cuisineText: {
@@ -105,7 +106,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   selectedCuisineText: {
-    color: '#4CAF50',
+    color: theme.colors.primary,
     fontWeight: '600',
   },
   filterScrollView: {
@@ -121,21 +122,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.colors.surfaceMuted,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: theme.colors.border,
   },
   activeFilterTag: {
-    backgroundColor: '#4CAF50',
-    borderColor: '#4CAF50',
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
   },
   filterText: {
     fontSize: 14,
-    color: '#666',
+    color: theme.colors.textSecondary,
     fontWeight: '500',
   },
   activeFilterText: {
-    color: '#fff',
+    color: theme.colors.textOnAction,
     fontWeight: '600',
   },
   dropdownIcon: {

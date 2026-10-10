@@ -31,6 +31,7 @@ import {
   DeliveryAddressModal,
   type DeliveryAddress,
 } from '@/src/components/delivery/DeliveryAddressModal';
+import theme from '@/src/styles/theme';
 
 type PickerView = 'summary' | 'location' | 'region' | 'time';
 type LocationTab = 'recent' | 'suggested' | 'saved';
@@ -311,7 +312,7 @@ export default function LocationPromptModal({
               <Ionicons
                 name={option === 'delivery' ? 'bicycle-outline' : 'bag-handle-outline'}
                 size={18}
-                color={selected ? '#FFFFFF' : '#376143'}
+                color={selected ? theme.colors.surface : '#376143'}
               />
               <Text style={[styles.segmentText, selected && styles.segmentTextSelected]}>
                 {option === 'delivery' ? 'Delivery' : 'Pickup'}
@@ -362,7 +363,7 @@ export default function LocationPromptModal({
       ) : null}
       {error ? (
         <View style={styles.errorBox}>
-          <Ionicons name="alert-circle-outline" size={18} color="#B3261E" />
+          <Ionicons name="alert-circle-outline" size={18} color={theme.colors.error} />
           <Text style={styles.errorText}>{error}</Text>
         </View>
       ) : null}
@@ -546,7 +547,7 @@ export default function LocationPromptModal({
 
           {error ? (
             <View style={styles.errorBox}>
-              <Ionicons name="alert-circle-outline" size={18} color="#B3261E" />
+              <Ionicons name="alert-circle-outline" size={18} color={theme.colors.error} />
               <Text style={styles.errorText}>{error}</Text>
             </View>
           ) : null}
@@ -771,12 +772,12 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     backgroundColor: 'rgba(17, 25, 20, 0.5)',
   },
-  modalRootFull: { backgroundColor: '#FFFFFF' },
+  modalRootFull: { backgroundColor: theme.colors.surface },
   sheet: {
     width: '100%',
     borderTopLeftRadius: 26,
     borderTopRightRadius: 26,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.surface,
     paddingHorizontal: 18,
     paddingBottom: 8,
   },
@@ -822,7 +823,7 @@ const styles = StyleSheet.create({
   segmentSelected: { backgroundColor: '#25A84B' },
   segmentDisabled: { opacity: 0.45 },
   segmentText: { color: '#376143', fontSize: 14, fontWeight: '700' },
-  segmentTextSelected: { color: '#FFFFFF' },
+  segmentTextSelected: { color: theme.colors.textOnAction },
   preferenceRows: {
     overflow: 'hidden',
     borderWidth: 1,
@@ -885,14 +886,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#25A84B',
   },
   confirmButtonDisabled: { backgroundColor: '#B7C2BA' },
-  confirmButtonText: { color: '#FFFFFF', fontSize: 15, fontWeight: '800' },
-  fullPage: { flex: 1, backgroundColor: '#FFFFFF' },
+  confirmButtonText: { color: theme.colors.textOnAction, fontSize: 15, fontWeight: '800' },
+  fullPage: { flex: 1, backgroundColor: theme.colors.surface },
   timeSheet: {
     width: '100%',
     maxHeight: '88%',
     borderTopLeftRadius: 26,
     borderTopRightRadius: 26,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.surface,
     overflow: 'hidden',
   },
   timeScroll: { flexGrow: 0 },
@@ -914,7 +915,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: '#63B778',
     borderRadius: 13,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.surface,
   },
   searchInput: { flex: 1, color: '#202A23', fontSize: 14, paddingVertical: 10 },
   regionButton: { width: 42, height: 44, alignItems: 'center', justifyContent: 'center' },
@@ -929,7 +930,7 @@ const styles = StyleSheet.create({
   tab: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   tabActive: { borderBottomWidth: 2, borderBottomColor: '#269B49' },
   tabText: { color: '#7A837D', fontSize: 13, fontWeight: '700' },
-  tabTextActive: { color: '#237A3B' },
+  tabTextActive: { color: theme.colors.primaryAction },
   resultsScroll: { flex: 1 },
   resultsContent: { flexGrow: 1, paddingHorizontal: 16, paddingBottom: 30 },
   currentLocationRow: {
@@ -1059,7 +1060,7 @@ const styles = StyleSheet.create({
   },
   dayChipSelected: { borderColor: '#25A84B', backgroundColor: '#25A84B' },
   dayChipText: { color: '#56625A', fontSize: 12, fontWeight: '700' },
-  dayChipTextSelected: { color: '#FFFFFF' },
+  dayChipTextSelected: { color: theme.colors.textOnAction },
   timeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   timeChip: {
     width: '31%',
@@ -1070,9 +1071,9 @@ const styles = StyleSheet.create({
     borderColor: '#DDE4DF',
     borderRadius: 11,
   },
-  timeChipSelected: { borderColor: '#25A84B', backgroundColor: '#EAF7ED' },
+  timeChipSelected: { borderColor: '#25A84B', backgroundColor: theme.colors.primarySoft },
   timeChipText: { color: '#4B5750', fontSize: 12, fontWeight: '700' },
-  timeChipTextSelected: { color: '#237A3B' },
+  timeChipTextSelected: { color: theme.colors.primaryAction },
   timeDisclaimer: {
     color: '#7A837D',
     fontSize: 11,

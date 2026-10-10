@@ -11,6 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuth } from '@/src/services/auth-context';
+import theme from '@/src/styles/theme';
 
 type WrittenReview = { id: string; rating: number; comment: string; createdAt: string };
 type Summary = {
@@ -60,18 +61,18 @@ export default function CustomerReviewsScreen() {
     <SafeAreaView style={styles.page} edges={['top', 'left', 'right']}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.headerButton}>
-          <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
+          <Ionicons name="arrow-back" size={24} color={theme.colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Buyer reviews</Text>
         <View style={styles.headerButton} />
       </View>
       {loading ? (
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color="#4CAF50" />
+          <ActivityIndicator size="large" color={theme.colors.primary} />
         </View>
       ) : error || !summary ? (
         <View style={styles.centered}>
-          <Ionicons name="alert-circle-outline" size={40} color="#C62828" />
+          <Ionicons name="alert-circle-outline" size={40} color={theme.colors.error} />
           <Text style={styles.errorText}>{error ?? 'Buyer reviews are unavailable.'}</Text>
           <TouchableOpacity style={styles.retryButton} onPress={load}>
             <Text style={styles.retryText}>Try again</Text>
@@ -108,33 +109,44 @@ export default function CustomerReviewsScreen() {
 }
 
 const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: '#F8F9FA' },
+  page: { flex: 1, backgroundColor: theme.colors.surfaceAlt },
   header: {
     height: 56,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 12,
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#E5E5E5',
+    borderBottomColor: theme.colors.border,
   },
   headerButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { flex: 1, textAlign: 'center', fontSize: 17, fontWeight: '800', color: '#1A1A1A' },
+  headerTitle: {
+    flex: 1,
+    textAlign: 'center',
+    fontSize: 17,
+    fontWeight: '800',
+    color: theme.colors.text,
+  },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, padding: 30 },
-  errorText: { color: '#666', fontSize: 14, lineHeight: 20, textAlign: 'center' },
+  errorText: {
+    color: theme.colors.textSecondary,
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: 'center',
+  },
   retryButton: {
-    backgroundColor: '#237A3B',
+    backgroundColor: theme.colors.primaryAction,
     borderRadius: 22,
     paddingHorizontal: 20,
     paddingVertical: 10,
   },
-  retryText: { color: '#fff', fontWeight: '800' },
+  retryText: { color: theme.colors.textOnAction, fontWeight: '800' },
   content: { padding: 20, paddingBottom: 40 },
   scoreCard: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 7,
-    backgroundColor: '#FFF8E1',
+    backgroundColor: theme.colors.warningSoft,
     borderRadius: 16,
     padding: 18,
   },
@@ -143,14 +155,19 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#1A1A1A',
+    color: theme.colors.text,
     marginTop: 24,
     marginBottom: 12,
   },
-  reviewCard: { backgroundColor: '#fff', borderRadius: 14, padding: 15, marginBottom: 10 },
+  reviewCard: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: 14,
+    padding: 15,
+    marginBottom: 10,
+  },
   reviewHeader: { flexDirection: 'row', justifyContent: 'space-between' },
   reviewScore: { color: '#9B7000', fontSize: 13, fontWeight: '800' },
-  reviewDate: { color: '#888', fontSize: 12 },
-  comment: { color: '#333', fontSize: 14, lineHeight: 21, marginTop: 8 },
-  empty: { color: '#777', fontSize: 14 },
+  reviewDate: { color: theme.colors.textMuted, fontSize: 12 },
+  comment: { color: theme.colors.textStrong, fontSize: 14, lineHeight: 21, marginTop: 8 },
+  empty: { color: theme.colors.textSecondary, fontSize: 14 },
 });

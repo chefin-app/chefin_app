@@ -16,6 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { images } from '@/src/constants/images';
 import { useCart, type CartItem } from '@/src/context/CartContext';
 import { checkCartAvailability, type BasketAvailability } from '@/src/utils/cartAvailability';
+import theme from '@/src/styles/theme';
 
 type Basket = {
   cookId: string;
@@ -142,7 +143,7 @@ export default function GlobalCartOverview() {
     <SafeAreaView style={styles.page} edges={['top', 'left', 'right']}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.headerButton} onPress={() => router.back()}>
-          <Ionicons name="chevron-back" size={25} color="#202622" />
+          <Ionicons name="chevron-back" size={25} color={theme.colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>My Cart</Text>
         {cartItems.length ? (
@@ -272,12 +273,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 12,
-    backgroundColor: '#FFF',
+    backgroundColor: theme.colors.surface,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: '#E0E5E1',
   },
   headerButton: { width: 76, minHeight: 44, justifyContent: 'center' },
-  headerTitle: { fontSize: 18, fontWeight: '800', color: '#202622' },
+  headerTitle: { fontSize: 18, fontWeight: '800', color: theme.colors.text },
   manageText: { color: '#238B45', fontWeight: '800', textAlign: 'right' },
   content: { padding: 16, paddingBottom: 40 },
   intro: { fontSize: 13, lineHeight: 19, color: '#66706A', marginBottom: 14 },
@@ -295,7 +296,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 13,
-    backgroundColor: '#FFF',
+    backgroundColor: theme.colors.surface,
     borderRadius: 18,
     padding: 13,
     marginBottom: 12,
@@ -308,9 +309,9 @@ const styles = StyleSheet.create({
   image: { width: 66, height: 66, borderRadius: 13, backgroundColor: '#E8ECE9' },
   cardCopy: { flex: 1 },
   cardTopRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  restaurantName: { flex: 1, fontSize: 15, fontWeight: '800', color: '#202622' },
+  restaurantName: { flex: 1, fontSize: 15, fontWeight: '800', color: theme.colors.text },
   meta: { marginTop: 4, fontSize: 13, color: '#505A53' },
-  time: { marginTop: 3, fontSize: 12, color: '#747D77' },
+  time: { marginTop: 3, fontSize: 12, color: theme.colors.textSecondary },
   ready: { marginTop: 6, color: '#238B45', fontSize: 12, fontWeight: '800' },
   unavailable: { marginTop: 6, color: '#B13A2E', fontSize: 12, fontWeight: '800' },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
@@ -322,7 +323,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  emptyTitle: { marginTop: 18, fontSize: 21, fontWeight: '800', color: '#202622' },
+  emptyTitle: { marginTop: 18, fontSize: 21, fontWeight: '800', color: theme.colors.text },
   emptyText: { marginTop: 8, maxWidth: 290, textAlign: 'center', color: '#6B746E', lineHeight: 20 },
   browseButton: {
     marginTop: 22,
@@ -331,5 +332,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: 22,
     paddingVertical: 14,
   },
-  browseText: { color: '#FFF', fontWeight: '800' },
+  browseText: { color: theme.colors.textOnAction, fontWeight: '800' },
 });

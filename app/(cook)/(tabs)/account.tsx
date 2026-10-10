@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/src/utils/supabaseClient';
 import { useAuth } from '@/src/services/auth-context';
 import { createShadowStyle } from '@/src/utils/platform-utils';
+import theme from '@/src/styles/theme';
 
 interface MenuItem {
   id: string;
@@ -225,7 +226,7 @@ const Account: React.FC = () => {
       >
         <View style={styles.menuItemLeft}>
           <View style={styles.iconContainer}>
-            <Ionicons name={item.icon} size={24} color="#666666" />
+            <Ionicons name={item.icon} size={24} color={theme.colors.textSecondary} />
           </View>
           <View style={styles.textContainer}>
             <Text style={styles.menuItemTitle}>{item.title}</Text>
@@ -252,7 +253,7 @@ const Account: React.FC = () => {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={() => loadOverview(true)}
-            tintColor="#258B50"
+            tintColor={theme.colors.primaryAction}
             colors={['#258B50']}
           />
         }
@@ -260,7 +261,7 @@ const Account: React.FC = () => {
         <View style={styles.performanceCard}>
           {overviewLoading ? (
             <View style={styles.performanceLoading}>
-              <ActivityIndicator color="#258B50" />
+              <ActivityIndicator color={theme.colors.primaryAction} />
               <Text style={styles.performanceLoadingText}>Loading your performance…</Text>
             </View>
           ) : overviewError && !overview ? (
@@ -300,7 +301,7 @@ const Account: React.FC = () => {
                       'Your restaurant'}
                   </Text>
                 </View>
-                <Ionicons name="analytics" size={22} color="#258B50" />
+                <Ionicons name="analytics" size={22} color={theme.colors.primaryAction} />
               </View>
 
               <View style={styles.earningsBlock}>
@@ -376,7 +377,7 @@ const Account: React.FC = () => {
 
               <View style={styles.recentSummary}>
                 <View style={styles.recentIcon}>
-                  <Ionicons name="trending-up" size={18} color="#258B50" />
+                  <Ionicons name="trending-up" size={18} color={theme.colors.primaryAction} />
                 </View>
                 <View style={styles.recentCopy}>
                   <Text style={styles.recentLabel}>Last 30 days</Text>
@@ -414,7 +415,7 @@ const Account: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.surface,
   },
   header: {
     flexDirection: 'row',
@@ -439,7 +440,7 @@ const styles = StyleSheet.create({
   contentContainer: { paddingTop: 16, paddingBottom: 16 },
   performanceCard: {
     borderRadius: 20,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.surface,
     padding: 20,
     marginBottom: 22,
     ...createShadowStyle({
@@ -467,7 +468,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: '#E8F6EC',
   },
-  retryButtonText: { color: '#237A3B', fontSize: 13, fontWeight: '700' },
+  retryButtonText: { color: theme.colors.primaryAction, fontSize: 13, fontWeight: '700' },
   performanceHeader: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   restaurantAvatar: {
     width: 48,
@@ -476,12 +477,17 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#258B50',
+    backgroundColor: theme.colors.primaryAction,
   },
   restaurantAvatarImage: { width: '100%', height: '100%' },
-  restaurantAvatarText: { color: '#FFFFFF', fontSize: 20, fontWeight: '800' },
+  restaurantAvatarText: { color: theme.colors.textOnAction, fontSize: 20, fontWeight: '800' },
   performanceHeaderCopy: { flex: 1 },
-  performanceEyebrow: { fontSize: 10, fontWeight: '800', letterSpacing: 0.8, color: '#258B50' },
+  performanceEyebrow: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+    color: theme.colors.primaryAction,
+  },
   restaurantName: { marginTop: 3, fontSize: 18, fontWeight: '700', color: '#26332B' },
   earningsBlock: { alignItems: 'center', paddingVertical: 24 },
   earningsLabel: { fontSize: 12, color: '#758078' },
@@ -514,10 +520,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#D6EFDD',
   },
   recentCopy: { flex: 1 },
-  recentLabel: { fontSize: 11, fontWeight: '700', color: '#237A3B' },
+  recentLabel: { fontSize: 11, fontWeight: '700', color: theme.colors.primaryAction },
   recentValue: { marginTop: 2, fontSize: 12, lineHeight: 18, color: '#3D4B42' },
   breakdownText: { marginTop: 11, fontSize: 10, lineHeight: 16, color: '#8A938D' },
-  staleText: { marginTop: 8, fontSize: 10, color: '#B26A00' },
+  staleText: { marginTop: 8, fontSize: 10, color: theme.colors.warning },
   section: {
     marginBottom: 30,
   },
@@ -528,7 +534,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#999999',
+    color: theme.colors.placeholder,
     letterSpacing: 0.5,
   },
   menuItem: {
@@ -537,7 +543,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#F5F5F5',
+    borderBottomColor: theme.colors.surfaceMuted,
   },
   menuItemDisabled: { opacity: 0.5 },
   menuItemLeft: {
@@ -563,7 +569,7 @@ const styles = StyleSheet.create({
   },
   menuItemSubtitle: {
     fontSize: 13,
-    color: '#999999',
+    color: theme.colors.placeholder,
     lineHeight: 16,
   },
   menuItemRight: {
@@ -571,9 +577,9 @@ const styles = StyleSheet.create({
   },
   tabBar: {
     flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.surface,
     borderTopWidth: 1,
-    borderTopColor: '#E0E0E0',
+    borderTopColor: theme.colors.border,
     paddingVertical: 8,
   },
   tabItem: {
@@ -586,12 +592,12 @@ const styles = StyleSheet.create({
   },
   tabText: {
     fontSize: 10,
-    color: '#999999',
+    color: theme.colors.placeholder,
     marginTop: 2,
   },
   activeTabText: {
     fontSize: 10,
-    color: '#4CAF50',
+    color: theme.colors.primary,
     marginTop: 2,
   },
 });

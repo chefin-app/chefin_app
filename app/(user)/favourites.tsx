@@ -13,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFavourites } from '@/src/context/FavouritesContext';
 import { useCustomerLocation } from '@/src/context/CustomerLocationContext';
 import { isRestaurantAvailableInRegion } from '@/src/constants/serviceRegions';
+import theme from '@/src/styles/theme';
 
 const FavouritesScreen = () => {
   const router = useRouter();
@@ -38,7 +39,7 @@ const FavouritesScreen = () => {
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <Ionicons name="chevron-back" size={24} color="#000" />
+            <Ionicons name="chevron-back" size={24} color={theme.colors.text} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Favourites</Text>
           <View style={{ width: 40 }} />
@@ -65,7 +66,7 @@ const FavouritesScreen = () => {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="chevron-back" size={24} color="#000" />
+          <Ionicons name="chevron-back" size={24} color={theme.colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Favourites</Text>
         <View style={{ width: 40 }} />
@@ -87,7 +88,7 @@ const FavouritesScreen = () => {
                 <Image source={{ uri: item.imageUrl }} style={styles.cardImage} />
                 {!available ? (
                   <View style={styles.unavailableOverlay}>
-                    <Ionicons name="location-outline" size={20} color="#FFFFFF" />
+                    <Ionicons name="location-outline" size={20} color={theme.colors.textOnAction} />
                     <Text style={styles.unavailableText}>Unavailable in {region.name}</Text>
                   </View>
                 ) : null}
@@ -100,7 +101,7 @@ const FavouritesScreen = () => {
                 </View>
               </TouchableOpacity>
               <TouchableOpacity style={styles.heartIcon} onPress={() => toggleFavourite(item)}>
-                <Ionicons name="heart" size={24} color="#FF5252" />
+                <Ionicons name="heart" size={24} color={theme.colors.destructive} />
               </TouchableOpacity>
             </View>
           );
@@ -112,7 +113,7 @@ const FavouritesScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
+  container: { flex: 1, backgroundColor: theme.colors.surface },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -126,26 +127,26 @@ const styles = StyleSheet.create({
   emptyTitle: { fontSize: 22, fontWeight: '700', marginBottom: 10 },
   emptySubtitle: {
     fontSize: 16,
-    color: '#666',
+    color: theme.colors.textSecondary,
     textAlign: 'center',
     marginBottom: 30,
     lineHeight: 22,
   },
   findButton: {
-    backgroundColor: '#237A3B',
+    backgroundColor: theme.colors.primaryAction,
     paddingVertical: 16,
     paddingHorizontal: 24,
     borderRadius: 12,
     width: '100%',
     alignItems: 'center',
   },
-  findButtonText: { color: '#fff', fontWeight: '600', fontSize: 16 },
+  findButtonText: { color: theme.colors.textOnAction, fontWeight: '600', fontSize: 16 },
   card: {
     marginBottom: 20,
     borderRadius: 16,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#f0f0f0',
+    borderColor: theme.colors.separator,
   },
   cardUnavailable: { opacity: 0.68 },
   cardImage: { width: '100%', height: 200 },
@@ -153,7 +154,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 15,
     right: 15,
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
     padding: 8,
     borderRadius: 20,
     zIndex: 2,
@@ -170,11 +171,11 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     backgroundColor: 'rgba(35, 45, 39, 0.88)',
   },
-  unavailableText: { color: '#FFFFFF', fontSize: 12, fontWeight: '700' },
+  unavailableText: { color: theme.colors.textOnAction, fontSize: 12, fontWeight: '700' },
   cardFooter: { padding: 15 },
   rating: { fontWeight: '600', color: '#FFB800', marginBottom: 5 },
   cardTitle: { fontSize: 18, fontWeight: '700', marginBottom: 5 },
-  cardSub: { color: '#666' },
+  cardSub: { color: theme.colors.textSecondary },
 });
 
 export default FavouritesScreen;

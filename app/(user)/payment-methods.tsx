@@ -23,6 +23,7 @@ import {
   type SavedPaymentCard,
   type StoredPaymentMethods,
 } from '@/src/utils/payment-method-storage';
+import theme from '@/src/styles/theme';
 
 const detectBrand = (digits: string): string => {
   if (/^4/.test(digits)) return 'Visa';
@@ -65,7 +66,7 @@ const ScreenHeader = ({ title, onBack }: { title: string; onBack: () => void }) 
       accessibilityRole="button"
       accessibilityLabel="Go back"
     >
-      <Ionicons name="chevron-back" size={24} color="#000" />
+      <Ionicons name="chevron-back" size={24} color={theme.colors.text} />
     </TouchableOpacity>
     <Text style={styles.headerTitle}>{title}</Text>
     <View style={styles.headerSpacer} />
@@ -300,7 +301,7 @@ export default function PaymentMethodScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.emptyContainer}>
-          <ActivityIndicator size="large" color="#4CAF50" />
+          <ActivityIndicator size="large" color={theme.colors.primary} />
         </View>
       </SafeAreaView>
     );
@@ -337,7 +338,12 @@ export default function PaymentMethodScreen() {
 
             <Text style={styles.fieldLabel}>CARD NUMBER</Text>
             <View style={styles.cardInputWrapper}>
-              <Ionicons name="card" size={22} color="#666" style={styles.cardIcon} />
+              <Ionicons
+                name="card"
+                size={22}
+                color={theme.colors.textSecondary}
+                style={styles.cardIcon}
+              />
               <TextInput
                 ref={cardRef}
                 placeholder="1234 5678 9012 3456"
@@ -350,7 +356,7 @@ export default function PaymentMethodScreen() {
                 autoComplete="cc-number"
                 textContentType="creditCardNumber"
                 returnKeyType="next"
-                placeholderTextColor="#a3a3a3ff"
+                placeholderTextColor={theme.colors.placeholder}
                 onSubmitEditing={() => expRef.current?.focus()}
               />
               {brand && <Text style={styles.brandTag}>{brand}</Text>}
@@ -368,7 +374,7 @@ export default function PaymentMethodScreen() {
                   value={formatExpiry(expDigits)}
                   onChangeText={onExpChange}
                   maxLength={5}
-                  placeholderTextColor="#a3a3a3ff"
+                  placeholderTextColor={theme.colors.placeholder}
                   returnKeyType="next"
                 />
               </View>
@@ -384,7 +390,7 @@ export default function PaymentMethodScreen() {
                   onChangeText={onCvcChange}
                   maxLength={expectedCvcLength}
                   secureTextEntry
-                  placeholderTextColor="#a3a3a3ff"
+                  placeholderTextColor={theme.colors.placeholder}
                   returnKeyType="done"
                   onSubmitEditing={handleSubmit}
                 />
@@ -400,14 +406,18 @@ export default function PaymentMethodScreen() {
               disabled={!isComplete || saving || !canMutate}
             >
               {saving ? (
-                <ActivityIndicator color="#fff" />
+                <ActivityIndicator color={theme.colors.textOnAction} />
               ) : (
                 <Text style={styles.primaryButtonText}>Add Card</Text>
               )}
             </TouchableOpacity>
 
             <View style={styles.providerNote}>
-              <Ionicons name="shield-checkmark-outline" size={18} color="#5F6368" />
+              <Ionicons
+                name="shield-checkmark-outline"
+                size={18}
+                color={theme.colors.textSecondary}
+              />
               <Text style={styles.providerNoteText}>
                 A PCI-compliant payment provider must replace this local demo before launch.
               </Text>
@@ -440,7 +450,7 @@ export default function PaymentMethodScreen() {
                     accessibilityLabel={`${card.brand} ending in ${card.last4}`}
                   >
                     <View style={styles.savedCardIcon}>
-                      <Ionicons name="card" size={25} color="#2E7D32" />
+                      <Ionicons name="card" size={25} color={theme.colors.primaryOnLight} />
                     </View>
                     <View style={styles.savedCardDetails}>
                       <View style={styles.savedCardTitleRow}>
@@ -455,7 +465,7 @@ export default function PaymentMethodScreen() {
                     <Ionicons
                       name={isDefault ? 'radio-button-on' : 'radio-button-off'}
                       size={23}
-                      color={isDefault ? '#4CAF50' : '#BDBDBD'}
+                      color={isDefault ? theme.colors.primary : '#BDBDBD'}
                     />
                   </TouchableOpacity>
                   <TouchableOpacity
@@ -464,7 +474,7 @@ export default function PaymentMethodScreen() {
                     accessibilityRole="button"
                     accessibilityLabel={`Remove ${card.brand} ending in ${card.last4}`}
                   >
-                    <Ionicons name="trash-outline" size={19} color="#C62828" />
+                    <Ionicons name="trash-outline" size={19} color={theme.colors.error} />
                   </TouchableOpacity>
                 </View>
               );
@@ -475,7 +485,7 @@ export default function PaymentMethodScreen() {
             style={[styles.addAnotherButton, !canMutate && styles.restrictedAction]}
             onPress={beginAddFlow}
           >
-            <Ionicons name="add-circle-outline" size={22} color="#2E7D32" />
+            <Ionicons name="add-circle-outline" size={22} color={theme.colors.primaryOnLight} />
             <Text style={styles.addAnotherButtonText}>Add another card</Text>
           </TouchableOpacity>
         </ScrollView>
@@ -489,7 +499,7 @@ export default function PaymentMethodScreen() {
       <ScreenHeader title="Payment Methods" onBack={handleBack} />
       <View style={styles.emptyContainer}>
         <View style={styles.iconContainer}>
-          <Ionicons name="card" size={60} color="#4CAF50" />
+          <Ionicons name="card" size={60} color={theme.colors.primary} />
         </View>
         <Text style={styles.emptyTitle}>No payment method added</Text>
         <Text style={styles.emptySubtitle}>
@@ -499,7 +509,7 @@ export default function PaymentMethodScreen() {
           style={[styles.addButton, !canMutate && styles.restrictedAction]}
           onPress={beginAddFlow}
         >
-          <Ionicons name="add" size={20} color="#4CAF50" />
+          <Ionicons name="add" size={20} color={theme.colors.primary} />
           <Text style={styles.addButtonText}> Add a card</Text>
         </TouchableOpacity>
       </View>
@@ -508,7 +518,7 @@ export default function PaymentMethodScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
+  container: { flex: 1, backgroundColor: theme.colors.surface },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -525,23 +535,28 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: '#e8f5e9',
+    backgroundColor: theme.colors.primarySoft,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 20,
   },
   emptyTitle: { fontSize: 22, fontWeight: '700', marginBottom: 10 },
-  emptySubtitle: { fontSize: 16, color: '#666', textAlign: 'center', marginBottom: 30 },
+  emptySubtitle: {
+    fontSize: 16,
+    color: theme.colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: 30,
+  },
   addButton: {
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#4CAF50',
+    borderColor: theme.colors.primary,
     borderRadius: 12,
     paddingVertical: 14,
     paddingHorizontal: 24,
   },
-  addButtonText: { color: '#4CAF50', fontWeight: '600', fontSize: 16 },
+  addButtonText: { color: theme.colors.primary, fontWeight: '600', fontSize: 16 },
   restrictedAction: { opacity: 0.45 },
   formContainer: { padding: 20 },
   demoNotice: {
@@ -562,7 +577,7 @@ const styles = StyleSheet.create({
   fieldLabel: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#888',
+    color: theme.colors.textMuted,
     marginBottom: 6,
     letterSpacing: 0.6,
   },
@@ -570,7 +585,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: theme.colors.border,
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 12,
@@ -581,7 +596,7 @@ const styles = StyleSheet.create({
   brandTag: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#4CAF50',
+    color: theme.colors.primary,
     marginLeft: 8,
   },
   row: { flexDirection: 'row', marginBottom: 30 },
@@ -589,21 +604,21 @@ const styles = StyleSheet.create({
   formColumn: { flex: 1 },
   halfInput: {
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: theme.colors.border,
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 14,
     fontSize: 16,
   },
   primaryButton: {
-    backgroundColor: '#237A3B',
+    backgroundColor: theme.colors.primaryAction,
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
     marginBottom: 15,
   },
-  primaryButtonDisabled: { backgroundColor: '#a5d6a7' },
-  primaryButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  primaryButtonDisabled: { backgroundColor: theme.colors.primaryDisabled },
+  primaryButtonText: { color: theme.colors.textOnAction, fontSize: 16, fontWeight: '600' },
   providerNote: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -614,7 +629,7 @@ const styles = StyleSheet.create({
   },
   providerNoteText: {
     flex: 1,
-    color: '#757575',
+    color: theme.colors.textMuted,
     fontSize: 12,
     lineHeight: 17,
   },
@@ -624,13 +639,13 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   savedTitle: {
-    color: '#1F2937',
+    color: theme.colors.text,
     fontSize: 20,
     fontWeight: '700',
     marginBottom: 5,
   },
   savedSubtitle: {
-    color: '#6B7280',
+    color: theme.colors.textSecondary,
     fontSize: 14,
     lineHeight: 20,
     marginBottom: 20,
@@ -643,9 +658,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: theme.colors.border,
     borderRadius: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.surface,
     overflow: 'hidden',
   },
   defaultCard: {
@@ -664,7 +679,7 @@ const styles = StyleSheet.create({
     width: 46,
     height: 46,
     borderRadius: 13,
-    backgroundColor: '#E8F5E9',
+    backgroundColor: theme.colors.primarySoft,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 13,
@@ -679,12 +694,12 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   savedCardTitle: {
-    color: '#1F2937',
+    color: theme.colors.text,
     fontSize: 15,
     fontWeight: '700',
   },
   defaultPill: {
-    color: '#2E7D32',
+    color: theme.colors.primaryOnLight,
     backgroundColor: '#DFF3E1',
     borderRadius: 999,
     paddingHorizontal: 7,
@@ -716,13 +731,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
     borderWidth: 1.5,
-    borderColor: '#4CAF50',
+    borderColor: theme.colors.primary,
     borderRadius: 14,
     paddingVertical: 15,
     marginBottom: 18,
   },
   addAnotherButtonText: {
-    color: '#2E7D32',
+    color: theme.colors.primaryOnLight,
     fontSize: 16,
     fontWeight: '700',
   },

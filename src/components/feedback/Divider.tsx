@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
+import theme from '@/src/styles/theme';
 
 interface DividerProps {
   thickness?: number;
@@ -9,7 +10,7 @@ interface DividerProps {
 
 const Divider: React.FC<DividerProps> = ({
   thickness = StyleSheet.hairlineWidth,
-  color = '#E0E0E0',
+  color = theme.colors.border,
   marginVertical = 12,
 }) => {
   return (

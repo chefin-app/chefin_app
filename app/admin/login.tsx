@@ -19,6 +19,7 @@ import { fetchAdminSession } from '@/src/admin/api';
 import { useAdminAuth } from '@/src/admin/AdminAuthContext';
 import PrimaryButton from '@/src/components/buttons/PrimaryButton';
 import { TextInputField } from '@/src/components/inputs/TextInputField';
+import { ADMIN_THEME } from '@/src/admin/theme';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -97,7 +98,7 @@ export default function AdminLoginScreen() {
             {wide && (
               <View style={styles.brandPanel}>
                 <View style={styles.brandMark}>
-                  <Ionicons name="restaurant" size={28} color="#FFFFFF" />
+                  <Ionicons name="restaurant" size={28} color={ADMIN_THEME.colors.surface} />
                 </View>
                 <Text style={styles.brandName}>Chefin</Text>
                 <Text style={styles.brandHeadline}>
@@ -118,7 +119,7 @@ export default function AdminLoginScreen() {
               {!wide && (
                 <View style={styles.mobileBrand}>
                   <View style={styles.mobileBrandMark}>
-                    <Ionicons name="restaurant" size={22} color="#FFFFFF" />
+                    <Ionicons name="restaurant" size={22} color={ADMIN_THEME.colors.surface} />
                   </View>
                   <Text style={styles.mobileBrandText}>Chefin Admin</Text>
                 </View>
@@ -168,13 +169,17 @@ export default function AdminLoginScreen() {
 
               {error && (
                 <View style={styles.messageError}>
-                  <Ionicons name="alert-circle" size={18} color="#B42318" />
+                  <Ionicons name="alert-circle" size={18} color={ADMIN_THEME.colors.red} />
                   <Text style={styles.messageErrorText}>{error}</Text>
                 </View>
               )}
               {notice && (
                 <View style={styles.messageSuccess}>
-                  <Ionicons name="checkmark-circle" size={18} color="#237A3B" />
+                  <Ionicons
+                    name="checkmark-circle"
+                    size={18}
+                    color={ADMIN_THEME.colors.greenDark}
+                  />
                   <Text style={styles.messageSuccessText}>{notice}</Text>
                 </View>
               )}
@@ -208,7 +213,7 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 1080,
     alignSelf: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: ADMIN_THEME.colors.surface,
     borderRadius: 28,
     overflow: 'hidden',
     borderWidth: 1,
@@ -231,12 +236,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 24,
   },
-  brandName: { fontFamily: 'mon-b', fontSize: 22, color: '#FFFFFF', marginBottom: 42 },
+  brandName: {
+    fontFamily: 'mon-b',
+    fontSize: 22,
+    color: ADMIN_THEME.colors.surface,
+    marginBottom: 42,
+  },
   brandHeadline: {
     fontFamily: 'mon-b',
     fontSize: 36,
     lineHeight: 46,
-    color: '#FFFFFF',
+    color: ADMIN_THEME.colors.surface,
     marginBottom: 18,
   },
   brandCopy: { fontFamily: 'mon', fontSize: 15, lineHeight: 25, color: '#DDF5E5' },
@@ -258,7 +268,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: '#4CAF50',
+    backgroundColor: ADMIN_THEME.colors.green,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -273,14 +283,19 @@ const styles = StyleSheet.create({
   },
   title: { fontFamily: 'mon-b', fontSize: 32, color: '#1F2923', marginBottom: 9 },
   subtitle: { fontFamily: 'mon', fontSize: 14, lineHeight: 21, color: '#6B746E' },
-  input: { fontFamily: 'mon', height: 52, borderRadius: 12, backgroundColor: '#FBFCFB' },
+  input: {
+    fontFamily: 'mon',
+    height: 52,
+    borderRadius: 12,
+    backgroundColor: ADMIN_THEME.colors.surfaceMuted,
+  },
   passwordField: { position: 'relative' },
   inputWithIcon: {
     fontFamily: 'mon',
     height: 52,
     borderRadius: 12,
     paddingRight: 48,
-    backgroundColor: '#FBFCFB',
+    backgroundColor: ADMIN_THEME.colors.surfaceMuted,
   },
   passwordToggle: { position: 'absolute', right: 14, bottom: 31, padding: 6 },
   forgotButton: { alignSelf: 'flex-end', paddingVertical: 4, marginTop: -5, marginBottom: 18 },
@@ -311,7 +326,12 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     color: '#246238',
   },
-  submitButton: { borderRadius: 12, paddingVertical: 15, backgroundColor: '#4CAF50', elevation: 0 },
+  submitButton: {
+    borderRadius: 12,
+    paddingVertical: 15,
+    backgroundColor: ADMIN_THEME.colors.green,
+    elevation: 0,
+  },
   accessNote: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginTop: 22 },
   accessNoteText: { flex: 1, fontFamily: 'mon', fontSize: 11, lineHeight: 17, color: '#7B8494' },
 });

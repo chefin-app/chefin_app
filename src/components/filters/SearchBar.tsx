@@ -10,6 +10,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import theme from '@/src/styles/theme';
 
 type Props = {
   placeholder?: string;
@@ -30,14 +31,14 @@ const SearchBar = ({
 }: Props) => {
   return (
     <View style={[styles.wrapper, containerStyle]}>
-      <Ionicons name="search" size={20} color="#888" style={styles.icon} />
+      <Ionicons name="search" size={20} color={theme.colors.textMuted} style={styles.icon} />
       <TextInput
         ref={inputRef}
         style={styles.input}
         placeholder={placeholder}
         value={value}
         onChangeText={onChangeText}
-        placeholderTextColor="#888"
+        placeholderTextColor={theme.colors.textMuted}
         onSubmitEditing={() => {
           if (onSubmitEditing) onSubmitEditing();
         }}
@@ -52,7 +53,7 @@ const SearchBar = ({
           accessibilityLabel="Clear search"
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
-          <Ionicons name="close-circle" size={18} color="#888" />
+          <Ionicons name="close-circle" size={18} color={theme.colors.textMuted} />
         </TouchableOpacity>
       )}
     </View>
@@ -82,7 +83,7 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: 14,
-    color: '#333',
+    color: theme.colors.textStrong,
     height: 25,
     paddingVertical: 0,
   },

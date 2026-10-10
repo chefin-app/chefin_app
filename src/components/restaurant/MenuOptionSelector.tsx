@@ -8,6 +8,7 @@ import {
   toggleOptionSelection,
   type MenuOptionSelectionState,
 } from '@/src/utils/menuOptions';
+import theme from '@/src/styles/theme';
 
 interface Props {
   groups: MenuOptionGroup[];
@@ -52,7 +53,7 @@ export default function MenuOptionSelector({ groups, selected, onChange }: Props
                         : 'square-outline'
                   }
                   size={26}
-                  color={disabled ? '#C4CAC6' : checked ? '#20A84F' : '#AAB2AD'}
+                  color={disabled ? '#C4CAC6' : checked ? theme.colors.primary : '#AAB2AD'}
                 />
                 <View style={styles.optionCopy}>
                   <Text style={[styles.optionName, disabled && styles.disabledText]}>

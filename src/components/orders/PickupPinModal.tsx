@@ -14,6 +14,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import theme from '@/src/styles/theme';
 
 type Evidence = { base64: string; uri: string; contentType: string };
 
@@ -145,7 +146,11 @@ export default function PickupPinModal({
         <View style={styles.card}>
           <View style={styles.header}>
             <View style={styles.icon}>
-              <Ionicons name="shield-checkmark-outline" size={22} color="#237A3B" />
+              <Ionicons
+                name="shield-checkmark-outline"
+                size={22}
+                color={theme.colors.primaryAction}
+              />
             </View>
             <View style={styles.flex}>
               <Text style={styles.title}>
@@ -182,7 +187,7 @@ export default function PickupPinModal({
                 onPress={verify}
               >
                 {saving ? (
-                  <ActivityIndicator color="#fff" />
+                  <ActivityIndicator color={theme.colors.textOnAction} />
                 ) : (
                   <Text style={styles.primaryText}>Verify and complete pickup</Text>
                 )}
@@ -206,7 +211,7 @@ export default function PickupPinModal({
                 {evidence ? (
                   <Image source={{ uri: evidence.uri }} style={styles.evidenceThumb} />
                 ) : (
-                  <Ionicons name="camera-outline" size={21} color="#237A3B" />
+                  <Ionicons name="camera-outline" size={21} color={theme.colors.primaryAction} />
                 )}
                 <Text style={styles.evidenceText}>
                   {evidence ? 'Replace evidence photo' : 'Add evidence photo (optional)'}
@@ -218,7 +223,7 @@ export default function PickupPinModal({
                 onPress={submitException}
               >
                 {saving ? (
-                  <ActivityIndicator color="#fff" />
+                  <ActivityIndicator color={theme.colors.textOnAction} />
                 ) : (
                   <Text style={styles.primaryText}>Send to support</Text>
                 )}
@@ -242,7 +247,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 20,
   },
-  card: { width: '100%', maxWidth: 460, backgroundColor: '#fff', borderRadius: 24, padding: 20 },
+  card: {
+    width: '100%',
+    maxWidth: 460,
+    backgroundColor: theme.colors.surface,
+    borderRadius: 24,
+    padding: 20,
+  },
   header: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, marginBottom: 20 },
   icon: {
     width: 42,
@@ -272,13 +283,18 @@ const styles = StyleSheet.create({
     minHeight: 52,
     marginTop: 16,
     borderRadius: 26,
-    backgroundColor: '#258B50',
+    backgroundColor: theme.colors.primaryAction,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 18,
   },
   disabled: { opacity: 0.42 },
-  primaryText: { color: '#fff', fontSize: 15, fontWeight: '800', textAlign: 'center' },
+  primaryText: {
+    color: theme.colors.textOnAction,
+    fontSize: 15,
+    fontWeight: '800',
+    textAlign: 'center',
+  },
   linkButton: { minHeight: 44, alignItems: 'center', justifyContent: 'center', marginTop: 6 },
   linkText: { color: '#356C49', fontSize: 14, fontWeight: '700' },
   reasonInput: {
@@ -304,5 +320,5 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   evidenceThumb: { width: 34, height: 34, borderRadius: 7 },
-  evidenceText: { color: '#237A3B', fontSize: 14, fontWeight: '700' },
+  evidenceText: { color: theme.colors.primaryAction, fontSize: 14, fontWeight: '700' },
 });

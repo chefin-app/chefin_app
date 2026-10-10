@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
 import { useCart } from '@/src/context/CartContext';
+import theme from '@/src/styles/theme';
 
 /**
  * Sticky bottom-right cart entry (bag with an item-count badge). Hidden while
@@ -39,7 +40,7 @@ const styles = StyleSheet.create({
     width: 62,
     height: 62,
     borderRadius: 18,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 1000,
@@ -61,9 +62,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: '#FFFFFF',
+    borderColor: theme.colors.surface,
   },
-  badgeText: { color: '#FFFFFF', fontSize: 10, fontWeight: '800' },
+  badgeText: { color: theme.colors.textOnAction, fontSize: 10, fontWeight: '800' },
 });
 
 export default FloatingCartButton;

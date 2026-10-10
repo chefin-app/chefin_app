@@ -19,6 +19,13 @@ const theme = {
     primaryAction: '#237A3B',
     primarySoft: '#E8F5E9', // tinted backgrounds
     primaryDisabled: '#A5D6A7',
+    /**
+     * Dark green for text and icons sitting on a light background — section
+     * eyebrows, inline links, active filter labels. Consolidates the
+     * near-identical #2E7D32 / #216E39 / #1B5E20 that were used
+     * interchangeably for this role.
+     */
+    primaryOnLight: '#237A3B',
 
     // Surfaces
     background: '#FFFFFF',
@@ -47,6 +54,14 @@ const theme = {
     errorSoft: '#FEF3F2',
     warning: '#8A5B00',
     warningSoft: '#FFF4D6',
+    /** Destructive affordances — delete, clear basket, remove account. */
+    destructive: '#FF4D4D',
+    /**
+     * Secondary action link in the cook console — "Edit", "Add", "Create
+     * schedule". Deliberately blue so it reads as a link rather than a
+     * primary green CTA.
+     */
+    link: '#1473E6',
 
     /** Password-strength meter — four steps, weakest to strongest. */
     strength: {

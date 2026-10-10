@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 
 import NotificationFeed from '@/src/components/notifications/NotificationFeed';
 import { type AppNotification, useNotifications } from '@/src/context/NotificationsContext';
+import theme from '@/src/styles/theme';
 
 export default function CookNotificationsScreen() {
   const router = useRouter();
@@ -92,7 +93,7 @@ export default function CookNotificationsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFFFFF' },
+  container: { flex: 1, backgroundColor: theme.colors.surface },
   header: {
     minHeight: 94,
     flexDirection: 'row',
@@ -107,7 +108,7 @@ const styles = StyleSheet.create({
   eyebrow: { marginBottom: 3, color: '#67806E', fontSize: 9, fontWeight: '900', letterSpacing: 1 },
   title: { color: '#1E2721', fontSize: 27, fontWeight: '900' },
   readAllButton: { minHeight: 40, justifyContent: 'center', paddingHorizontal: 5 },
-  readAllText: { color: '#237A3B', fontSize: 14, fontWeight: '800' },
+  readAllText: { color: theme.colors.primaryAction, fontSize: 14, fontWeight: '800' },
   readAllTextDisabled: { color: '#A6AEA8' },
   feedContainer: { flex: 1 },
 });

@@ -19,6 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { supabase } from '@/src/utils/supabaseClient';
 import { useAuth } from '@/src/services/auth-context';
+import theme from '@/src/styles/theme';
 
 const DISH_IMAGES_BUCKET = 'dish-images';
 const MAX_DIETARY_TAGS = 4;
@@ -334,7 +335,7 @@ export default function EditDishScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color="#4CAF50" />
+          <ActivityIndicator size="large" color={theme.colors.primary} />
         </View>
       </SafeAreaView>
     );
@@ -348,7 +349,7 @@ export default function EditDishScreen() {
       >
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-            <Ionicons name="chevron-back" size={24} color="#1A1A1A" />
+            <Ionicons name="chevron-back" size={24} color={theme.colors.text} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Edit dish</Text>
           <View style={{ width: 40 }} />
@@ -380,12 +381,12 @@ export default function EditDishScreen() {
                 <Image source={{ uri: imageUrl }} style={styles.photo} />
               ) : (
                 <View style={styles.photoPlaceholder}>
-                  <Ionicons name="camera-outline" size={32} color="#999" />
+                  <Ionicons name="camera-outline" size={32} color={theme.colors.placeholder} />
                 </View>
               )}
               {uploadingPhoto && (
                 <View style={styles.photoOverlay}>
-                  <ActivityIndicator color="#fff" />
+                  <ActivityIndicator color={theme.colors.textOnAction} />
                 </View>
               )}
               <View style={styles.photoEditBadge}>
@@ -404,7 +405,7 @@ export default function EditDishScreen() {
               value={title}
               onChangeText={text => setTitle(text.slice(0, 32))}
               placeholder="The American Burger"
-              placeholderTextColor="#bbb"
+              placeholderTextColor={theme.colors.placeholder}
               maxLength={32}
               editable={!isPending}
               returnKeyType="done"
@@ -421,7 +422,7 @@ export default function EditDishScreen() {
               value={description}
               onChangeText={text => setDescription(text.slice(0, 200))}
               placeholder="Double cheeseburger with lettuce, tomato…"
-              placeholderTextColor="#bbb"
+              placeholderTextColor={theme.colors.placeholder}
               multiline
               submitBehavior="newline"
               maxLength={200}
@@ -439,7 +440,7 @@ export default function EditDishScreen() {
               value={ingredientsText}
               onChangeText={text => setIngredientsText(text.slice(0, 500))}
               placeholder={'One ingredient per line\n\nChicken breast\nOlive oil\nGarlic'}
-              placeholderTextColor="#bbb"
+              placeholderTextColor={theme.colors.placeholder}
               multiline
               submitBehavior="newline"
               maxLength={500}
@@ -460,7 +461,7 @@ export default function EditDishScreen() {
                 keyboardType="decimal-pad"
                 inputMode="decimal"
                 placeholder="0.00"
-                placeholderTextColor="#bbb"
+                placeholderTextColor={theme.colors.placeholder}
                 editable={!isPending}
                 returnKeyType="done"
                 submitBehavior="blurAndSubmit"
@@ -480,7 +481,7 @@ export default function EditDishScreen() {
                 value={menuCategory}
                 onChangeText={text => setMenuCategory(text.slice(0, 80))}
                 placeholder="e.g. Nasi Lemak, Pasta, Drinks"
-                placeholderTextColor="#bbb"
+                placeholderTextColor={theme.colors.placeholder}
                 editable={!isPending}
                 returnKeyType="done"
                 submitBehavior="blurAndSubmit"
@@ -574,7 +575,7 @@ export default function EditDishScreen() {
               <Ionicons
                 name={sellingScheduleId == null ? 'radio-button-on' : 'radio-button-off'}
                 size={23}
-                color={sellingScheduleId == null ? '#4CAF50' : '#B7BDB9'}
+                color={sellingScheduleId == null ? theme.colors.primary : theme.colors.placeholder}
               />
             </TouchableOpacity>
             {sellingSchedules.map(schedule => (
@@ -588,7 +589,11 @@ export default function EditDishScreen() {
                 <Ionicons
                   name={sellingScheduleId === schedule.id ? 'radio-button-on' : 'radio-button-off'}
                   size={23}
-                  color={sellingScheduleId === schedule.id ? '#4CAF50' : '#B7BDB9'}
+                  color={
+                    sellingScheduleId === schedule.id
+                      ? theme.colors.primary
+                      : theme.colors.placeholder
+                  }
                 />
               </TouchableOpacity>
             ))}
@@ -604,7 +609,7 @@ export default function EditDishScreen() {
             disabled={saving || removing || isPending}
           >
             {saving ? (
-              <ActivityIndicator color="#fff" />
+              <ActivityIndicator color={theme.colors.textOnAction} />
             ) : (
               <Text style={styles.saveBtnText}>
                 {isPending ? 'Locked until approved' : 'Save changes'}
@@ -619,10 +624,10 @@ export default function EditDishScreen() {
             disabled={saving || removing}
           >
             {removing ? (
-              <ActivityIndicator color="#FF4D4D" />
+              <ActivityIndicator color={theme.colors.destructive} />
             ) : (
               <>
-                <Ionicons name="trash-outline" size={20} color="#FF4D4D" />
+                <Ionicons name="trash-outline" size={20} color={theme.colors.destructive} />
                 <Text style={styles.removeBtnText}>Remove dish</Text>
               </>
             )}
@@ -642,7 +647,7 @@ function extractStoragePath(publicUrl?: string | null): string | null {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
+  container: { flex: 1, backgroundColor: theme.colors.surface },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   header: {
     flexDirection: 'row',
@@ -651,13 +656,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: '#1A1A1A' },
+  headerTitle: { fontSize: 18, fontWeight: '700', color: theme.colors.text },
   backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   pendingBanner: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 8,
-    backgroundColor: '#FFF3E0',
+    backgroundColor: theme.colors.warningSoft,
     borderRadius: 12,
     padding: 12,
     marginBottom: 4,
@@ -673,7 +678,7 @@ const styles = StyleSheet.create({
 
   card: {
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: theme.colors.border,
     borderRadius: 16,
     padding: 14,
     gap: 8,
@@ -681,7 +686,7 @@ const styles = StyleSheet.create({
   cardLabel: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#888',
+    color: theme.colors.textMuted,
     letterSpacing: 0.5,
     textTransform: 'uppercase',
   },
@@ -691,7 +696,7 @@ const styles = StyleSheet.create({
     width: '92%',
     aspectRatio: 4 / 3,
     borderRadius: 12,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: theme.colors.surfaceMuted,
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
@@ -708,24 +713,24 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 10,
     right: 10,
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
   },
-  photoEditBadgeText: { fontSize: 12, fontWeight: '600', color: '#1A1A1A' },
+  photoEditBadgeText: { fontSize: 12, fontWeight: '600', color: theme.colors.text },
 
   input: {
     fontSize: 16,
-    color: '#1A1A1A',
+    color: theme.colors.text,
     paddingVertical: 6,
   },
   inputMultiline: { minHeight: 80 },
-  counter: { fontSize: 12, color: '#888', alignSelf: 'flex-end' },
+  counter: { fontSize: 12, color: theme.colors.textMuted, alignSelf: 'flex-end' },
 
   priceRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  priceCurrency: { fontSize: 20, fontWeight: '700', color: '#1A1A1A' },
-  priceInput: { flex: 1, fontSize: 20, fontWeight: '700', color: '#1A1A1A' },
+  priceCurrency: { fontSize: 20, fontWeight: '700', color: theme.colors.text },
+  priceInput: { flex: 1, fontSize: 20, fontWeight: '700', color: theme.colors.text },
 
   sectionHeaderRow: {
     flexDirection: 'row',
@@ -736,21 +741,21 @@ const styles = StyleSheet.create({
   categoryField: { gap: 8, marginBottom: 18 },
   categoryInput: {
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: theme.colors.border,
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 15,
-    color: '#1A1A1A',
+    color: theme.colors.text,
   },
   sectionLabel: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: theme.colors.text,
     letterSpacing: 0.4,
     textTransform: 'uppercase',
   },
-  sectionHint: { fontSize: 11, color: '#888', fontWeight: '500' },
+  sectionHint: { fontSize: 11, color: theme.colors.textMuted, fontWeight: '500' },
   chipGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 10 },
   chip: {
     width: '31%',
@@ -758,15 +763,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     borderRadius: 22,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
-    backgroundColor: '#fff',
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
     alignItems: 'center',
   },
-  chipSelected: { backgroundColor: '#1A1A1A', borderColor: '#1A1A1A' },
-  chipDisabled: { borderColor: '#F0F0F0', backgroundColor: '#FAFAFA' },
-  chipText: { fontSize: 13, fontWeight: '500', color: '#1A1A1A' },
-  chipTextSelected: { color: '#fff' },
-  chipTextDisabled: { color: '#BBB' },
+  chipSelected: { backgroundColor: theme.colors.text, borderColor: theme.colors.text },
+  chipDisabled: { borderColor: theme.colors.separator, backgroundColor: '#FAFAFA' },
+  chipText: { fontSize: 13, fontWeight: '500', color: theme.colors.text },
+  chipTextSelected: { color: theme.colors.textOnAction },
+  chipTextDisabled: { color: theme.colors.placeholder },
   scheduleHelp: { fontSize: 12, color: '#6D766F', lineHeight: 18 },
   scheduleChoice: {
     minHeight: 58,
@@ -779,17 +784,22 @@ const styles = StyleSheet.create({
   scheduleChoiceCopy: { flex: 1 },
   scheduleChoiceTitle: { flex: 1, fontSize: 14, fontWeight: '700', color: '#252B27' },
   scheduleChoiceMeta: { fontSize: 11, color: '#78817B', marginTop: 3 },
-  createSchedule: { color: '#1473E6', fontSize: 13, fontWeight: '800', paddingVertical: 10 },
+  createSchedule: {
+    color: theme.colors.link,
+    fontSize: 13,
+    fontWeight: '800',
+    paddingVertical: 10,
+  },
 
   saveBtn: {
-    backgroundColor: '#237A3B',
+    backgroundColor: theme.colors.primaryAction,
     borderRadius: 28,
     paddingVertical: 16,
     alignItems: 'center',
     marginTop: 8,
   },
-  saveBtnDisabled: { backgroundColor: '#A5D6A7' },
-  saveBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  saveBtnDisabled: { backgroundColor: theme.colors.primaryDisabled },
+  saveBtnText: { color: theme.colors.textOnAction, fontSize: 16, fontWeight: '700' },
 
   removeBtn: {
     flexDirection: 'row',
@@ -798,5 +808,5 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     gap: 6,
   },
-  removeBtnText: { color: '#FF4D4D', fontSize: 15, fontWeight: '700' },
+  removeBtnText: { color: theme.colors.destructive, fontSize: 15, fontWeight: '700' },
 });

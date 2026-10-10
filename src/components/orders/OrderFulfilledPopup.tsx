@@ -8,6 +8,7 @@ import {
   type NotificationRole,
   useNotifications,
 } from '@/src/context/NotificationsContext';
+import theme from '@/src/styles/theme';
 
 interface OrderFulfilledPopupProps {
   role: NotificationRole | null;
@@ -108,7 +109,7 @@ export default function OrderFulfilledPopup({ role }: OrderFulfilledPopupProps) 
           </TouchableOpacity>
 
           <View style={styles.iconCircle}>
-            <Ionicons name="checkmark" size={38} color="#FFFFFF" />
+            <Ionicons name="checkmark" size={38} color={theme.colors.textOnAction} />
           </View>
           <Text style={styles.title}>Order fulfilled!</Text>
           <Text style={styles.body}>
@@ -158,7 +159,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 26,
     paddingTop: 38,
     paddingBottom: 24,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.surface,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.16,
@@ -211,7 +212,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#42C975',
   },
   primaryButtonText: {
-    color: '#FFFFFF',
+    color: theme.colors.textOnAction,
     fontFamily: 'mon-b',
     fontSize: 15,
   },

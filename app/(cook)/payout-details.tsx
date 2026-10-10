@@ -27,6 +27,7 @@ import {
   PaymentSettingsButton,
   paymentSettingsStyles,
 } from '@/src/components/settings/PaymentSettingsUI';
+import theme from '@/src/styles/theme';
 
 const DISH_IMAGES_BUCKET = 'dish-images';
 
@@ -269,7 +270,7 @@ export default function PayoutDetailsScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color="#4CAF50" />
+          <ActivityIndicator size="large" color={theme.colors.primary} />
         </View>
       </SafeAreaView>
     );
@@ -297,12 +298,12 @@ export default function PayoutDetailsScreen() {
                 style={styles.optionsLink}
                 onPress={() => router.push('/(cook)/direct-payment-settings')}
               >
-                <Ionicons name="qr-code-outline" size={24} color="#4CAF50" />
+                <Ionicons name="qr-code-outline" size={24} color={theme.colors.primary} />
                 <View style={styles.optionsText}>
                   <Text style={styles.sectionTitle}>Customer Payment Options</Text>
                   <Text style={styles.body}>DuitNow QR and pay on collection</Text>
                 </View>
-                <Ionicons name="chevron-forward" size={20} color="#666" />
+                <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
               </TouchableOpacity>
               <Text style={styles.sectionTitle}>Payout details</Text>
             </>
@@ -317,7 +318,12 @@ export default function PayoutDetailsScreen() {
 
           <Text style={styles.fieldLabel}>BANK ACCOUNT NAME</Text>
           <View style={styles.inputWrapper}>
-            <Ionicons name="person-outline" size={20} color="#666" style={styles.inputIcon} />
+            <Ionicons
+              name="person-outline"
+              size={20}
+              color={theme.colors.textSecondary}
+              style={styles.inputIcon}
+            />
             <TextInput
               ref={accountNameRef}
               placeholder="Full name as registered with your bank"
@@ -333,7 +339,12 @@ export default function PayoutDetailsScreen() {
 
           <Text style={styles.fieldLabel}>BANK ACCOUNT NUMBER</Text>
           <View style={styles.inputWrapper}>
-            <Ionicons name="keypad-outline" size={20} color="#666" style={styles.inputIcon} />
+            <Ionicons
+              name="keypad-outline"
+              size={20}
+              color={theme.colors.textSecondary}
+              style={styles.inputIcon}
+            />
             <TextInput
               ref={accountNumberRef}
               placeholder="e.g. 1122334455"
@@ -367,11 +378,16 @@ export default function PayoutDetailsScreen() {
 const styles = StyleSheet.create({
   ...paymentSettingsStyles,
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  instruction: { fontSize: 14, color: '#666', marginBottom: 20, textAlign: 'center' },
+  instruction: {
+    fontSize: 14,
+    color: theme.colors.textSecondary,
+    marginBottom: 20,
+    textAlign: 'center',
+  },
   inputIcon: { marginRight: 10 },
   disclaimer: {
     fontSize: 11,
-    color: '#999',
+    color: theme.colors.placeholder,
     textAlign: 'center',
     marginTop: 8,
     fontStyle: 'italic',
@@ -381,7 +397,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: theme.colors.border,
     borderRadius: 12,
     padding: 16,
     marginBottom: 28,

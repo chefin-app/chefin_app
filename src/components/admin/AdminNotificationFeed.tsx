@@ -10,17 +10,34 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { AdminActivityItem } from '@/src/admin/types';
+import { ADMIN_THEME } from '@/src/admin/theme';
 
 const ACTIVITY_META: Record<
   AdminActivityItem['type'],
   { icon: React.ComponentProps<typeof Ionicons>['name']; color: string; background: string }
 > = {
-  alert: { icon: 'warning-outline', color: '#B42318', background: '#FEE4E2' },
-  report: { icon: 'flag-outline', color: '#B42318', background: '#FEE4E2' },
-  verification: { icon: 'shield-checkmark-outline', color: '#9A6700', background: '#FFF1C2' },
-  order: { icon: 'receipt-outline', color: '#175CD3', background: '#E8F1FF' },
-  payment: { icon: 'card-outline', color: '#9A6700', background: '#FFF1C2' },
-  cook: { icon: 'restaurant-outline', color: '#237A3B', background: '#E8F7ED' },
+  alert: {
+    icon: 'warning-outline',
+    color: ADMIN_THEME.colors.red,
+    background: ADMIN_THEME.status.danger.background,
+  },
+  report: {
+    icon: 'flag-outline',
+    color: ADMIN_THEME.colors.red,
+    background: ADMIN_THEME.status.danger.background,
+  },
+  verification: {
+    icon: 'shield-checkmark-outline',
+    color: ADMIN_THEME.colors.amber,
+    background: ADMIN_THEME.status.warning.background,
+  },
+  order: { icon: 'receipt-outline', color: ADMIN_THEME.colors.blue, background: '#E8F1FF' },
+  payment: {
+    icon: 'card-outline',
+    color: ADMIN_THEME.colors.amber,
+    background: ADMIN_THEME.status.warning.background,
+  },
+  cook: { icon: 'restaurant-outline', color: ADMIN_THEME.colors.greenDark, background: '#E8F7ED' },
   user: { icon: 'person-outline', color: '#475467', background: '#EEF0F3' },
 };
 
@@ -92,7 +109,7 @@ export default function AdminNotificationFeed({
 
       {loading ? (
         <View style={styles.loadingState}>
-          <ActivityIndicator color="#4CAF50" />
+          <ActivityIndicator color={ADMIN_THEME.colors.green} />
         </View>
       ) : items.length === 0 ? (
         <View style={styles.emptyState}>
@@ -153,7 +170,7 @@ export default function AdminNotificationFeed({
 const styles = StyleSheet.create({
   panel: {
     maxHeight: 540,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: ADMIN_THEME.colors.surface,
     borderRadius: 18,
     borderWidth: 1,
     borderColor: '#E4EAE6',
@@ -171,10 +188,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#EDF1EE',
+    borderBottomColor: ADMIN_THEME.colors.borderSoft,
   },
   title: { fontFamily: 'mon-b', fontSize: 15, color: '#1F2923' },
-  subtitle: { fontFamily: 'mon', fontSize: 10, color: '#8A938D', marginTop: 3 },
+  subtitle: { fontFamily: 'mon', fontSize: 10, color: ADMIN_THEME.colors.textMuted, marginTop: 3 },
   markAllButton: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: 5 },
   markAllText: { fontFamily: 'mon-sb', fontSize: 11, color: '#258B50' },
   markAllTextDisabled: { color: '#AAB2AD' },
@@ -211,10 +228,15 @@ const styles = StyleSheet.create({
   avatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#EEF2EF' },
   icon: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   rowBody: { flex: 1 },
-  rowTitle: { fontFamily: 'mon', fontSize: 12, lineHeight: 17, color: '#344039' },
+  rowTitle: {
+    fontFamily: 'mon',
+    fontSize: 12,
+    lineHeight: 17,
+    color: ADMIN_THEME.colors.textStrong,
+  },
   rowTitleUnread: { fontFamily: 'mon-sb', color: '#1F2923' },
   rowText: { fontFamily: 'mon', fontSize: 10, color: '#707A73', marginTop: 2 },
-  rowTime: { fontFamily: 'mon', fontSize: 10, color: '#9AA29D', marginTop: 5 },
+  rowTime: { fontFamily: 'mon', fontSize: 10, color: ADMIN_THEME.colors.textSubtle, marginTop: 5 },
   rowTrailing: { minHeight: 40, alignItems: 'center', justifyContent: 'space-between' },
   unreadDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#3BA7F2', marginTop: 5 },
 });

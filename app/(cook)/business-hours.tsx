@@ -17,6 +17,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/src/services/auth-context';
+import theme from '@/src/styles/theme';
 
 type OpeningWindow = {
   isoWeekday: number;
@@ -347,7 +348,7 @@ export default function BusinessHoursScreen() {
     return (
       <SafeAreaView style={styles.page}>
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color="#00B85A" />
+          <ActivityIndicator size="large" color={theme.colors.primary} />
         </View>
       </SafeAreaView>
     );
@@ -371,7 +372,7 @@ export default function BusinessHoursScreen() {
           <View style={styles.calendarIllustration}>
             <Ionicons name="calendar" size={42} color="#51CD83" />
             <View style={styles.clockBadge}>
-              <Ionicons name="time" size={17} color="#FFFFFF" />
+              <Ionicons name="time" size={17} color={theme.colors.textOnAction} />
             </View>
           </View>
           <Text style={styles.introTitle}>Special Hours</Text>
@@ -453,7 +454,11 @@ export default function BusinessHoursScreen() {
         </View>
 
         <View style={styles.infoCard}>
-          <Ionicons name="information-circle-outline" size={22} color="#237A3B" />
+          <Ionicons
+            name="information-circle-outline"
+            size={22}
+            color={theme.colors.primaryAction}
+          />
           <Text style={styles.infoText}>
             Approved dishes automatically follow these hours. If an item sells out, switch it off in
             Menu; it will become available again on your next open day.
@@ -468,7 +473,7 @@ export default function BusinessHoursScreen() {
           onPress={saveWeeklyHours}
         >
           {saving ? (
-            <ActivityIndicator color="#FFFFFF" />
+            <ActivityIndicator color={theme.colors.textOnAction} />
           ) : (
             <Text style={styles.saveText}>Save changes</Text>
           )}
@@ -509,7 +514,7 @@ export default function BusinessHoursScreen() {
               <Ionicons
                 name={weeklyClosed ? 'checkbox' : 'square-outline'}
                 size={25}
-                color={weeklyClosed ? '#00A651' : '#AEB5B0'}
+                color={weeklyClosed ? theme.colors.primary : '#AEB5B0'}
               />
               <Text style={styles.checkLabel}>Closed</Text>
             </TouchableOpacity>
@@ -564,7 +569,7 @@ export default function BusinessHoursScreen() {
                 markedDates={Object.fromEntries(
                   [...specialDates].map(date => [
                     date,
-                    { selected: true, selectedColor: '#00A651' },
+                    { selected: true, selectedColor: theme.colors.primary },
                   ])
                 )}
                 onDayPress={(day: DateData) =>
@@ -575,7 +580,7 @@ export default function BusinessHoursScreen() {
                     return next;
                   })
                 }
-                theme={{ todayTextColor: '#00A651', arrowColor: '#00A651' }}
+                theme={{ todayTextColor: theme.colors.primary, arrowColor: theme.colors.primary }}
               />
             </View>
             <Text style={styles.fieldLabel}>Availability</Text>
@@ -584,7 +589,7 @@ export default function BusinessHoursScreen() {
               <Ionicons
                 name={specialClosed ? 'radio-button-on' : 'radio-button-off'}
                 size={25}
-                color={specialClosed ? '#00A651' : '#AEB5B0'}
+                color={specialClosed ? theme.colors.primary : '#AEB5B0'}
               />
             </TouchableOpacity>
             <TouchableOpacity style={styles.radioRow} onPress={() => setSpecialClosed(false)}>
@@ -592,7 +597,7 @@ export default function BusinessHoursScreen() {
               <Ionicons
                 name={!specialClosed ? 'radio-button-on' : 'radio-button-off'}
                 size={25}
-                color={!specialClosed ? '#00A651' : '#AEB5B0'}
+                color={!specialClosed ? theme.colors.primary : '#AEB5B0'}
               />
             </TouchableOpacity>
             {!specialClosed && (
@@ -617,7 +622,7 @@ export default function BusinessHoursScreen() {
               onPress={saveSpecialHours}
             >
               {specialSaving ? (
-                <ActivityIndicator color="#FFFFFF" />
+                <ActivityIndicator color={theme.colors.textOnAction} />
               ) : (
                 <Text style={styles.saveText}>Confirm Special Hours</Text>
               )}
@@ -692,7 +697,7 @@ function PeriodEditor({
 }
 
 const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: '#FFFFFF' },
+  page: { flex: 1, backgroundColor: theme.colors.surface },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   flex: { flex: 1 },
   header: { height: 72, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, gap: 8 },
@@ -742,9 +747,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 27,
-    backgroundColor: '#00B85A',
+    backgroundColor: theme.colors.primary,
   },
-  primaryWideText: { color: '#FFFFFF', fontSize: 17, fontWeight: '800' },
+  primaryWideText: { color: theme.colors.textOnAction, fontSize: 17, fontWeight: '800' },
   sectionCard: {
     paddingHorizontal: 20,
     paddingTop: 24,
@@ -767,7 +772,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#E5E8E6',
+    borderBottomColor: theme.colors.border,
   },
   dayLabel: { width: 94, color: '#333A35', fontSize: 15, fontWeight: '600' },
   dayHours: { flex: 1, color: '#555D58', fontSize: 14, lineHeight: 20, textAlign: 'right' },
@@ -788,7 +793,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#E5E8E6',
+    borderBottomColor: theme.colors.border,
   },
   specialDate: { color: '#28302B', fontSize: 14, fontWeight: '700' },
   specialStatus: { marginTop: 4, color: '#59615C', fontSize: 13 },
@@ -807,17 +812,17 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     paddingBottom: 18,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: '#E5E8E6',
-    backgroundColor: '#FFFFFF',
+    borderTopColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
   },
   saveButton: {
     minHeight: 54,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 27,
-    backgroundColor: '#00B85A',
+    backgroundColor: theme.colors.primary,
   },
-  saveText: { color: '#FFFFFF', fontSize: 17, fontWeight: '800' },
+  saveText: { color: theme.colors.textOnAction, fontSize: 17, fontWeight: '800' },
   disabled: { opacity: 0.45 },
   backdrop: {
     flex: 1,
@@ -832,7 +837,7 @@ const styles = StyleSheet.create({
     maxHeight: '88%',
     padding: 22,
     borderRadius: 24,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.surface,
   },
   modalTitle: { color: '#202521', fontSize: 22, fontWeight: '800', textAlign: 'center' },
   dayPicker: { flexDirection: 'row', justifyContent: 'space-between', gap: 5, marginTop: 22 },
@@ -895,17 +900,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 26,
-    backgroundColor: '#00B85A',
+    backgroundColor: theme.colors.primary,
   },
   specialForm: { paddingHorizontal: 18, paddingBottom: 30 },
-  fieldLabel: { marginTop: 18, marginBottom: 8, color: '#343A36', fontSize: 15, fontWeight: '700' },
+  fieldLabel: {
+    marginTop: 18,
+    marginBottom: 8,
+    color: theme.colors.textStrong,
+    fontSize: 15,
+    fontWeight: '700',
+  },
   input: {
     minHeight: 56,
     paddingHorizontal: 16,
     borderWidth: 1,
     borderColor: '#CDD2CF',
     borderRadius: 16,
-    color: '#242A26',
+    color: theme.colors.text,
     fontSize: 16,
   },
   calendarCard: { overflow: 'hidden', borderWidth: 1, borderColor: '#E1E5E2', borderRadius: 16 },

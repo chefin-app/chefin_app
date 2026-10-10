@@ -13,6 +13,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { BaseText } from '@/src/components/typography';
 import { createShadowStyle } from '../../utils/platform-utils';
+import theme from '@/src/styles/theme';
 
 type DropdownSelectProps = {
   label?: string;
@@ -56,7 +57,7 @@ export const DropdownSelect = ({
         >
           {selectedOption ? selectedOption.label : placeholder}
         </Text>
-        <Ionicons name="chevron-down" size={20} color="#666" />
+        <Ionicons name="chevron-down" size={20} color={theme.colors.textSecondary} />
       </TouchableOpacity>
 
       <Modal
@@ -92,7 +93,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    color: '#333',
+    color: theme.colors.textStrong,
     marginBottom: 8,
     fontWeight: '500',
   },
@@ -101,19 +102,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     height: 50,
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
     borderRadius: 12,
     paddingHorizontal: 16,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: theme.colors.border,
   },
   dropdownButtonText: {
     fontSize: 16,
-    color: '#333',
+    color: theme.colors.textStrong,
     flex: 1,
   },
   placeholderText: {
-    color: '#999',
+    color: theme.colors.placeholder,
   },
   modalOverlay: {
     flex: 1,
@@ -126,7 +127,7 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 350,
     maxHeight: '70%',
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
     borderRadius: 12,
     ...createShadowStyle({
       shadowColor: '#000',
@@ -140,10 +141,10 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     paddingHorizontal: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: theme.colors.separator,
   },
   optionText: {
     fontSize: 16,
-    color: '#333',
+    color: theme.colors.textStrong,
   },
 });

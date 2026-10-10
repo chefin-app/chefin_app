@@ -17,6 +17,7 @@ import type { AdminActivityItem } from '@/src/admin/types';
 import { useAdminAuth } from '@/src/admin/AdminAuthContext';
 import { useAuth } from '@/src/services/auth-context';
 import AdminNotificationFeed from './AdminNotificationFeed';
+import { ADMIN_THEME } from '@/src/admin/theme';
 
 type NavItem = {
   key: string;
@@ -166,7 +167,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
     <View style={styles.sidebarInner}>
       <View style={styles.brandRow}>
         <View style={styles.brandIcon}>
-          <Ionicons name="restaurant" size={20} color="#FFFFFF" />
+          <Ionicons name="restaurant" size={20} color={ADMIN_THEME.colors.surface} />
         </View>
         <View>
           <Text style={styles.brandName}>Chefin</Text>
@@ -192,7 +193,11 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
               accessibilityState={{ selected: active }}
               accessibilityHint={item.route ? undefined : 'Planned for a later dashboard phase'}
             >
-              <Ionicons name={item.icon} size={19} color={active ? '#FFFFFF' : '#59665E'} />
+              <Ionicons
+                name={item.icon}
+                size={19}
+                color={active ? ADMIN_THEME.colors.surface : '#59665E'}
+              />
               <Text style={[styles.navItemText, active && styles.navItemTextActive]}>
                 {item.label}
               </Text>
@@ -210,7 +215,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
         <View style={styles.soonDot} />
       </TouchableOpacity>
       <TouchableOpacity style={[styles.navItem, styles.logoutItem]} onPress={handleLogout}>
-        <Ionicons name="log-out-outline" size={19} color="#B42318" />
+        <Ionicons name="log-out-outline" size={19} color={ADMIN_THEME.colors.red} />
         <Text style={styles.logoutText}>Logout</Text>
       </TouchableOpacity>
     </View>
@@ -248,7 +253,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
               <Ionicons
                 name={notificationsOpen ? 'notifications' : 'notifications-outline'}
                 size={22}
-                color="#344039"
+                color={ADMIN_THEME.colors.textStrong}
               />
               {unreadCount > 0 && (
                 <View style={styles.badge}>
@@ -291,7 +296,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
 
         {comingSoon && (
           <View style={styles.comingSoonBanner}>
-            <Ionicons name="sparkles-outline" size={17} color="#237A3B" />
+            <Ionicons name="sparkles-outline" size={17} color={ADMIN_THEME.colors.greenDark} />
             <Text style={styles.comingSoonText}>{comingSoon}</Text>
           </View>
         )}
@@ -302,12 +307,12 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
 }
 
 const styles = StyleSheet.create({
-  page: { flex: 1, flexDirection: 'row', backgroundColor: '#F4F6F8' },
+  page: { flex: 1, flexDirection: 'row', backgroundColor: ADMIN_THEME.colors.page },
   sidebar: {
     width: 248,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: ADMIN_THEME.colors.surface,
     borderRightWidth: 1,
-    borderRightColor: '#E8ECE9',
+    borderRightColor: ADMIN_THEME.colors.borderSoft,
   },
   sidebarInner: { flex: 1, paddingHorizontal: 18, paddingTop: 24, paddingBottom: 20 },
   brandRow: {
@@ -321,7 +326,7 @@ const styles = StyleSheet.create({
     width: 39,
     height: 39,
     borderRadius: 12,
-    backgroundColor: '#4CAF50',
+    backgroundColor: ADMIN_THEME.colors.green,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -338,7 +343,7 @@ const styles = StyleSheet.create({
     fontFamily: 'mon-b',
     fontSize: 9,
     letterSpacing: 1.3,
-    color: '#A0A8A3',
+    color: ADMIN_THEME.colors.textSubtle,
     paddingHorizontal: 12,
     marginBottom: 10,
   },
@@ -351,22 +356,27 @@ const styles = StyleSheet.create({
     gap: 11,
     paddingHorizontal: 13,
   },
-  navItemActive: { backgroundColor: '#4CAF50' },
+  navItemActive: { backgroundColor: ADMIN_THEME.colors.green },
   navItemText: { flex: 1, fontFamily: 'mon-sb', fontSize: 12, color: '#4B5850' },
-  navItemTextActive: { color: '#FFFFFF' },
+  navItemTextActive: { color: ADMIN_THEME.colors.surface },
   soonDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: '#CDD3CF' },
   sidebarSpacer: { flex: 1, minHeight: 28 },
   logoutItem: { marginTop: 5 },
-  logoutText: { fontFamily: 'mon-sb', fontSize: 12, color: '#B42318' },
+  logoutText: { fontFamily: 'mon-sb', fontSize: 12, color: ADMIN_THEME.colors.red },
   mobileOverlay: { ...StyleSheet.absoluteFill, zIndex: 100 },
   mobileBackdrop: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(17, 27, 20, 0.38)' },
-  mobileSidebar: { width: 282, maxWidth: '86%', height: '100%', backgroundColor: '#FFFFFF' },
+  mobileSidebar: {
+    width: 282,
+    maxWidth: '86%',
+    height: '100%',
+    backgroundColor: ADMIN_THEME.colors.surface,
+  },
   workspace: { flex: 1, minWidth: 0 },
   workspaceDesktop: { marginLeft: 0 },
   topbar: {
     position: 'relative',
     height: 72,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: ADMIN_THEME.colors.surface,
     borderBottomWidth: 1,
     borderBottomColor: '#E9EDEA',
     flexDirection: 'row',
@@ -399,11 +409,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: '#F04438',
     borderWidth: 2,
-    borderColor: '#FFFFFF',
+    borderColor: ADMIN_THEME.colors.surface,
   },
-  badgeText: { fontFamily: 'mon-b', fontSize: 8, color: '#FFFFFF' },
+  badgeText: { fontFamily: 'mon-b', fontSize: 8, color: ADMIN_THEME.colors.surface },
   profileDivider: { width: 1, height: 30, backgroundColor: '#E5EAE7', marginHorizontal: 16 },
-  profileImage: { width: 38, height: 38, borderRadius: 12, backgroundColor: '#EDF1EE' },
+  profileImage: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: ADMIN_THEME.colors.borderSoft,
+  },
   profileFallback: {
     width: 38,
     height: 38,
@@ -412,10 +427,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: '#DFF5E6',
   },
-  profileFallbackText: { fontFamily: 'mon-b', fontSize: 12, color: '#237A3B' },
+  profileFallbackText: { fontFamily: 'mon-b', fontSize: 12, color: ADMIN_THEME.colors.greenDark },
   profileText: { marginLeft: 10, maxWidth: 160 },
   profileName: { fontFamily: 'mon-sb', fontSize: 12, color: '#28342D' },
-  profileRole: { fontFamily: 'mon', fontSize: 9, color: '#8A938D', marginTop: 2 },
+  profileRole: {
+    fontFamily: 'mon',
+    fontSize: 9,
+    color: ADMIN_THEME.colors.textMuted,
+    marginTop: 2,
+  },
   comingSoonBanner: {
     flexDirection: 'row',
     alignItems: 'center',

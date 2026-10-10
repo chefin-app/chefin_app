@@ -32,6 +32,7 @@ import {
   saveRestaurantDiscoveryLocation,
   type RestaurantDiscoveryLocationDraft,
 } from '@/src/utils/restaurantLocation';
+import theme from '@/src/styles/theme';
 
 // ── Constants ───────────────────────────────────────────────────────
 const RESTAURANT_NAME_LIMIT = 40;
@@ -809,7 +810,7 @@ export default function StartRestaurantWizard() {
               value={restaurantName}
               onChangeText={t => setRestaurantName(t.slice(0, RESTAURANT_NAME_LIMIT))}
               placeholder="e.g. Sarah's Home Kitchen"
-              placeholderTextColor="#bbb"
+              placeholderTextColor={theme.colors.placeholder}
               autoFocus
               autoCapitalize="words"
             />
@@ -826,13 +827,13 @@ export default function StartRestaurantWizard() {
               <>
                 <Image source={{ uri: photoUri }} style={styles.photoPreview} />
                 <View style={styles.photoEditBadge}>
-                  <Ionicons name="pencil" size={14} color="#1A1A1A" />
+                  <Ionicons name="pencil" size={14} color={theme.colors.text} />
                   <Text style={styles.photoEditBadgeText}>Change</Text>
                 </View>
               </>
             ) : (
               <View style={styles.photoPlaceholder}>
-                <Ionicons name="camera-outline" size={36} color="#999" />
+                <Ionicons name="camera-outline" size={36} color={theme.colors.placeholder} />
                 <Text style={styles.photoPlaceholderText}>Tap to add a photo</Text>
               </View>
             )}
@@ -847,7 +848,7 @@ export default function StartRestaurantWizard() {
               value={title}
               onChangeText={t => setTitle(t.slice(0, TITLE_LIMIT))}
               placeholder="e.g. The American Burger"
-              placeholderTextColor="#bbb"
+              placeholderTextColor={theme.colors.placeholder}
               multiline
               submitBehavior="newline"
               autoFocus
@@ -867,7 +868,7 @@ export default function StartRestaurantWizard() {
               value={description}
               onChangeText={t => setDescription(t.slice(0, DESCRIPTION_LIMIT))}
               placeholder="Double cheeseburger with lettuce, tomato…"
-              placeholderTextColor="#bbb"
+              placeholderTextColor={theme.colors.placeholder}
               multiline
               submitBehavior="newline"
               autoFocus
@@ -887,7 +888,7 @@ export default function StartRestaurantWizard() {
               value={ingredientsText}
               onChangeText={t => setIngredientsText(t.slice(0, INGREDIENTS_LIMIT))}
               placeholder={'One ingredient per line\n\nChicken breast\nOlive oil\nGarlic'}
-              placeholderTextColor="#bbb"
+              placeholderTextColor={theme.colors.placeholder}
               multiline
               submitBehavior="newline"
               autoFocus
@@ -978,7 +979,12 @@ export default function StartRestaurantWizard() {
                 inputMode="decimal"
                 selectTextOnFocus
               />
-              <Ionicons name="pencil" size={20} color="#888" style={styles.priceEditIcon} />
+              <Ionicons
+                name="pencil"
+                size={20}
+                color={theme.colors.textMuted}
+                style={styles.priceEditIcon}
+              />
             </View>
             <Text style={styles.priceEditHint}>Tap the price to edit it</Text>
             <View style={styles.priceAdjustRow}>
@@ -1000,7 +1006,7 @@ export default function StartRestaurantWizard() {
           <View style={{ gap: 12 }}>
             {/* Autocomplete search (OpenStreetMap / Nominatim) */}
             <View style={[styles.searchWrap, addressLocationError && styles.searchWrapError]}>
-              <Ionicons name="search" size={18} color="#888" />
+              <Ionicons name="search" size={18} color={theme.colors.textMuted} />
               <TextInput
                 ref={addressSearchRef}
                 style={styles.searchInput}
@@ -1010,20 +1016,20 @@ export default function StartRestaurantWizard() {
                   setAddressLocationError(null);
                 }}
                 placeholder="Search for your address"
-                placeholderTextColor="#bbb"
+                placeholderTextColor={theme.colors.placeholder}
                 autoCorrect={false}
                 autoCapitalize="none"
               />
-              {addrSearching && <ActivityIndicator size="small" color="#888" />}
+              {addrSearching && <ActivityIndicator size="small" color={theme.colors.textMuted} />}
               {addrSearchQuery.length > 0 && !addrSearching && (
                 <TouchableOpacity onPress={() => setAddrSearchQuery('')} hitSlop={8}>
-                  <Ionicons name="close-circle" size={18} color="#bbb" />
+                  <Ionicons name="close-circle" size={18} color={theme.colors.placeholder} />
                 </TouchableOpacity>
               )}
             </View>
             {addressLocationError && (
               <View style={styles.locationErrorRow}>
-                <Ionicons name="alert-circle" size={18} color="#C62828" />
+                <Ionicons name="alert-circle" size={18} color={theme.colors.error} />
                 <Text style={styles.locationErrorText}>{addressLocationError}</Text>
               </View>
             )}
@@ -1036,7 +1042,11 @@ export default function StartRestaurantWizard() {
                     style={styles.suggestionRow}
                     onPress={() => selectAddrSuggestion(s)}
                   >
-                    <Ionicons name="location-outline" size={18} color="#666" />
+                    <Ionicons
+                      name="location-outline"
+                      size={18}
+                      color={theme.colors.textSecondary}
+                    />
                     <Text style={styles.suggestionText} numberOfLines={2}>
                       {s.display_name}
                     </Text>
@@ -1074,7 +1084,7 @@ export default function StartRestaurantWizard() {
                       }
                     }}
                     placeholder={required ? '' : '(optional)'}
-                    placeholderTextColor="#bbb"
+                    placeholderTextColor={theme.colors.placeholder}
                     keyboardType={numeric ? 'number-pad' : 'default'}
                     autoCapitalize="words"
                   />
@@ -1105,7 +1115,7 @@ export default function StartRestaurantWizard() {
             />
             <View style={styles.divider} />
             <View style={styles.tierCallout}>
-              <Ionicons name="shield-checkmark" size={20} color="#4CAF50" />
+              <Ionicons name="shield-checkmark" size={20} color={theme.colors.primary} />
               <View style={{ flex: 1 }}>
                 <Text style={styles.tierCalloutTitle}>Optional food-safety credentials</Text>
                 <Text style={styles.tierCalloutBody}>
@@ -1133,7 +1143,11 @@ export default function StartRestaurantWizard() {
                     {asset ? (
                       asset.isPdf ? (
                         <View style={styles.pdfBadge}>
-                          <Ionicons name="document-text-outline" size={32} color="#1A1A1A" />
+                          <Ionicons
+                            name="document-text-outline"
+                            size={32}
+                            color={theme.colors.text}
+                          />
                           <Text style={styles.pdfBadgeText} numberOfLines={1}>
                             {asset.name}
                           </Text>
@@ -1144,7 +1158,7 @@ export default function StartRestaurantWizard() {
                       )
                     ) : (
                       <View style={styles.pdfBadge}>
-                        <Ionicons name="add" size={32} color="#888" />
+                        <Ionicons name="add" size={32} color={theme.colors.textMuted} />
                         <Text style={styles.pdfBadgeHint}>Upload a photo, scan or PDF</Text>
                       </View>
                     )}
@@ -1183,7 +1197,7 @@ export default function StartRestaurantWizard() {
               }}
             />
             <View style={styles.tierCallout}>
-              <Ionicons name="lock-closed-outline" size={20} color="#237A3B" />
+              <Ionicons name="lock-closed-outline" size={20} color={theme.colors.primaryAction} />
               <View style={{ flex: 1 }}>
                 <Text style={styles.tierCalloutTitle}>Private identity review</Text>
                 <Text style={styles.tierCalloutBody}>
@@ -1202,7 +1216,11 @@ export default function StartRestaurantWizard() {
                   {identityDocument ? (
                     identityDocument.isPdf ? (
                       <View style={styles.pdfBadge}>
-                        <Ionicons name="document-lock-outline" size={32} color="#1A1A1A" />
+                        <Ionicons
+                          name="document-lock-outline"
+                          size={32}
+                          color={theme.colors.text}
+                        />
                         <Text style={styles.pdfBadgeText}>{identityDocument.name}</Text>
                         <Text style={styles.pdfBadgeHint}>Tap to replace</Text>
                       </View>
@@ -1211,7 +1229,7 @@ export default function StartRestaurantWizard() {
                     )
                   ) : (
                     <View style={styles.pdfBadge}>
-                      <Ionicons name="add" size={32} color="#888" />
+                      <Ionicons name="add" size={32} color={theme.colors.textMuted} />
                       <Text style={styles.pdfBadgeHint}>Upload a photo, scan or PDF</Text>
                     </View>
                   )}
@@ -1234,7 +1252,7 @@ export default function StartRestaurantWizard() {
                 <Ionicons
                   name="person-outline"
                   size={20}
-                  color="#666"
+                  color={theme.colors.textSecondary}
                   style={{ marginRight: 10 }}
                 />
                 <TextInput
@@ -1255,7 +1273,7 @@ export default function StartRestaurantWizard() {
                 <Ionicons
                   name="keypad-outline"
                   size={20}
-                  color="#666"
+                  color={theme.colors.textSecondary}
                   style={{ marginRight: 10 }}
                 />
                 <TextInput
@@ -1293,7 +1311,7 @@ export default function StartRestaurantWizard() {
   if (loadingExistingApplication) {
     return (
       <SafeAreaView style={[styles.container, styles.loadingContainer]}>
-        <ActivityIndicator size="large" color="#4CAF50" />
+        <ActivityIndicator size="large" color={theme.colors.primary} />
         <Text style={styles.loadingText}>Loading your application…</Text>
       </SafeAreaView>
     );
@@ -1346,7 +1364,7 @@ export default function StartRestaurantWizard() {
               ]}
             >
               {submitting ? (
-                <ActivityIndicator color="#fff" />
+                <ActivityIndicator color={theme.colors.textOnAction} />
               ) : (
                 <Text style={styles.nextBtnText}>{advanceLabel}</Text>
               )}
@@ -1383,32 +1401,32 @@ function RadioRow({
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
+  container: { flex: 1, backgroundColor: theme.colors.surface },
   topRow: { paddingHorizontal: 24, paddingTop: 8 },
   saveExitChip: {
     alignSelf: 'flex-start',
     borderWidth: 1.5,
-    borderColor: '#1A1A1A',
+    borderColor: theme.colors.text,
     borderRadius: 24,
     paddingHorizontal: 14,
     paddingVertical: 6,
   },
-  saveExitText: { fontSize: 13, fontWeight: '700', color: '#1A1A1A' },
+  saveExitText: { fontSize: 13, fontWeight: '700', color: theme.colors.text },
   scrollContent: { paddingHorizontal: 24, paddingTop: 24, paddingBottom: 24 },
-  title: { fontSize: 28, fontWeight: '800', color: '#1A1A1A', lineHeight: 34 },
-  subtitle: { fontSize: 14, color: '#666', marginTop: 8, lineHeight: 20 },
+  title: { fontSize: 28, fontWeight: '800', color: theme.colors.text, lineHeight: 34 },
+  subtitle: { fontSize: 14, color: theme.colors.textSecondary, marginTop: 8, lineHeight: 20 },
   stepBody: { marginTop: 32 },
 
   photoArea: {
     height: 240,
     borderRadius: 20,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: theme.colors.surfaceMuted,
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
   },
   photoPlaceholder: { alignItems: 'center', gap: 10 },
-  photoPlaceholderText: { fontSize: 14, color: '#888', fontWeight: '500' },
+  photoPlaceholderText: { fontSize: 14, color: theme.colors.textMuted, fontWeight: '500' },
   photoPreview: { width: '100%', height: '100%' },
   photoEditBadge: {
     position: 'absolute',
@@ -1416,25 +1434,25 @@ const styles = StyleSheet.create({
     right: 12,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 16,
     gap: 4,
   },
-  photoEditBadgeText: { fontSize: 12, fontWeight: '600', color: '#1A1A1A' },
+  photoEditBadgeText: { fontSize: 12, fontWeight: '600', color: theme.colors.text },
 
   textBox: {
     minHeight: 100,
     borderWidth: 1,
-    borderColor: '#1A1A1A',
+    borderColor: theme.colors.text,
     borderRadius: 12,
     padding: 14,
     fontSize: 16,
-    color: '#1A1A1A',
+    color: theme.colors.text,
   },
   textBoxTall: { minHeight: 150 },
-  counter: { fontSize: 12, color: '#888', marginTop: 6, fontWeight: '500' },
+  counter: { fontSize: 12, color: theme.colors.textMuted, marginTop: 6, fontWeight: '500' },
 
   sectionHeaderRow: {
     flexDirection: 'row',
@@ -1445,11 +1463,11 @@ const styles = StyleSheet.create({
   sectionLabel: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: theme.colors.text,
     letterSpacing: 0.4,
     textTransform: 'uppercase',
   },
-  sectionHint: { fontSize: 12, color: '#888', fontWeight: '500' },
+  sectionHint: { fontSize: 12, color: theme.colors.textMuted, fontWeight: '500' },
   chipGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 14 },
   chip: {
     width: '31%',
@@ -1457,55 +1475,61 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
-    backgroundColor: '#fff',
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
     alignItems: 'center',
   },
-  chipSelected: { backgroundColor: '#1A1A1A', borderColor: '#1A1A1A' },
-  chipDisabled: { borderColor: '#F0F0F0', backgroundColor: '#FAFAFA' },
-  chipText: { fontSize: 14, fontWeight: '500', color: '#1A1A1A' },
-  chipTextSelected: { color: '#fff' },
-  chipTextDisabled: { color: '#BBB' },
+  chipSelected: { backgroundColor: theme.colors.text, borderColor: theme.colors.text },
+  chipDisabled: { borderColor: theme.colors.separator, backgroundColor: '#FAFAFA' },
+  chipText: { fontSize: 14, fontWeight: '500', color: theme.colors.text },
+  chipTextSelected: { color: theme.colors.textOnAction },
+  chipTextDisabled: { color: theme.colors.placeholder },
 
   priceWrapper: { alignItems: 'center', marginTop: 30 },
   priceRow: { flexDirection: 'row', alignItems: 'baseline' },
-  priceCurrency: { fontSize: 36, fontWeight: '800', color: '#1A1A1A' },
+  priceCurrency: { fontSize: 36, fontWeight: '800', color: theme.colors.text },
   priceInput: {
     fontSize: 56,
     fontWeight: '800',
-    color: '#1A1A1A',
+    color: theme.colors.text,
     minWidth: 100,
     textAlign: 'center',
     padding: 0,
   },
   priceEditIcon: { marginLeft: 8, alignSelf: 'center' },
-  priceEditHint: { fontSize: 12, color: '#888', marginTop: 8, fontWeight: '500' },
+  priceEditHint: { fontSize: 12, color: theme.colors.textMuted, marginTop: 8, fontWeight: '500' },
   priceAdjustRow: { flexDirection: 'row', gap: 10, marginTop: 28 },
   priceAdjustBtn: {
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: '#1A1A1A',
+    borderColor: theme.colors.text,
   },
-  priceAdjustText: { fontSize: 14, fontWeight: '700', color: '#1A1A1A' },
+  priceAdjustText: { fontSize: 14, fontWeight: '700', color: theme.colors.text },
 
   searchWrap: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F5F5F5',
+    backgroundColor: theme.colors.surfaceMuted,
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 10,
     gap: 8,
   },
-  searchWrapError: { borderWidth: 2, borderColor: '#C62828', backgroundColor: '#FFF5F5' },
-  searchInput: { flex: 1, fontSize: 15, color: '#1A1A1A' },
+  searchWrapError: { borderWidth: 2, borderColor: theme.colors.error, backgroundColor: '#FFF5F5' },
+  searchInput: { flex: 1, fontSize: 15, color: theme.colors.text },
   locationErrorRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 7 },
-  locationErrorText: { flex: 1, color: '#C62828', fontSize: 13, lineHeight: 18, fontWeight: '700' },
+  locationErrorText: {
+    flex: 1,
+    color: theme.colors.error,
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: '700',
+  },
   suggestionList: {
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: theme.colors.border,
     borderRadius: 12,
     overflow: 'hidden',
   },
@@ -1516,39 +1540,56 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     gap: 8,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#E0E0E0',
+    borderBottomColor: theme.colors.border,
   },
-  suggestionText: { flex: 1, fontSize: 13, color: '#1A1A1A', lineHeight: 18 },
+  suggestionText: { flex: 1, fontSize: 13, color: theme.colors.text, lineHeight: 18 },
   manualLabel: {
     fontSize: 12,
-    color: '#888',
+    color: theme.colors.textMuted,
     fontWeight: '600',
     letterSpacing: 0.4,
     textTransform: 'uppercase',
     marginTop: 8,
   },
   fieldWrap: { gap: 4 },
-  fieldLabel: { fontSize: 11, color: '#888', fontWeight: '600', letterSpacing: 0.4 },
-  requiredAsterisk: { color: '#FF5252' },
+  fieldLabel: {
+    fontSize: 11,
+    color: theme.colors.textMuted,
+    fontWeight: '600',
+    letterSpacing: 0.4,
+  },
+  requiredAsterisk: { color: theme.colors.destructive },
   fieldInput: {
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: theme.colors.border,
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 16,
-    color: '#1A1A1A',
+    color: theme.colors.text,
   },
-  fieldInputWarning: { borderColor: '#FFB74D', backgroundColor: '#FFF8E1' },
+  fieldInputWarning: { borderColor: '#FFB74D', backgroundColor: theme.colors.warningSoft },
   warningText: { color: '#B26B00', fontSize: 12, marginTop: 2, marginLeft: 4 },
   loadingContainer: { alignItems: 'center', justifyContent: 'center', gap: 12 },
-  loadingText: { color: '#666', fontSize: 14, fontWeight: '600' },
+  loadingText: { color: theme.colors.textSecondary, fontSize: 14, fontWeight: '600' },
 
-  fsQuestion: { fontSize: 16, fontWeight: '700', color: '#1A1A1A', marginBottom: 8, marginTop: 8 },
-  fsHint: { fontSize: 13, color: '#888', marginBottom: 12, marginTop: -4, lineHeight: 18 },
+  fsQuestion: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: theme.colors.text,
+    marginBottom: 8,
+    marginTop: 8,
+  },
+  fsHint: {
+    fontSize: 13,
+    color: theme.colors.textMuted,
+    marginBottom: 12,
+    marginTop: -4,
+    lineHeight: 18,
+  },
   radioRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, gap: 12 },
-  radioTitle: { fontSize: 15, fontWeight: '700', color: '#1A1A1A' },
-  radioSubtitle: { fontSize: 12, color: '#888', lineHeight: 16 },
+  radioTitle: { fontSize: 15, fontWeight: '700', color: theme.colors.text },
+  radioSubtitle: { fontSize: 12, color: theme.colors.textMuted, lineHeight: 16 },
   radioOuter: {
     width: 22,
     height: 22,
@@ -1558,12 +1599,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  radioOuterSelected: { borderColor: '#4CAF50' },
-  radioInner: { width: 12, height: 12, borderRadius: 6, backgroundColor: '#4CAF50' },
-  divider: { height: 1, backgroundColor: '#E0E0E0', marginVertical: 16 },
+  radioOuterSelected: { borderColor: theme.colors.primary },
+  radioInner: { width: 12, height: 12, borderRadius: 6, backgroundColor: theme.colors.primary },
+  divider: { height: 1, backgroundColor: theme.colors.border, marginVertical: 16 },
 
   uploadWrap: { marginLeft: 4, marginTop: 4, marginBottom: 8 },
-  uploadHint: { fontSize: 13, color: '#666', marginBottom: 8 },
+  uploadHint: { fontSize: 13, color: theme.colors.textSecondary, marginBottom: 8 },
   uploadBox: {
     height: 140,
     borderRadius: 16,
@@ -1577,22 +1618,22 @@ const styles = StyleSheet.create({
   },
   uploadPreview: { width: '100%', height: '100%' },
   pdfBadge: { alignItems: 'center', gap: 4 },
-  pdfBadgeText: { fontSize: 13, fontWeight: '700', color: '#1A1A1A' },
-  pdfBadgeHint: { fontSize: 11, color: '#888' },
+  pdfBadgeText: { fontSize: 13, fontWeight: '700', color: theme.colors.text },
+  pdfBadgeHint: { fontSize: 11, color: theme.colors.textMuted },
   tierCallout: {
     flexDirection: 'row',
     gap: 10,
-    backgroundColor: '#E8F5E9',
+    backgroundColor: theme.colors.primarySoft,
     borderRadius: 12,
     padding: 14,
     marginBottom: 12,
     alignItems: 'flex-start',
   },
-  tierCalloutTitle: { fontSize: 14, fontWeight: '700', color: '#1A1A1A', marginBottom: 2 },
-  tierCalloutBody: { fontSize: 12, color: '#555', lineHeight: 17 },
+  tierCalloutTitle: { fontSize: 14, fontWeight: '700', color: theme.colors.text, marginBottom: 2 },
+  tierCalloutBody: { fontSize: 12, color: theme.colors.textSecondary, lineHeight: 17 },
   removeDocText: {
     fontSize: 13,
-    color: '#FF5252',
+    color: theme.colors.destructive,
     fontWeight: '600',
     textDecorationLine: 'underline',
     marginTop: -2,
@@ -1603,14 +1644,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: theme.colors.border,
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 12,
   },
   halfInput: {
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: theme.colors.border,
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 14,
@@ -1618,7 +1659,7 @@ const styles = StyleSheet.create({
   },
   disclaimer: {
     fontSize: 11,
-    color: '#999',
+    color: theme.colors.placeholder,
     textAlign: 'center',
     marginTop: 8,
     fontStyle: 'italic',
@@ -1626,18 +1667,18 @@ const styles = StyleSheet.create({
 
   footer: { paddingHorizontal: 24, paddingTop: 8, paddingBottom: 16 },
   progressRow: { flexDirection: 'row', gap: 4, marginBottom: 16 },
-  progressSegment: { flex: 1, height: 5, borderRadius: 3, backgroundColor: '#E0E0E0' },
-  progressSegmentFilled: { backgroundColor: '#4CAF50' },
+  progressSegment: { flex: 1, height: 5, borderRadius: 3, backgroundColor: theme.colors.border },
+  progressSegmentFilled: { backgroundColor: theme.colors.primary },
   navRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   backLink: { paddingVertical: 12, paddingRight: 12 },
   backLinkText: {
     fontSize: 15,
-    color: '#1A1A1A',
+    color: theme.colors.text,
     textDecorationLine: 'underline',
     fontWeight: '600',
   },
   nextBtn: {
-    backgroundColor: '#237A3B',
+    backgroundColor: theme.colors.primaryAction,
     borderRadius: 28,
     paddingVertical: 14,
     paddingHorizontal: 36,
@@ -1645,6 +1686,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   nextBtnLast: { paddingHorizontal: 28, minWidth: 180 },
-  nextBtnDisabled: { backgroundColor: '#A5D6A7' },
-  nextBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  nextBtnDisabled: { backgroundColor: theme.colors.primaryDisabled },
+  nextBtnText: { color: theme.colors.textOnAction, fontSize: 16, fontWeight: '700' },
 });

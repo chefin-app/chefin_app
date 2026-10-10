@@ -22,6 +22,7 @@ import PickupCoordinationCard from '@/src/components/orders/PickupCoordinationCa
 import BuyerRatingCard from '@/src/components/reviews/BuyerRatingCard';
 import PickupPinModal from '@/src/components/orders/PickupPinModal';
 import DirectPaymentCard from '@/src/components/orders/DirectPaymentCard';
+import theme from '@/src/styles/theme';
 
 type OrderStatus = 'pending' | 'confirmed' | 'ready' | 'completed' | 'cancelled';
 
@@ -197,7 +198,7 @@ export default function CookOrderDetail() {
     return (
       <SafeAreaView style={styles.page}>
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color="#00A651" />
+          <ActivityIndicator size="large" color={theme.colors.primary} />
         </View>
       </SafeAreaView>
     );
@@ -215,7 +216,7 @@ export default function CookOrderDetail() {
     <SafeAreaView style={styles.page}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} hitSlop={10}>
-          <Ionicons name="arrow-back" size={26} color="#1A1A1A" />
+          <Ionicons name="arrow-back" size={26} color={theme.colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{shortOrderCode(order.id)}</Text>
         <View style={styles.headerSpacer} />
@@ -251,7 +252,7 @@ export default function CookOrderDetail() {
         {order.fulfillment_type === 'delivery' && order.delivery_jobs ? (
           <View style={styles.deliveryCard}>
             <View style={styles.deliveryHeading}>
-              <Ionicons name="location-outline" size={21} color="#216E39" />
+              <Ionicons name="location-outline" size={21} color={theme.colors.primaryOnLight} />
               <Text style={styles.deliveryTitle}>Customer delivery address</Text>
             </View>
             <Text style={styles.deliveryRecipient}>
@@ -327,16 +328,16 @@ export default function CookOrderDetail() {
           </Text>
           <View style={styles.proofIcon}>
             {uploadingProof ? (
-              <ActivityIndicator size="small" color="#00794F" />
+              <ActivityIndicator size="small" color={theme.colors.primaryAction} />
             ) : (
-              <Ionicons name="camera-outline" size={22} color="#00794F" />
+              <Ionicons name="camera-outline" size={22} color={theme.colors.primaryAction} />
             )}
           </View>
         </TouchableOpacity>
 
         {order.customer_note ? (
           <View style={styles.noteRow}>
-            <Ionicons name="chatbubble-ellipses-outline" size={19} color="#C62828" />
+            <Ionicons name="chatbubble-ellipses-outline" size={19} color={theme.colors.error} />
             <Text style={styles.noteText}>{order.customer_note}</Text>
           </View>
         ) : null}
@@ -390,14 +391,14 @@ export default function CookOrderDetail() {
             <Ionicons
               name={copied ? 'checkmark-outline' : 'copy-outline'}
               size={19}
-              color={copied ? '#00A651' : '#5F6368'}
+              color={copied ? theme.colors.primary : theme.colors.textSecondary}
             />
           </TouchableOpacity>
         </View>
 
         {canCancel ? (
           <TouchableOpacity style={styles.cancelButton} onPress={confirmCancel} disabled={updating}>
-            <Ionicons name="close" size={20} color="#C62828" />
+            <Ionicons name="close" size={20} color={theme.colors.error} />
             <Text style={styles.cancelButtonText}>Cancel order</Text>
           </TouchableOpacity>
         ) : null}
@@ -412,7 +413,7 @@ export default function CookOrderDetail() {
             disabled={updating}
           >
             {updating ? (
-              <ActivityIndicator color="#00794F" />
+              <ActivityIndicator color={theme.colors.primaryAction} />
             ) : (
               <Text style={styles.primaryButtonText}>{action.label}</Text>
             )}
@@ -431,7 +432,7 @@ export default function CookOrderDetail() {
 }
 
 const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: '#FFFFFF' },
+  page: { flex: 1, backgroundColor: theme.colors.surface },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   header: {
     flexDirection: 'row',
@@ -442,11 +443,11 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: '#E4E6E4',
   },
-  headerTitle: { fontSize: 22, fontWeight: '800', color: '#1A1A1A' },
+  headerTitle: { fontSize: 22, fontWeight: '800', color: theme.colors.text },
   headerSpacer: { flex: 1 },
   content: { padding: 20, paddingBottom: 40 },
   summaryRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 18 },
-  summaryText: { fontSize: 16, color: '#1A1A1A', flexShrink: 1 },
+  summaryText: { fontSize: 16, color: theme.colors.text, flexShrink: 1 },
   summaryBold: { fontWeight: '800' },
   statusTag: {
     backgroundColor: '#E5F5FB',
@@ -454,9 +455,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 5,
   },
-  statusTagCancelled: { backgroundColor: '#FDECEA' },
+  statusTagCancelled: { backgroundColor: theme.colors.errorSoft },
   statusTagText: { fontSize: 13, fontWeight: '600', color: '#20586B', textTransform: 'capitalize' },
-  statusTagTextCancelled: { color: '#C62828' },
+  statusTagTextCancelled: { color: theme.colors.error },
   proofCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -491,13 +492,13 @@ const styles = StyleSheet.create({
     textTransform: 'capitalize',
     fontSize: 13,
     fontWeight: '800',
-    color: '#216E39',
+    color: theme.colors.primaryOnLight,
   },
   driverText: { fontSize: 12, color: '#5A655D', marginTop: 3 },
   trackingLink: { color: '#1769AA', fontWeight: '800', marginTop: 10 },
   waitingText: { fontSize: 12, lineHeight: 17, color: '#5A655D', marginTop: 10 },
-  proofThumb: { width: 44, height: 44, borderRadius: 10, backgroundColor: '#F0F0F0' },
-  proofText: { flex: 1, fontSize: 17, fontWeight: '700', color: '#1A1A1A' },
+  proofThumb: { width: 44, height: 44, borderRadius: 10, backgroundColor: theme.colors.separator },
+  proofText: { flex: 1, fontSize: 17, fontWeight: '700', color: theme.colors.text },
   proofIcon: {
     width: 42,
     height: 42,
@@ -507,24 +508,29 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   noteRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8 },
-  noteText: { flex: 1, fontSize: 16, fontWeight: '700', color: '#1A1A1A' },
+  noteText: { flex: 1, fontSize: 16, fontWeight: '700', color: theme.colors.text },
   divider: { height: StyleSheet.hairlineWidth, backgroundColor: '#D8DCD8', marginVertical: 15 },
   itemRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
-  itemQty: { fontSize: 17, fontWeight: '800', color: '#1A1A1A' },
-  itemQtyX: { color: '#9AA19B', fontWeight: '600' },
-  itemTitle: { flex: 1, fontSize: 17, fontWeight: '800', color: '#1A1A1A' },
-  itemPrice: { fontSize: 17, color: '#1A1A1A' },
+  itemQty: { fontSize: 17, fontWeight: '800', color: theme.colors.text },
+  itemQtyX: { color: theme.colors.textMuted, fontWeight: '600' },
+  itemTitle: { flex: 1, fontSize: 17, fontWeight: '800', color: theme.colors.text },
+  itemPrice: { fontSize: 17, color: theme.colors.text },
   optionGroup: { marginTop: 14, paddingLeft: 28 },
-  optionGroupName: { fontSize: 13, color: '#9AA19B', letterSpacing: 0.4, marginBottom: 6 },
+  optionGroupName: {
+    fontSize: 13,
+    color: theme.colors.textMuted,
+    letterSpacing: 0.4,
+    marginBottom: 6,
+  },
   optionRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 },
-  optionName: { fontSize: 15, color: '#333934' },
-  optionPrice: { fontSize: 15, color: '#333934' },
+  optionName: { fontSize: 15, color: theme.colors.textStrong },
+  optionPrice: { fontSize: 15, color: theme.colors.textStrong },
   totalRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  subtotalLabel: { fontSize: 17, fontWeight: '800', color: '#1A1A1A' },
-  taxNote: { fontSize: 12, color: '#9AA19B', marginTop: 2 },
-  subtotalValue: { fontSize: 17, fontWeight: '700', color: '#1A1A1A' },
-  totalLabel: { fontSize: 22, fontWeight: '800', color: '#1A1A1A' },
-  totalValue: { fontSize: 22, fontWeight: '800', color: '#1A1A1A' },
+  subtotalLabel: { fontSize: 17, fontWeight: '800', color: theme.colors.text },
+  taxNote: { fontSize: 12, color: theme.colors.textMuted, marginTop: 2 },
+  subtotalValue: { fontSize: 17, fontWeight: '700', color: theme.colors.text },
+  totalLabel: { fontSize: 22, fontWeight: '800', color: theme.colors.text },
+  totalValue: { fontSize: 22, fontWeight: '800', color: theme.colors.text },
   bookingBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -536,9 +542,9 @@ const styles = StyleSheet.create({
     marginTop: 20,
     marginBottom: 18,
   },
-  bookingLabel: { fontSize: 14, color: '#333934' },
+  bookingLabel: { fontSize: 14, color: theme.colors.textStrong },
   bookingCopy: { flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 1 },
-  bookingValue: { fontSize: 13, color: '#5F6368', letterSpacing: 0.3 },
+  bookingValue: { fontSize: 13, color: theme.colors.textSecondary, letterSpacing: 0.3 },
   cancelButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -549,7 +555,7 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
     marginBottom: 12,
   },
-  cancelButtonText: { fontSize: 16, fontWeight: '700', color: '#C62828' },
+  cancelButtonText: { fontSize: 16, fontWeight: '700', color: theme.colors.error },
   primaryButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -559,6 +565,6 @@ const styles = StyleSheet.create({
     borderRadius: 26,
     paddingVertical: 15,
   },
-  primaryButtonText: { fontSize: 16, fontWeight: '800', color: '#00794F' },
+  primaryButtonText: { fontSize: 16, fontWeight: '800', color: theme.colors.primaryAction },
   buttonDisabled: { opacity: 0.6 },
 });

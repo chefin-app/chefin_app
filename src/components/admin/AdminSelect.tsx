@@ -71,7 +71,11 @@ export default function AdminSelect<T extends string>({
         <Text style={styles.buttonText} numberOfLines={1}>
           {label}: {selectedLabel}
         </Text>
-        <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={15} color="#667085" />
+        <Ionicons
+          name={open ? 'chevron-up' : 'chevron-down'}
+          size={15}
+          color={ADMIN_THEME.colors.slate}
+        />
       </TouchableOpacity>
 
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
@@ -124,10 +128,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 10,
     borderWidth: 1,
-    borderColor: '#DDE3DF',
+    borderColor: ADMIN_THEME.colors.border,
     borderRadius: 11,
     paddingHorizontal: 13,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: ADMIN_THEME.colors.surface,
   },
   buttonText: {
     flexShrink: 1,
@@ -140,9 +144,9 @@ const styles = StyleSheet.create({
     position: 'absolute',
     padding: 6,
     borderWidth: 1,
-    borderColor: '#DDE3DF',
+    borderColor: ADMIN_THEME.colors.border,
     borderRadius: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: ADMIN_THEME.colors.surface,
     shadowColor: '#17211B',
     shadowOffset: { width: 0, height: 7 },
     shadowOpacity: 0.16,
@@ -158,12 +162,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 8,
   },
-  optionSelected: { backgroundColor: '#EAF8EE' },
+  optionSelected: { backgroundColor: ADMIN_THEME.colors.greenSoft },
   optionText: {
     flex: 1,
     fontFamily: ADMIN_THEME.fonts.regular,
     fontSize: ADMIN_THEME.sizes.control,
     color: '#536058',
   },
-  optionTextSelected: { fontFamily: ADMIN_THEME.fonts.semibold, color: '#237A3B' },
+  optionTextSelected: {
+    fontFamily: ADMIN_THEME.fonts.semibold,
+    color: ADMIN_THEME.colors.greenDark,
+  },
 });

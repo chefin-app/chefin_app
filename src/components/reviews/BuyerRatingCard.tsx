@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import theme from '@/src/styles/theme';
 
 type WrittenReview = {
   id: string;
@@ -92,7 +93,11 @@ export default function BuyerRatingCard({
       {summary.count > 0 && (
         <TouchableOpacity style={styles.expandButton} onPress={() => setExpanded(value => !value)}>
           <Text style={styles.expandText}>{expanded ? 'Hide reviews' : 'See recent reviews'}</Text>
-          <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={17} color="#237A3B" />
+          <Ionicons
+            name={expanded ? 'chevron-up' : 'chevron-down'}
+            size={17}
+            color={theme.colors.primaryAction}
+          />
         </TouchableOpacity>
       )}
 
@@ -124,7 +129,7 @@ export default function BuyerRatingCard({
               }
             >
               <Text style={styles.viewAllText}>View all {summary.writtenReviewCount} reviews</Text>
-              <Ionicons name="chevron-forward" size={16} color="#237A3B" />
+              <Ionicons name="chevron-forward" size={16} color={theme.colors.primaryAction} />
             </TouchableOpacity>
           )}
         </View>
@@ -169,7 +174,7 @@ const styles = StyleSheet.create({
     borderTopColor: '#E2D39C',
     paddingTop: 9,
   },
-  expandText: { color: '#237A3B', fontSize: 13, fontWeight: '800' },
+  expandText: { color: theme.colors.primaryAction, fontSize: 13, fontWeight: '800' },
   reviews: { gap: 10 },
   review: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#E2D39C', paddingTop: 10 },
   reviewMeta: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
@@ -183,5 +188,5 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingTop: 4,
   },
-  viewAllText: { color: '#237A3B', fontSize: 13, fontWeight: '800' },
+  viewAllText: { color: theme.colors.primaryAction, fontSize: 13, fontWeight: '800' },
 });

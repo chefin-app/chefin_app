@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import theme from '@/src/styles/theme';
 
 type Payment = {
   refund?: {
@@ -234,16 +235,16 @@ const styles = StyleSheet.create({
     padding: 16,
     marginVertical: 12,
     gap: 12,
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: '#ddd',
   },
   title: { fontSize: 18, fontWeight: '600' },
   status: { fontWeight: '600', color: '#176A36' },
-  error: { color: '#B42318', padding: 8 },
+  error: { color: theme.colors.error, padding: 8 },
   input: { borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 12 },
   button: { padding: 14, borderRadius: 10, backgroundColor: '#176A36' },
-  buttonText: { color: '#fff', textAlign: 'center', fontWeight: '600' },
+  buttonText: { color: theme.colors.textOnAction, textAlign: 'center', fontWeight: '600' },
   qr: { width: '100%', height: 260 },
 });

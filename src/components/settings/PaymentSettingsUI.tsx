@@ -1,6 +1,7 @@
 import React from 'react';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import theme from '@/src/styles/theme';
 
 // Shared by payout details and customer payment options to keep both sections consistent.
 export function PaymentSettingsHeader({ title, onBack }: { title: string; onBack: () => void }) {
@@ -12,7 +13,7 @@ export function PaymentSettingsHeader({ title, onBack }: { title: string; onBack
         accessibilityRole="button"
         accessibilityLabel="Go back"
       >
-        <Ionicons name="chevron-back" size={24} color="#000" />
+        <Ionicons name="chevron-back" size={24} color={theme.colors.text} />
       </TouchableOpacity>
       <Text style={paymentSettingsStyles.headerTitle}>{title}</Text>
       <View style={paymentSettingsStyles.headerSpacer} />
@@ -42,7 +43,7 @@ export function PaymentSettingsButton({
       ]}
     >
       {loading ? (
-        <ActivityIndicator color="#fff" />
+        <ActivityIndicator color={theme.colors.textOnAction} />
       ) : (
         <Text style={paymentSettingsStyles.primaryButtonText}>{title}</Text>
       )}
@@ -51,7 +52,7 @@ export function PaymentSettingsButton({
 }
 
 export const paymentSettingsStyles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
+  container: { flex: 1, backgroundColor: theme.colors.surface },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -59,16 +60,22 @@ export const paymentSettingsStyles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 15,
   },
-  headerTitle: { flex: 1, textAlign: 'center', fontSize: 20, fontWeight: '700', color: '#000' },
+  headerTitle: {
+    flex: 1,
+    textAlign: 'center',
+    fontSize: 20,
+    fontWeight: '700',
+    color: theme.colors.text,
+  },
   backButton: { width: 40, padding: 5 },
   headerSpacer: { width: 40 },
   formContainer: { padding: 20 },
   sectionTitle: { fontSize: 16, fontWeight: '600', color: '#222', marginBottom: 12 },
-  body: { fontSize: 14, lineHeight: 21, color: '#666' },
+  body: { fontSize: 14, lineHeight: 21, color: theme.colors.textSecondary },
   fieldLabel: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#888',
+    color: theme.colors.textMuted,
     marginBottom: 6,
     letterSpacing: 0.6,
   },
@@ -76,7 +83,7 @@ export const paymentSettingsStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: theme.colors.border,
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 12,
@@ -84,13 +91,13 @@ export const paymentSettingsStyles = StyleSheet.create({
   },
   input: { flex: 1, fontSize: 16, color: '#222' },
   primaryButton: {
-    backgroundColor: '#237A3B',
+    backgroundColor: theme.colors.primaryAction,
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
     marginTop: 12,
     marginBottom: 15,
   },
-  primaryButtonDisabled: { backgroundColor: '#a5d6a7' },
-  primaryButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  primaryButtonDisabled: { backgroundColor: theme.colors.primaryDisabled },
+  primaryButtonText: { color: theme.colors.textOnAction, fontSize: 16, fontWeight: '600' },
 });

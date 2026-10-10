@@ -15,6 +15,7 @@ import type {
   RestaurantOrderSelection,
   RestaurantOrderSlot,
 } from '@/src/utils/restaurantOrderSchedule';
+import theme from '@/src/styles/theme';
 
 export interface RestaurantScheduleDay {
   serviceDate: string;
@@ -220,7 +221,7 @@ const styles = StyleSheet.create({
     width: '100%',
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.surface,
     overflow: 'hidden',
   },
   dragHandle: {
@@ -291,7 +292,7 @@ const styles = StyleSheet.create({
     fontSize: 17,
     color: '#2D3731',
   },
-  dayNumberTextSelected: { color: '#FFFFFF' },
+  dayNumberTextSelected: { color: theme.colors.textOnAction },
   slotList: { flexGrow: 0 },
   slotListContent: { paddingHorizontal: 20, paddingBottom: 20 },
   slotRow: {

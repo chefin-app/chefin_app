@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { createShadowStyle } from '../../utils/platform-utils';
+import theme from '@/src/styles/theme';
 
 type QuantityStepperProps = {
   initialQuantity?: number;
@@ -29,11 +30,11 @@ export const QuantityStepper = ({
   return (
     <View style={styles.container}>
       <TouchableOpacity onPress={handleDecrement} style={styles.button}>
-        <Ionicons name="remove" size={24} color="#666" />
+        <Ionicons name="remove" size={24} color={theme.colors.textSecondary} />
       </TouchableOpacity>
       <Text style={styles.quantityText}>{quantity}</Text>
       <TouchableOpacity onPress={handleIncrement} style={styles.button}>
-        <Ionicons name="add" size={24} color="#4CAF50" />
+        <Ionicons name="add" size={24} color={theme.colors.primary} />
       </TouchableOpacity>
     </View>
   );
@@ -43,7 +44,7 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
     borderRadius: 25,
     paddingHorizontal: 8,
     ...createShadowStyle({
@@ -60,7 +61,7 @@ const styles = StyleSheet.create({
   quantityText: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
+    color: theme.colors.textStrong,
     minWidth: 30,
     textAlign: 'center',
   },

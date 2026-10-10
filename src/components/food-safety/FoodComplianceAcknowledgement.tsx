@@ -8,6 +8,7 @@ import {
   LOCAL_AUTHORITY_GUIDANCE_URL,
   MOH_FOOD_PREMISES_GUIDANCE_URL,
 } from '@/src/constants/foodSafetyWaiver';
+import theme from '@/src/styles/theme';
 
 interface FoodComplianceAcknowledgementProps {
   accepted: boolean;
@@ -28,7 +29,7 @@ export function FoodComplianceAcknowledgement({
   return (
     <View style={styles.container}>
       <View style={styles.headingRow}>
-        <Ionicons name="document-text-outline" size={20} color="#2E7D32" />
+        <Ionicons name="document-text-outline" size={20} color={theme.colors.primaryOnLight} />
         <View style={styles.headingCopy}>
           <Text accessibilityRole="header" style={styles.title}>
             Cook Compliance Acknowledgement and Indemnity
@@ -57,7 +58,11 @@ export function FoodComplianceAcknowledgement({
         style={styles.expandButton}
       >
         <Text style={styles.expandText}>{expanded ? 'Hide full clause' : 'Read full clause'}</Text>
-        <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={16} color="#1B5E20" />
+        <Ionicons
+          name={expanded ? 'chevron-up' : 'chevron-down'}
+          size={16}
+          color={theme.colors.primaryOnLight}
+        />
       </TouchableOpacity>
 
       {expanded && (
@@ -111,7 +116,7 @@ export function FoodComplianceAcknowledgement({
         style={[styles.checkboxRow, isRecorded && styles.checkboxRowRecorded]}
       >
         <View style={[styles.checkbox, accepted && styles.checkboxChecked]}>
-          {accepted && <Ionicons name="checkmark" size={16} color="#FFFFFF" />}
+          {accepted && <Ionicons name="checkmark" size={16} color={theme.colors.textOnAction} />}
         </View>
         <Text style={styles.acceptanceText}>
           {isRecorded
@@ -138,8 +143,8 @@ const styles = StyleSheet.create({
   },
   headingRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   headingCopy: { flex: 1 },
-  title: { color: '#1A1A1A', fontSize: 15, fontWeight: '800', lineHeight: 20 },
-  requiredLabel: { color: '#B26A00', fontSize: 11, fontWeight: '700', marginTop: 2 },
+  title: { color: theme.colors.text, fontSize: 15, fontWeight: '800', lineHeight: 20 },
+  requiredLabel: { color: theme.colors.warning, fontSize: 11, fontWeight: '700', marginTop: 2 },
   summary: { color: '#4A4A4A', fontSize: 12, lineHeight: 18, marginTop: 10 },
   expandButton: {
     alignSelf: 'flex-start',
@@ -151,13 +156,13 @@ const styles = StyleSheet.create({
     paddingRight: 8,
   },
   expandText: {
-    color: '#1B5E20',
+    color: theme.colors.primaryOnLight,
     fontSize: 13,
     fontWeight: '700',
     textDecorationLine: 'underline',
   },
   clause: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.surface,
     borderRadius: 12,
     padding: 12,
     marginTop: 8,
@@ -165,13 +170,18 @@ const styles = StyleSheet.create({
     borderColor: '#DDE8DD',
   },
   section: { marginBottom: 10 },
-  sectionTitle: { color: '#1A1A1A', fontSize: 12, fontWeight: '800', marginBottom: 3 },
+  sectionTitle: { color: theme.colors.text, fontSize: 12, fontWeight: '800', marginBottom: 3 },
   sectionBody: { color: '#555555', fontSize: 12, lineHeight: 18 },
-  legalNote: { color: '#666666', fontSize: 11, fontStyle: 'italic', lineHeight: 16 },
+  legalNote: {
+    color: theme.colors.textSecondary,
+    fontSize: 11,
+    fontStyle: 'italic',
+    lineHeight: 16,
+  },
   guidanceLinks: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', marginTop: 8 },
-  guidanceLink: { color: '#1B5E20', fontSize: 11, fontWeight: '700' },
-  linkDivider: { color: '#888888', fontSize: 11, marginHorizontal: 6 },
-  version: { color: '#888888', fontSize: 10, marginTop: 8 },
+  guidanceLink: { color: theme.colors.primaryOnLight, fontSize: 11, fontWeight: '700' },
+  linkDivider: { color: theme.colors.textMuted, fontSize: 11, marginHorizontal: 6 },
+  version: { color: theme.colors.textMuted, fontSize: 10, marginTop: 8 },
   checkboxRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -186,12 +196,15 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     borderWidth: 1.5,
     borderColor: '#777777',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 1,
   },
-  checkboxChecked: { borderColor: '#2E7D32', backgroundColor: '#2E7D32' },
+  checkboxChecked: {
+    borderColor: theme.colors.primaryOnLight,
+    backgroundColor: theme.colors.primaryOnLight,
+  },
   acceptanceText: { flex: 1, color: '#2E2E2E', fontSize: 12, lineHeight: 18 },
   requiredHint: { color: '#6D5A00', fontSize: 11, lineHeight: 16, marginTop: 6, marginLeft: 32 },
 });

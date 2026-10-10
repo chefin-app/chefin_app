@@ -39,6 +39,7 @@ import AdminDialog from '@/src/components/admin/AdminDialog';
 import { AdminPanel, AdminStatusBadge } from '@/src/components/admin/AdminOverviewUI';
 import AdminSelect from '@/src/components/admin/AdminSelect';
 import { useAuth } from '@/src/services/auth-context';
+import { ADMIN_THEME } from '@/src/admin/theme';
 
 const FILTERS: Array<{ key: PaymentManagementFilter; label: string }> = [
   { key: 'all', label: 'All transactions' },
@@ -488,14 +489,14 @@ export default function PaymentsScreen() {
       'Funds held',
       currency(stats?.heldFunds ?? 0),
       'Protected from premature payout',
-      '#175CD3',
+      ADMIN_THEME.colors.blue,
       'lock-closed-outline',
     ],
     [
       'Pending refunds',
       String(stats?.pendingRefunds ?? 0),
       'Awaiting manual review',
-      '#B42318',
+      ADMIN_THEME.colors.red,
       'return-down-back-outline',
     ],
     [
@@ -550,7 +551,7 @@ export default function PaymentsScreen() {
             accessibilityLabel="Refresh payments"
           >
             {refreshing ? (
-              <ActivityIndicator size="small" color="#4CAF50" />
+              <ActivityIndicator size="small" color={ADMIN_THEME.colors.green} />
             ) : (
               <Ionicons name="refresh" size={18} color="#47544C" />
             )}
@@ -616,12 +617,12 @@ export default function PaymentsScreen() {
 
         <View style={styles.controls}>
           <View style={styles.searchBox}>
-            <Ionicons name="search-outline" size={19} color="#89928C" />
+            <Ionicons name="search-outline" size={19} color={ADMIN_THEME.colors.textMuted} />
             <TextInput
               value={searchInput}
               onChangeText={setSearchInput}
               placeholder="Search transaction, order, cook or customer"
-              placeholderTextColor="#9AA29D"
+              placeholderTextColor={ADMIN_THEME.colors.textSubtle}
               style={styles.searchInput}
             />
             {searchInput ? (
@@ -629,7 +630,7 @@ export default function PaymentsScreen() {
                 onPress={() => setSearchInput('')}
                 accessibilityLabel="Clear search"
               >
-                <Ionicons name="close-circle" size={18} color="#A0A8A3" />
+                <Ionicons name="close-circle" size={18} color={ADMIN_THEME.colors.textSubtle} />
               </TouchableOpacity>
             ) : null}
           </View>
@@ -656,12 +657,12 @@ export default function PaymentsScreen() {
 
         {loading ? (
           <View style={styles.stateBox}>
-            <ActivityIndicator size="large" color="#4CAF50" />
+            <ActivityIndicator size="large" color={ADMIN_THEME.colors.green} />
             <Text style={styles.stateText}>Loading payment records…</Text>
           </View>
         ) : error ? (
           <View style={styles.stateBox}>
-            <Ionicons name="cloud-offline-outline" size={28} color="#B42318" />
+            <Ionicons name="cloud-offline-outline" size={28} color={ADMIN_THEME.colors.red} />
             <Text style={styles.errorText}>{error}</Text>
             <SmallButton label="Try again" tone="primary" onPress={() => loadPayments()} />
           </View>
@@ -824,7 +825,7 @@ export default function PaymentsScreen() {
       >
         {detailsLoading ? (
           <View style={styles.stateBox}>
-            <ActivityIndicator size="large" color="#4CAF50" />
+            <ActivityIndicator size="large" color={ADMIN_THEME.colors.green} />
           </View>
         ) : detailsError ? (
           <View style={styles.stateBox}>
@@ -951,7 +952,7 @@ export default function PaymentsScreen() {
             {details.delivery ? (
               <View style={styles.evidenceCard}>
                 <View style={styles.evidenceHeader}>
-                  <Ionicons name="bicycle-outline" size={20} color="#175CD3" />
+                  <Ionicons name="bicycle-outline" size={20} color={ADMIN_THEME.colors.blue} />
                   <View style={styles.flexOne}>
                     <Text style={styles.evidenceTitle}>Delivery confirmation</Text>
                     <Text style={styles.evidenceText}>
@@ -978,7 +979,7 @@ export default function PaymentsScreen() {
             {details.fulfillmentType === 'pickup' ? (
               <View style={styles.evidenceCard}>
                 <View style={styles.evidenceHeader}>
-                  <Ionicons name="key-outline" size={20} color="#237A3B" />
+                  <Ionicons name="key-outline" size={20} color={ADMIN_THEME.colors.greenDark} />
                   <View style={styles.flexOne}>
                     <Text style={[styles.evidenceTitle, styles.pickupEvidenceTitle]}>
                       Pickup handoff confirmation
@@ -997,7 +998,11 @@ export default function PaymentsScreen() {
               <Text style={styles.sectionTitle}>Refund review</Text>
               {details.refunds.length === 0 ? (
                 <View style={styles.emptyRefund}>
-                  <Ionicons name="checkmark-circle-outline" size={20} color="#237A3B" />
+                  <Ionicons
+                    name="checkmark-circle-outline"
+                    size={20}
+                    color={ADMIN_THEME.colors.greenDark}
+                  />
                   <Text style={styles.evidenceText}>
                     No refund request has been submitted for this transaction.
                   </Text>
@@ -1166,7 +1171,7 @@ export default function PaymentsScreen() {
                 onChangeText={setGatewayReference}
                 style={styles.textField}
                 placeholder="e.g. re_123456"
-                placeholderTextColor="#A0A8A3"
+                placeholderTextColor={ADMIN_THEME.colors.textSubtle}
               />
             </View>
           ) : null}
@@ -1184,7 +1189,7 @@ export default function PaymentsScreen() {
                   ? 'Explain why this case is being opened…'
                   : 'Explain this decision…'
               }
-              placeholderTextColor="#A0A8A3"
+              placeholderTextColor={ADMIN_THEME.colors.textSubtle}
               textAlignVertical="top"
             />
           </View>
@@ -1212,9 +1217,9 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingHorizontal: 16,
     borderWidth: 1,
-    borderColor: '#DDE3DF',
+    borderColor: ADMIN_THEME.colors.border,
     borderRadius: 11,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: ADMIN_THEME.colors.surface,
   },
   exportText: { fontFamily: 'mon-sb', fontSize: 10, color: '#445149' },
   refreshButton: ADMIN_SHARED_STYLES.refreshButton,
@@ -1223,7 +1228,13 @@ const styles = StyleSheet.create({
   statIcon: ADMIN_SHARED_STYLES.statIcon,
   statLabel: ADMIN_SHARED_STYLES.statLabel,
   statValue: { ...ADMIN_SHARED_STYLES.statValue, fontSize: 19 },
-  statDetail: { fontFamily: 'mon', fontSize: 8, lineHeight: 13, color: '#9AA29D', marginTop: 3 },
+  statDetail: {
+    fontFamily: 'mon',
+    fontSize: 8,
+    lineHeight: 13,
+    color: ADMIN_THEME.colors.textSubtle,
+    marginTop: 3,
+  },
   policyBanner: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -1253,7 +1264,7 @@ const styles = StyleSheet.create({
   },
   countBadgeActive: { backgroundColor: '#D3EFD9' },
   countText: { fontFamily: 'mon-b', fontSize: 8, color: '#737D77' },
-  countTextActive: { color: '#237A3B' },
+  countTextActive: { color: ADMIN_THEME.colors.greenDark },
   controls: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -1270,16 +1281,21 @@ const styles = StyleSheet.create({
     gap: 10,
     padding: 30,
   },
-  stateTitle: { fontFamily: 'mon-b', fontSize: 14, color: '#303A34' },
+  stateTitle: { fontFamily: 'mon-b', fontSize: 14, color: ADMIN_THEME.colors.textStrong },
   stateText: { fontFamily: 'mon', fontSize: 10, color: '#7C867F', textAlign: 'center' },
   errorText: {
     fontFamily: 'mon-sb',
     fontSize: 10,
     lineHeight: 16,
-    color: '#B42318',
+    color: ADMIN_THEME.colors.red,
     textAlign: 'center',
   },
-  table: { borderWidth: 1, borderColor: '#E3E8E5', borderRadius: 14, overflow: 'hidden' },
+  table: {
+    borderWidth: 1,
+    borderColor: ADMIN_THEME.colors.border,
+    borderRadius: 14,
+    overflow: 'hidden',
+  },
   tableRow: {
     minHeight: 76,
     flexDirection: 'row',
@@ -1288,7 +1304,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#E5E9E7',
     paddingHorizontal: 14,
     gap: 10,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: ADMIN_THEME.colors.surface,
   },
   tableHeader: ADMIN_SHARED_STYLES.tableHeader,
   tableHeaderText: ADMIN_SHARED_STYLES.tableHeaderText,
@@ -1303,17 +1319,22 @@ const styles = StyleSheet.create({
   cellStrong: { fontFamily: 'mon-sb', fontSize: 10, color: '#27332B' },
   cellMuted: { fontFamily: 'mon', fontSize: 8, color: '#929B95', marginTop: 3 },
   person: { flexDirection: 'row', alignItems: 'center', gap: 8, minWidth: 0 },
-  avatar: { width: 31, height: 31, borderRadius: 10, backgroundColor: '#EDF1EE' },
+  avatar: {
+    width: 31,
+    height: 31,
+    borderRadius: 10,
+    backgroundColor: ADMIN_THEME.colors.borderSoft,
+  },
   avatarFallback: {
     width: 31,
     height: 31,
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#EAF8EE',
+    backgroundColor: ADMIN_THEME.colors.greenSoft,
   },
-  avatarText: { fontFamily: 'mon-b', fontSize: 9, color: '#237A3B' },
-  personName: { flex: 1, fontFamily: 'mon-sb', fontSize: 9, color: '#344039' },
+  avatarText: { fontFamily: 'mon-b', fontSize: 9, color: ADMIN_THEME.colors.greenDark },
+  personName: { flex: 1, fontFamily: 'mon-sb', fontSize: 9, color: ADMIN_THEME.colors.textStrong },
   rowActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 5 },
   smallButton: {
     minHeight: 31,
@@ -1323,21 +1344,24 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#D7DEDA',
     borderRadius: 9,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: ADMIN_THEME.colors.surface,
   },
-  smallButtonPrimary: { borderColor: '#4CAF50', backgroundColor: '#4CAF50' },
+  smallButtonPrimary: {
+    borderColor: ADMIN_THEME.colors.green,
+    backgroundColor: ADMIN_THEME.colors.green,
+  },
   smallButtonDanger: { borderColor: '#F3C7C4', backgroundColor: '#FFF5F4' },
   smallButtonText: { fontFamily: 'mon-sb', fontSize: 8, color: '#56615A' },
-  smallButtonTextPrimary: { color: '#FFFFFF' },
-  smallButtonTextDanger: { color: '#B42318' },
+  smallButtonTextPrimary: { color: ADMIN_THEME.colors.surface },
+  smallButtonTextDanger: { color: ADMIN_THEME.colors.red },
   buttonDisabled: { opacity: 0.45 },
   cardList: { gap: 10 },
   paymentCard: {
     padding: 15,
     borderWidth: 1,
-    borderColor: '#E3E8E5',
+    borderColor: ADMIN_THEME.colors.border,
     borderRadius: 14,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: ADMIN_THEME.colors.surface,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -1379,15 +1403,25 @@ const styles = StyleSheet.create({
     minWidth: 230,
     padding: 15,
     borderWidth: 1,
-    borderColor: '#E0E5E2',
+    borderColor: ADMIN_THEME.colors.border,
     borderRadius: 14,
     backgroundColor: '#FAFBFA',
     gap: 8,
   },
   detailLabel: { fontFamily: 'mon-b', fontSize: 8, letterSpacing: 0.8, color: '#8A948D' },
   secondaryText: { fontFamily: 'mon', fontSize: 8, color: '#929B95' },
-  sectionTitle: { fontFamily: 'mon-b', fontSize: 13, color: '#344039', marginBottom: 10 },
-  infoList: { borderWidth: 1, borderColor: '#E4E9E6', borderRadius: 13, overflow: 'hidden' },
+  sectionTitle: {
+    fontFamily: 'mon-b',
+    fontSize: 13,
+    color: ADMIN_THEME.colors.textStrong,
+    marginBottom: 10,
+  },
+  infoList: {
+    borderWidth: 1,
+    borderColor: ADMIN_THEME.colors.border,
+    borderRadius: 13,
+    overflow: 'hidden',
+  },
   infoRow: {
     minHeight: 43,
     flexDirection: 'row',
@@ -1396,9 +1430,9 @@ const styles = StyleSheet.create({
     gap: 16,
     paddingHorizontal: 14,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#E4E9E6',
+    borderBottomColor: ADMIN_THEME.colors.border,
   },
-  infoLabel: { flex: 1, fontFamily: 'mon', fontSize: 9, color: '#7B857E' },
+  infoLabel: { flex: 1, fontFamily: 'mon', fontSize: 9, color: ADMIN_THEME.colors.textMuted },
   infoValue: { fontFamily: 'mon-sb', fontSize: 9, color: '#29342D', textAlign: 'right' },
   wrapValue: { flex: 1, lineHeight: 14 },
   totalRow: { backgroundColor: '#F7FAF8', borderBottomWidth: 0 },
@@ -1411,7 +1445,7 @@ const styles = StyleSheet.create({
     gap: 10,
     padding: 9,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#E4E9E6',
+    borderBottomColor: ADMIN_THEME.colors.border,
   },
   itemImage: { width: 38, height: 38, borderRadius: 9, backgroundColor: '#EEF2EF' },
   imagePlaceholder: { alignItems: 'center', justifyContent: 'center' },
@@ -1441,9 +1475,9 @@ const styles = StyleSheet.create({
     gap: 10,
     padding: 15,
     borderWidth: 1,
-    borderColor: '#E3E8E5',
+    borderColor: ADMIN_THEME.colors.border,
     borderRadius: 14,
-    backgroundColor: '#FBFCFB',
+    backgroundColor: ADMIN_THEME.colors.surfaceMuted,
     marginBottom: 10,
   },
   refundHeader: {
@@ -1464,7 +1498,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#F0F3F1',
   },
   evidenceButtons: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
-  noEvidence: { fontFamily: 'mon', fontSize: 8, fontStyle: 'italic', color: '#9A6700' },
+  noEvidence: {
+    fontFamily: 'mon',
+    fontSize: 8,
+    fontStyle: 'italic',
+    color: ADMIN_THEME.colors.amber,
+  },
   refundActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 7, paddingTop: 4 },
   actionContent: { gap: 15 },
   fieldLabel: {
@@ -1477,7 +1516,7 @@ const styles = StyleSheet.create({
   textField: {
     minHeight: 43,
     borderWidth: 1,
-    borderColor: '#DDE3DF',
+    borderColor: ADMIN_THEME.colors.border,
     borderRadius: 10,
     paddingHorizontal: 12,
     fontFamily: 'mon',
@@ -1487,7 +1526,7 @@ const styles = StyleSheet.create({
   textArea: {
     minHeight: 110,
     borderWidth: 1,
-    borderColor: '#DDE3DF',
+    borderColor: ADMIN_THEME.colors.border,
     borderRadius: 10,
     padding: 12,
     fontFamily: 'mon',
@@ -1499,9 +1538,9 @@ const styles = StyleSheet.create({
     fontFamily: 'mon-sb',
     fontSize: 9,
     lineHeight: 15,
-    color: '#B42318',
+    color: ADMIN_THEME.colors.red,
     padding: 10,
     borderRadius: 9,
-    backgroundColor: '#FFF3F2',
+    backgroundColor: ADMIN_THEME.colors.redSoft,
   },
 });

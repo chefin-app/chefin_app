@@ -1,5 +1,6 @@
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet, ViewStyle, TextStyle } from 'react-native';
+import theme from '@/src/styles/theme';
 
 type TabButtonProps = {
   title: string;
@@ -28,22 +29,22 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 15,
     borderRadius: 20, // Rounded pill shape
-    backgroundColor: '#fff', // Default background color
-    borderColor: '#e0e0e0',
+    backgroundColor: theme.colors.surface, // Default background color
+    borderColor: theme.colors.border,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
   selectedButton: {
-    backgroundColor: '#237A3B', // Selected button background
-    borderColor: '#4CAF50',
+    backgroundColor: theme.colors.primaryAction, // Selected button background
+    borderColor: theme.colors.primary,
   },
   buttonText: {
     fontSize: 14,
-    color: '#666', // Default text color
+    color: theme.colors.textSecondary, // Default text color
     fontWeight: '500',
   },
   selectedButtonText: {
-    color: '#fff', // Selected text color
+    color: theme.colors.textOnAction, // Selected text color
   },
 });

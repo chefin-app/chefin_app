@@ -14,6 +14,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import theme from '@/src/styles/theme';
 
 export type DeliveryAddress = {
   recipientName: string;
@@ -199,14 +200,14 @@ export function DeliveryAddressModal({
       >
         <View style={styles.header}>
           <TouchableOpacity onPress={onClose} style={styles.iconButton}>
-            <Ionicons name="close" size={24} color="#1A1A1A" />
+            <Ionicons name="close" size={24} color={theme.colors.text} />
           </TouchableOpacity>
           <Text style={styles.title}>Exact delivery address</Text>
           <View style={styles.iconButton} />
         </View>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <View style={styles.privacyCard}>
-            <Ionicons name="lock-closed-outline" size={20} color="#216E39" />
+            <Ionicons name="lock-closed-outline" size={20} color={theme.colors.primaryOnLight} />
             <Text style={styles.privacyText}>
               Only your cook and assigned Lalamove rider receive this address for the order.
             </Text>
@@ -217,9 +218,9 @@ export function DeliveryAddressModal({
             disabled={locating}
           >
             {locating ? (
-              <ActivityIndicator color="#216E39" />
+              <ActivityIndicator color={theme.colors.primaryOnLight} />
             ) : (
-              <Ionicons name="locate-outline" size={20} color="#216E39" />
+              <Ionicons name="locate-outline" size={20} color={theme.colors.primaryOnLight} />
             )}
             <Text style={styles.locationText}>Use my current location</Text>
           </TouchableOpacity>
@@ -254,7 +255,7 @@ export function DeliveryAddressModal({
             disabled={saving}
           >
             {saving ? (
-              <ActivityIndicator color="#fff" />
+              <ActivityIndicator color={theme.colors.textOnAction} />
             ) : (
               <Text style={styles.saveText}>Save and get Lalamove quote</Text>
             )}
@@ -266,7 +267,7 @@ export function DeliveryAddressModal({
 }
 
 const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: '#fff' },
+  page: { flex: 1, backgroundColor: theme.colors.surface },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -276,7 +277,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#DDD',
   },
   iconButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  title: { fontSize: 17, fontWeight: '800', color: '#1A1A1A' },
+  title: { fontSize: 17, fontWeight: '800', color: theme.colors.text },
   content: { padding: 20, paddingBottom: 32 },
   privacyCard: {
     flexDirection: 'row',
@@ -298,7 +299,7 @@ const styles = StyleSheet.create({
     minHeight: 48,
     marginBottom: 18,
   },
-  locationText: { color: '#216E39', fontWeight: '700' },
+  locationText: { color: theme.colors.primaryOnLight, fontWeight: '700' },
   field: { marginBottom: 14 },
   label: { fontSize: 13, fontWeight: '700', color: '#4D554F', marginBottom: 6 },
   input: {
@@ -308,22 +309,22 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 13,
     fontSize: 16,
-    color: '#1A1A1A',
+    color: theme.colors.text,
     backgroundColor: '#FAFBFA',
   },
   multiline: { minHeight: 86, paddingTop: 12, textAlignVertical: 'top' },
   row: { flexDirection: 'row', gap: 12 },
   flex: { flex: 1 },
   postcode: { width: 115 },
-  areaNote: { fontSize: 12, color: '#777', textAlign: 'center' },
+  areaNote: { fontSize: 12, color: theme.colors.textSecondary, textAlign: 'center' },
   footer: { padding: 16, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#DDD' },
   saveButton: {
     minHeight: 52,
     borderRadius: 16,
-    backgroundColor: '#216E39',
+    backgroundColor: theme.colors.primaryOnLight,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  saveText: { color: '#fff', fontSize: 16, fontWeight: '800' },
+  saveText: { color: theme.colors.textOnAction, fontSize: 16, fontWeight: '800' },
   disabled: { opacity: 0.65 },
 });

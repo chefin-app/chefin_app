@@ -31,6 +31,7 @@ import { AdminPanel, AdminStatusBadge } from '@/src/components/admin/AdminOvervi
 import AdminSelect from '@/src/components/admin/AdminSelect';
 import { useAuth } from '@/src/services/auth-context';
 import { ADMIN_SHARED_STYLES } from '@/src/admin/theme';
+import { ADMIN_THEME } from '@/src/admin/theme';
 
 const FILTERS: Array<{ key: DishManagementFilter; label: string }> = [
   { key: 'all', label: 'All dishes' },
@@ -409,7 +410,7 @@ export default function DishManagementScreen() {
           accessibilityLabel="Refresh dishes"
         >
           {refreshing ? (
-            <ActivityIndicator size="small" color="#4CAF50" />
+            <ActivityIndicator size="small" color={ADMIN_THEME.colors.green} />
           ) : (
             <Ionicons name="refresh" size={19} color="#47544C" />
           )}
@@ -426,7 +427,7 @@ export default function DishManagementScreen() {
             'Average price',
             `RM ${(stats?.averagePrice ?? 0).toFixed(2)}`,
             'cash-outline',
-            '#4CAF50',
+            ADMIN_THEME.colors.green,
           ],
         ].map(([label, value, icon, color]) => (
           <View key={String(label)} style={styles.statCard}>
@@ -494,12 +495,12 @@ export default function DishManagementScreen() {
 
         <View style={styles.controls}>
           <View style={styles.searchBox}>
-            <Ionicons name="search-outline" size={19} color="#89928C" />
+            <Ionicons name="search-outline" size={19} color={ADMIN_THEME.colors.textMuted} />
             <TextInput
               value={searchInput}
               onChangeText={setSearchInput}
               placeholder="Search dish, cook, restaurant or cuisine"
-              placeholderTextColor="#9AA29D"
+              placeholderTextColor={ADMIN_THEME.colors.textSubtle}
               style={styles.searchInput}
             />
             {searchInput ? (
@@ -507,7 +508,7 @@ export default function DishManagementScreen() {
                 onPress={() => setSearchInput('')}
                 accessibilityLabel="Clear search"
               >
-                <Ionicons name="close-circle" size={18} color="#A0A8A3" />
+                <Ionicons name="close-circle" size={18} color={ADMIN_THEME.colors.textSubtle} />
               </TouchableOpacity>
             ) : null}
           </View>
@@ -534,7 +535,7 @@ export default function DishManagementScreen() {
 
         {error ? (
           <View style={styles.errorBanner}>
-            <Ionicons name="alert-circle-outline" size={18} color="#B42318" />
+            <Ionicons name="alert-circle-outline" size={18} color={ADMIN_THEME.colors.red} />
             <Text style={styles.errorText}>{error}</Text>
             <TouchableOpacity onPress={() => loadDishes()}>
               <Text style={styles.retryText}>Retry</Text>
@@ -544,7 +545,7 @@ export default function DishManagementScreen() {
 
         {loading && !response ? (
           <View style={styles.loadingState}>
-            <ActivityIndicator size="large" color="#4CAF50" />
+            <ActivityIndicator size="large" color={ADMIN_THEME.colors.green} />
             <Text style={styles.loadingText}>Loading dishes…</Text>
           </View>
         ) : response?.dishes.length === 0 ? (
@@ -609,7 +610,7 @@ export default function DishManagementScreen() {
                   <View style={styles.flagsColumn}>
                     {dish.openReportCount > 0 ? (
                       <View style={styles.flagBadge}>
-                        <Ionicons name="flag" size={12} color="#B42318" />
+                        <Ionicons name="flag" size={12} color={ADMIN_THEME.colors.red} />
                         <Text style={styles.flagText}>{dish.openReportCount}</Text>
                       </View>
                     ) : (
@@ -705,12 +706,12 @@ export default function DishManagementScreen() {
       >
         {detailsLoading ? (
           <View style={styles.dialogLoading}>
-            <ActivityIndicator size="large" color="#4CAF50" />
+            <ActivityIndicator size="large" color={ADMIN_THEME.colors.green} />
             <Text style={styles.loadingText}>Loading dish information…</Text>
           </View>
         ) : detailsError ? (
           <View style={styles.errorBanner}>
-            <Ionicons name="alert-circle-outline" size={18} color="#B42318" />
+            <Ionicons name="alert-circle-outline" size={18} color={ADMIN_THEME.colors.red} />
             <Text style={styles.errorText}>{detailsError}</Text>
             {selectedId ? (
               <TouchableOpacity onPress={() => openDetails(selectedId)}>
@@ -730,7 +731,7 @@ export default function DishManagementScreen() {
               >
                 <Image source={{ uri: details.dish.imageUrl }} style={styles.heroImage} />
                 <View style={styles.imageExpandHint}>
-                  <Ionicons name="expand-outline" size={15} color="#FFFFFF" />
+                  <Ionicons name="expand-outline" size={15} color={ADMIN_THEME.colors.surface} />
                   <Text style={styles.imageExpandText}>View full image</Text>
                 </View>
               </TouchableOpacity>
@@ -795,9 +796,9 @@ export default function DishManagementScreen() {
               <DetailRow
                 label="Delivery offer"
                 value={
-                    details.dish.freeDeliveryThreshold == null
-                      ? 'No free-delivery threshold'
-                      : `Cook covers delivery from RM ${details.dish.freeDeliveryThreshold.toFixed(2)}`
+                  details.dish.freeDeliveryThreshold == null
+                    ? 'No free-delivery threshold'
+                    : `Cook covers delivery from RM ${details.dish.freeDeliveryThreshold.toFixed(2)}`
                 }
               />
             </View>
@@ -998,7 +999,9 @@ export default function DishManagementScreen() {
                 }
                 size={22}
                 color={
-                  actionMode === 'reject' || actionMode === 'unpublish' ? '#B42318' : '#237A3B'
+                  actionMode === 'reject' || actionMode === 'unpublish'
+                    ? ADMIN_THEME.colors.red
+                    : ADMIN_THEME.colors.greenDark
                 }
               />
               <Text style={styles.actionDescription}>{actionMeta[actionMode].description}</Text>
@@ -1013,7 +1016,7 @@ export default function DishManagementScreen() {
                   maxLength={1000}
                   submitBehavior="newline"
                   placeholder="Explain the decision clearly for the cook and audit trail"
-                  placeholderTextColor="#9AA29D"
+                  placeholderTextColor={ADMIN_THEME.colors.textSubtle}
                   style={styles.textarea}
                 />
                 <Text style={styles.formHint}>
@@ -1049,7 +1052,7 @@ export default function DishManagementScreen() {
                 accessibilityRole="button"
                 accessibilityLabel="Close image preview"
               >
-                <Ionicons name="close" size={22} color="#FFFFFF" />
+                <Ionicons name="close" size={22} color={ADMIN_THEME.colors.surface} />
               </TouchableOpacity>
             </View>
             {imagePreview ? (
@@ -1092,11 +1095,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 5,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#EEF1EF',
+    backgroundColor: ADMIN_THEME.colors.borderSoft,
   },
   countBadgeActive: { backgroundColor: '#CDEED6' },
   countBadgeText: { fontFamily: 'mon-b', fontSize: 8, color: '#6F7973' },
-  countBadgeTextActive: { color: '#237A3B' },
+  countBadgeTextActive: { color: ADMIN_THEME.colors.greenDark },
   controls: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -1113,12 +1116,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#FECDCA',
     borderRadius: 12,
-    backgroundColor: '#FFF3F2',
+    backgroundColor: ADMIN_THEME.colors.redSoft,
     padding: 13,
     marginBottom: 14,
   },
   errorText: { flex: 1, fontFamily: 'mon', fontSize: 10, color: '#912018' },
-  retryText: { fontFamily: 'mon-b', fontSize: 10, color: '#B42318' },
+  retryText: { fontFamily: 'mon-b', fontSize: 10, color: ADMIN_THEME.colors.red },
   loadingState: { minHeight: 260, alignItems: 'center', justifyContent: 'center', gap: 10 },
   dialogLoading: { minHeight: 320, alignItems: 'center', justifyContent: 'center', gap: 10 },
   loadingText: { fontFamily: 'mon', fontSize: 10, color: '#828B85' },
@@ -1129,7 +1132,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderBottomWidth: 1,
-    borderBottomColor: '#EDF0EE',
+    borderBottomColor: ADMIN_THEME.colors.borderSoft,
     paddingHorizontal: 8,
   },
   tableHeader: {
@@ -1140,7 +1143,12 @@ const styles = StyleSheet.create({
   tableHeaderText: ADMIN_SHARED_STYLES.tableHeaderText,
   tableCell: ADMIN_SHARED_STYLES.tableCell,
   tableStrong: { ...ADMIN_SHARED_STYLES.tableStrong, flexShrink: 1 },
-  tableSecondary: { fontFamily: 'mon', fontSize: 8, color: '#8A938D', marginTop: 3 },
+  tableSecondary: {
+    fontFamily: 'mon',
+    fontSize: 8,
+    color: ADMIN_THEME.colors.textMuted,
+    marginTop: 3,
+  },
   idColumn: { width: 105 },
   dishColumn: { width: 220 },
   cookColumn: { width: 190 },
@@ -1166,13 +1174,16 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#D9DFDB',
     borderRadius: 9,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: ADMIN_THEME.colors.surface,
   },
-  actionButtonPrimary: { borderColor: '#4CAF50', backgroundColor: '#4CAF50' },
-  actionButtonDanger: { borderColor: '#F6C7C3', backgroundColor: '#FFF3F2' },
+  actionButtonPrimary: {
+    borderColor: ADMIN_THEME.colors.green,
+    backgroundColor: ADMIN_THEME.colors.green,
+  },
+  actionButtonDanger: { borderColor: '#F6C7C3', backgroundColor: ADMIN_THEME.colors.redSoft },
   actionButtonText: ADMIN_SHARED_STYLES.buttonText,
-  actionButtonTextPrimary: { color: '#FFFFFF' },
-  actionButtonTextDanger: { color: '#B42318' },
+  actionButtonTextPrimary: { color: ADMIN_THEME.colors.surface },
+  actionButtonTextDanger: { color: ADMIN_THEME.colors.red },
   buttonDisabled: { opacity: 0.42 },
   flagBadge: {
     alignSelf: 'flex-start',
@@ -1180,28 +1191,33 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
     borderRadius: 99,
-    backgroundColor: '#FEE4E2',
+    backgroundColor: ADMIN_THEME.status.danger.background,
     paddingHorizontal: 8,
     paddingVertical: 6,
   },
-  flagText: { fontFamily: 'mon-b', fontSize: 8, color: '#B42318' },
+  flagText: { fontFamily: 'mon-b', fontSize: 8, color: ADMIN_THEME.colors.red },
   mobileCards: { gap: 11 },
   mobileCardLink: { gap: 12 },
   mobileCard: {
     borderWidth: 1,
-    borderColor: '#E4E9E6',
+    borderColor: ADMIN_THEME.colors.border,
     borderRadius: 14,
     padding: 13,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: ADMIN_THEME.colors.surface,
     gap: 12,
   },
   mobileCardTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 11 },
   mobileImage: { width: 58, height: 58, borderRadius: 12, backgroundColor: '#EEF2EF' },
   mobileCopy: { flex: 1, minWidth: 0 },
-  mobileTitle: { fontFamily: 'mon-b', fontSize: 13, color: '#27322B' },
-  mobilePrice: { fontFamily: 'mon-sb', fontSize: 11, color: '#237A3B', marginTop: 6 },
+  mobileTitle: { fontFamily: 'mon-b', fontSize: 13, color: ADMIN_THEME.colors.text },
+  mobilePrice: {
+    fontFamily: 'mon-sb',
+    fontSize: 11,
+    color: ADMIN_THEME.colors.greenDark,
+    marginTop: 6,
+  },
   mobileMetaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 14 },
-  mobileFlag: { fontFamily: 'mon-sb', fontSize: 8, color: '#B42318' },
+  mobileFlag: { fontFamily: 'mon-sb', fontSize: 8, color: ADMIN_THEME.colors.red },
   pagination: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -1211,9 +1227,9 @@ const styles = StyleSheet.create({
     marginTop: 18,
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: '#EDF0EE',
+    borderTopColor: ADMIN_THEME.colors.borderSoft,
   },
-  paginationText: { fontFamily: 'mon', fontSize: 9, color: '#7B857E' },
+  paginationText: { fontFamily: 'mon', fontSize: 9, color: ADMIN_THEME.colors.textMuted },
   detailsContent: { gap: 18 },
   heroImage: { width: '100%', height: 240, borderRadius: 16, backgroundColor: '#EEF2EF' },
   imageExpandHint: {
@@ -1228,7 +1244,7 @@ const styles = StyleSheet.create({
     borderRadius: 9,
     backgroundColor: 'rgba(20, 29, 23, 0.72)',
   },
-  imageExpandText: { fontFamily: 'mon-sb', fontSize: 9, color: '#FFFFFF' },
+  imageExpandText: { fontFamily: 'mon-sb', fontSize: 9, color: ADMIN_THEME.colors.surface },
   imagePreviewOverlay: {
     flex: 1,
     alignItems: 'center',
@@ -1244,7 +1260,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 16,
   },
-  imagePreviewTitle: { flex: 1, fontFamily: 'mon-b', fontSize: 16, color: '#FFFFFF' },
+  imagePreviewTitle: {
+    flex: 1,
+    fontFamily: 'mon-b',
+    fontSize: 16,
+    color: ADMIN_THEME.colors.surface,
+  },
   imagePreviewClose: {
     width: 42,
     height: 42,
@@ -1258,7 +1279,12 @@ const styles = StyleSheet.create({
   detailsHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 16 },
   detailsHeaderCopy: { flex: 1 },
   detailsTitle: { fontFamily: 'mon-b', fontSize: 23, lineHeight: 29, color: '#202B24' },
-  detailsMeta: { fontFamily: 'mon', fontSize: 10, color: '#8A938D', marginTop: 5 },
+  detailsMeta: {
+    fontFamily: 'mon',
+    fontSize: 10,
+    color: ADMIN_THEME.colors.textMuted,
+    marginTop: 5,
+  },
   detailsPrice: { fontFamily: 'mon-b', fontSize: 24, color: '#1F2923' },
   description: { fontFamily: 'mon', fontSize: 11, lineHeight: 18, color: '#68736C' },
   metricsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
@@ -1270,14 +1296,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
     borderWidth: 1,
-    borderColor: '#E0E5E2',
+    borderColor: ADMIN_THEME.colors.border,
     borderRadius: 14,
     padding: 13,
-    backgroundColor: '#FBFCFB',
+    backgroundColor: ADMIN_THEME.colors.surfaceMuted,
   },
-  metricValue: { fontFamily: 'mon-b', fontSize: 22, color: '#27322B' },
-  metricDanger: { color: '#B42318' },
-  metricLabel: { fontFamily: 'mon', fontSize: 9, color: '#8A938D' },
+  metricValue: { fontFamily: 'mon-b', fontSize: 22, color: ADMIN_THEME.colors.text },
+  metricDanger: { color: ADMIN_THEME.colors.red },
+  metricLabel: { fontFamily: 'mon', fontSize: 9, color: ADMIN_THEME.colors.textMuted },
   section: { gap: 10 },
   sectionTitle: {
     fontFamily: 'mon-b',
@@ -1294,26 +1320,37 @@ const styles = StyleSheet.create({
     gap: 20,
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#EDF0EE',
+    borderBottomColor: ADMIN_THEME.colors.borderSoft,
   },
-  detailLabel: { fontFamily: 'mon', fontSize: 9, color: '#8A938D' },
+  detailLabel: { fontFamily: 'mon', fontSize: 9, color: ADMIN_THEME.colors.textMuted },
   detailValue: {
     flex: 1,
     fontFamily: 'mon-sb',
     fontSize: 10,
     lineHeight: 16,
-    color: '#27322B',
+    color: ADMIN_THEME.colors.text,
     textAlign: 'right',
   },
-  emptySectionText: { fontFamily: 'mon', fontSize: 10, color: '#8A938D', paddingVertical: 8 },
-  optionGroup: { borderWidth: 1, borderColor: '#E3E8E5', borderRadius: 13, padding: 13, gap: 8 },
+  emptySectionText: {
+    fontFamily: 'mon',
+    fontSize: 10,
+    color: ADMIN_THEME.colors.textMuted,
+    paddingVertical: 8,
+  },
+  optionGroup: {
+    borderWidth: 1,
+    borderColor: ADMIN_THEME.colors.border,
+    borderRadius: 13,
+    padding: 13,
+    gap: 8,
+  },
   optionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 12,
   },
-  optionTitle: { fontFamily: 'mon-sb', fontSize: 10, color: '#27322B' },
+  optionTitle: { fontFamily: 'mon-sb', fontSize: 10, color: ADMIN_THEME.colors.text },
   optionRule: { fontFamily: 'mon', fontSize: 8, color: '#7A847E' },
   optionRow: {
     minHeight: 32,
@@ -1322,17 +1359,17 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingTop: 7,
     borderTopWidth: 1,
-    borderTopColor: '#EEF1EF',
+    borderTopColor: ADMIN_THEME.colors.borderSoft,
   },
   optionName: { flex: 1, fontFamily: 'mon', fontSize: 9, color: '#4F5A53' },
   optionPrice: { fontFamily: 'mon-sb', fontSize: 9, color: '#4F5A53' },
   availabilitySummary: {
     borderWidth: 1,
-    borderColor: '#DDE3DF',
+    borderColor: ADMIN_THEME.colors.border,
     borderRadius: 14,
     padding: 14,
     gap: 8,
-    backgroundColor: '#FBFCFB',
+    backgroundColor: ADMIN_THEME.colors.surfaceMuted,
   },
   availabilityTitle: { fontFamily: 'mon-b', fontSize: 11, color: '#36423A' },
   weekdayRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginVertical: 4 },
@@ -1344,17 +1381,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: '#E1E6E3',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: ADMIN_THEME.colors.surface,
   },
   weekdayActive: { borderColor: '#C9E8D2', backgroundColor: '#E8F7ED' },
-  weekdayText: { fontFamily: 'mon', fontSize: 8, color: '#929A95' },
-  weekdayTextActive: { fontFamily: 'mon-sb', color: '#237A3B' },
+  weekdayText: { fontFamily: 'mon', fontSize: 8, color: ADMIN_THEME.colors.textSubtle },
+  weekdayTextActive: { fontFamily: 'mon-sb', color: ADMIN_THEME.colors.greenDark },
   scheduleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 7,
     borderTopWidth: 1,
-    borderTopColor: '#EDF0EE',
+    borderTopColor: ADMIN_THEME.colors.borderSoft,
   },
   scheduleDay: { width: 50, fontFamily: 'mon-sb', fontSize: 9, color: '#4A554E' },
   scheduleTime: { fontFamily: 'mon', fontSize: 9, color: '#68736C' },
@@ -1367,7 +1404,12 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#E2E7E4',
   },
-  capacityValue: { fontFamily: 'mon-b', fontSize: 12, color: '#27322B', marginTop: 4 },
+  capacityValue: {
+    fontFamily: 'mon-b',
+    fontSize: 12,
+    color: ADMIN_THEME.colors.text,
+    marginTop: 4,
+  },
   reportCard: {
     borderWidth: 1,
     borderColor: '#F0D4D1',
@@ -1389,18 +1431,24 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#EDF0EE',
+    borderBottomColor: ADMIN_THEME.colors.borderSoft,
   },
   reviewScore: {
     borderRadius: 8,
-    backgroundColor: '#FFF1C2',
+    backgroundColor: ADMIN_THEME.status.warning.background,
     paddingHorizontal: 8,
     paddingVertical: 6,
   },
   reviewScoreText: { fontFamily: 'mon-b', fontSize: 8, color: '#805E00' },
   reviewCopy: { flex: 1 },
   historyRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, paddingVertical: 9 },
-  historyDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#4CAF50', marginTop: 3 },
+  historyDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: ADMIN_THEME.colors.green,
+    marginTop: 3,
+  },
   actionForm: { gap: 16 },
   actionNotice: {
     flexDirection: 'row',
@@ -1420,10 +1468,10 @@ const styles = StyleSheet.create({
     padding: 12,
     fontFamily: 'mon',
     fontSize: 10,
-    color: '#27322B',
+    color: ADMIN_THEME.colors.text,
     textAlignVertical: 'top',
     outlineStyle: 'none',
   } as never,
   formHint: { fontFamily: 'mon', fontSize: 8, color: '#8B948E', marginTop: 6, textAlign: 'right' },
-  actionError: { fontFamily: 'mon-sb', fontSize: 9, color: '#B42318' },
+  actionError: { fontFamily: 'mon-sb', fontSize: 9, color: ADMIN_THEME.colors.red },
 });

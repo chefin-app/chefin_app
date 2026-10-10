@@ -23,6 +23,7 @@ import {
   PaymentSettingsButton,
   paymentSettingsStyles,
 } from '@/src/components/settings/PaymentSettingsUI';
+import theme from '@/src/styles/theme';
 
 export default function DirectPaymentSettings() {
   const { session, user } = useAuth();
@@ -101,10 +102,7 @@ export default function DirectPaymentSettings() {
       );
       const body = await response.json();
       if (!response.ok) throw new Error(body.error);
-      Alert.alert(
-        'Saved',
-        'These options will apply to new orders.'
-      );
+      Alert.alert('Saved', 'These options will apply to new orders.');
       router.back();
     } catch (err) {
       Alert.alert('Could not save', err instanceof Error ? err.message : 'Please retry.');
@@ -121,7 +119,7 @@ export default function DirectPaymentSettings() {
       >
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           {loading ? (
-            <ActivityIndicator color="#4CAF50" />
+            <ActivityIndicator color={theme.colors.primary} />
           ) : error ? (
             <Text accessibilityRole="alert" style={styles.error}>
               {error}
@@ -135,8 +133,8 @@ export default function DirectPaymentSettings() {
                   disabled={saving}
                   value={qrEnabled}
                   onValueChange={setQrEnabled}
-                  trackColor={{ false: '#D9DEDB', true: '#4CAF50' }}
-                  ios_backgroundColor="#D9DEDB"
+                  trackColor={{ false: theme.colors.border, true: theme.colors.primary }}
+                  ios_backgroundColor={theme.colors.border}
                 />
               </View>
               <Text style={styles.body}>
@@ -154,7 +152,7 @@ export default function DirectPaymentSettings() {
                     style={styles.input}
                     maxLength={120}
                     editable={!saving}
-                    placeholderTextColor="#999"
+                    placeholderTextColor={theme.colors.placeholder}
                   />
                 </View>
                 <TouchableOpacity
@@ -178,8 +176,8 @@ export default function DirectPaymentSettings() {
                   disabled={saving}
                   value={collectionEnabled}
                   onValueChange={setCollectionEnabled}
-                  trackColor={{ false: '#D9DEDB', true: '#4CAF50' }}
-                  ios_backgroundColor="#D9DEDB"
+                  trackColor={{ false: theme.colors.border, true: theme.colors.primary }}
+                  ios_backgroundColor={theme.colors.border}
                 />
               </View>
               <Text style={styles.body}>
@@ -208,8 +206,13 @@ const styles = StyleSheet.create({
   content: { padding: 20, gap: 20 },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   toggleLabel: { flex: 1, fontSize: 16, fontWeight: '600', color: '#222' },
-  uploadButton: { borderWidth: 1, borderColor: '#4CAF50', padding: 14, borderRadius: 12 },
-  uploadText: { color: '#4CAF50', fontSize: 16, fontWeight: '600', textAlign: 'center' },
-  error: { color: '#C62828', fontSize: 14, lineHeight: 21 },
+  uploadButton: {
+    borderWidth: 1,
+    borderColor: theme.colors.primary,
+    padding: 14,
+    borderRadius: 12,
+  },
+  uploadText: { color: theme.colors.primary, fontSize: 16, fontWeight: '600', textAlign: 'center' },
+  error: { color: theme.colors.error, fontSize: 14, lineHeight: 21 },
   qr: { width: '100%', height: 260 },
 });

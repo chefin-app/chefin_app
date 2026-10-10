@@ -10,6 +10,7 @@ import {
 import React, { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import theme from '@/src/styles/theme';
 
 interface MainFilterProps {
   onFilterToggle?: (filterId: string, active: boolean) => void;
@@ -151,7 +152,7 @@ export default function MainFilter({ onFilterToggle, onDietarySelect }: MainFilt
               <Ionicons
                 name="flash"
                 size={15}
-                color={filter.active ? '#fff' : '#2E7D32'}
+                color={filter.active ? theme.colors.surface : theme.colors.primaryOnLight}
                 style={styles.leadingIcon}
               />
             )}
@@ -162,7 +163,7 @@ export default function MainFilter({ onFilterToggle, onDietarySelect }: MainFilt
               <Ionicons
                 name={dietaryDropdownVisible ? 'chevron-up' : 'chevron-down'}
                 size={16}
-                color={filter.active ? '#fff' : '#666'}
+                color={filter.active ? theme.colors.surface : theme.colors.textSecondary}
                 style={styles.dropdownIcon}
               />
             )}
@@ -193,7 +194,7 @@ export default function MainFilter({ onFilterToggle, onDietarySelect }: MainFilt
                 onPress={() => setDietaryDropdownVisible(false)}
                 style={styles.closeButton}
               >
-                <Ionicons name="close" size={24} color="#333" />
+                <Ionicons name="close" size={24} color={theme.colors.textStrong} />
               </TouchableOpacity>
             </View>
             <View style={styles.optionsContainer}>
@@ -214,7 +215,9 @@ export default function MainFilter({ onFilterToggle, onDietarySelect }: MainFilt
                     <Text style={styles.optionDescription}>{option.description}</Text>
                   </View>
                   <View style={[styles.checkbox, option.selected && styles.checkedBox]}>
-                    {option.selected && <Ionicons name="checkmark" size={16} color="#fff" />}
+                    {option.selected && (
+                      <Ionicons name="checkmark" size={16} color={theme.colors.textOnAction} />
+                    )}
                   </View>
                 </TouchableOpacity>
               ))}
@@ -257,21 +260,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.colors.surfaceMuted,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: theme.colors.border,
   },
   activeFilterTag: {
-    backgroundColor: '#4CAF50',
-    borderColor: '#4CAF50',
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
   },
   filterText: {
     fontSize: 14,
-    color: '#666',
+    color: theme.colors.textSecondary,
     fontWeight: '500',
   },
   activeFilterText: {
-    color: '#fff',
+    color: theme.colors.textOnAction,
     fontWeight: '600',
   },
   dropdownIcon: {
@@ -286,7 +289,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   dropdownContainer: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
     borderTopLeftRadius: 26,
     borderTopRightRadius: 26,
     width: '100%',
@@ -304,7 +307,7 @@ const styles = StyleSheet.create({
     height: 4,
     alignSelf: 'center',
     borderRadius: 2,
-    backgroundColor: '#DDE2DF',
+    backgroundColor: theme.colors.border,
   },
   dropdownHeader: {
     flexDirection: 'row',
@@ -319,7 +322,12 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     color: '#1F2521',
   },
-  dropdownSubtitle: { marginTop: 7, color: '#747D77', fontSize: 13, lineHeight: 19 },
+  dropdownSubtitle: {
+    marginTop: 7,
+    color: theme.colors.textSecondary,
+    fontSize: 13,
+    lineHeight: 19,
+  },
   closeButton: {
     padding: 4,
   },
@@ -339,7 +347,7 @@ const styles = StyleSheet.create({
     color: '#242B27',
     fontWeight: '700',
   },
-  optionDescription: { marginTop: 3, color: '#747D77', fontSize: 12 },
+  optionDescription: { marginTop: 3, color: theme.colors.textSecondary, fontSize: 12 },
   checkbox: {
     width: 24,
     height: 24,
@@ -350,8 +358,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   checkedBox: {
-    backgroundColor: '#4CAF50',
-    borderColor: '#4CAF50',
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
   },
   disclaimerCard: {
     flexDirection: 'row',
@@ -386,12 +394,12 @@ const styles = StyleSheet.create({
     minHeight: 54,
     justifyContent: 'center',
     borderRadius: 27,
-    backgroundColor: '#00B85A',
+    backgroundColor: theme.colors.primary,
     alignItems: 'center',
   },
   applyButtonText: {
     fontSize: 16,
-    color: '#fff',
+    color: theme.colors.textOnAction,
     fontWeight: '600',
   },
 });

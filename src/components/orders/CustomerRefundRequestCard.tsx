@@ -15,6 +15,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import theme from '@/src/styles/theme';
 
 type Evidence = { base64: string; uri: string; contentType: string };
 type RefundState = {
@@ -180,7 +181,7 @@ export default function CustomerRefundRequestCard({
   if (loading && !state) {
     return (
       <View style={styles.card}>
-        <ActivityIndicator size="small" color="#4CAF50" />
+        <ActivityIndicator size="small" color={theme.colors.primary} />
       </View>
     );
   }
@@ -224,7 +225,7 @@ export default function CustomerRefundRequestCard({
     <>
       <View style={styles.card}>
         <View style={styles.iconWrap}>
-          <Ionicons name="shield-checkmark-outline" size={20} color="#237A3B" />
+          <Ionicons name="shield-checkmark-outline" size={20} color={theme.colors.primaryAction} />
         </View>
         <View style={styles.flex}>
           <Text style={styles.title}>Something wrong with your order?</Text>
@@ -261,7 +262,7 @@ export default function CustomerRefundRequestCard({
                 </Text>
               </View>
               <TouchableOpacity style={styles.closeButton} onPress={() => setVisible(false)}>
-                <Ionicons name="close" size={22} color="#344039" />
+                <Ionicons name="close" size={22} color={theme.colors.textStrong} />
               </TouchableOpacity>
             </View>
             <ScrollView
@@ -324,7 +325,7 @@ export default function CustomerRefundRequestCard({
               </TouchableOpacity>
               <TouchableOpacity style={styles.submitButton} onPress={submit} disabled={saving}>
                 {saving ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
+                  <ActivityIndicator size="small" color={theme.colors.textOnAction} />
                 ) : (
                   <Text style={styles.submitText}>Submit for review</Text>
                 )}
@@ -377,7 +378,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#E3F4E7',
     marginTop: 10,
   },
-  openButtonText: { fontSize: 12, fontWeight: '800', color: '#237A3B' },
+  openButtonText: { fontSize: 12, fontWeight: '800', color: theme.colors.primaryAction },
   closedCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -401,7 +402,7 @@ const styles = StyleSheet.create({
     maxHeight: '90%',
     borderRadius: 20,
     overflow: 'hidden',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.surface,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -431,9 +432,9 @@ const styles = StyleSheet.create({
     borderColor: '#DDE3DF',
     borderRadius: 9,
   },
-  reasonButtonActive: { borderColor: '#4CAF50', backgroundColor: '#EAF8EE' },
+  reasonButtonActive: { borderColor: theme.colors.primary, backgroundColor: '#EAF8EE' },
   reasonText: { fontSize: 11, fontWeight: '600', color: '#657067' },
-  reasonTextActive: { color: '#237A3B' },
+  reasonTextActive: { color: theme.colors.primaryAction },
   textArea: {
     minHeight: 105,
     borderWidth: 1,
@@ -461,7 +462,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     lineHeight: 16,
     fontWeight: '700',
-    color: '#B42318',
+    color: theme.colors.error,
     padding: 10,
     borderRadius: 9,
     backgroundColor: '#FFF3F2',
@@ -492,7 +493,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 16,
     borderRadius: 10,
-    backgroundColor: '#237A3B',
+    backgroundColor: theme.colors.primaryAction,
   },
-  submitText: { fontSize: 12, fontWeight: '800', color: '#FFFFFF' },
+  submitText: { fontSize: 12, fontWeight: '800', color: theme.colors.textOnAction },
 });

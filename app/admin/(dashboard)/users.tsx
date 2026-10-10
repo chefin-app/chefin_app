@@ -40,6 +40,7 @@ import { AdminPanel, AdminStatusBadge } from '@/src/components/admin/AdminOvervi
 import AdminSelect from '@/src/components/admin/AdminSelect';
 import { showAdminFailure, showAdminSuccess } from '@/src/admin/feedback';
 import { ADMIN_SHARED_STYLES } from '@/src/admin/theme';
+import { ADMIN_THEME } from '@/src/admin/theme';
 
 type ActionMode = 'invite' | 'edit' | 'suspend' | 'deactivate' | 'message' | 'verification' | null;
 
@@ -653,7 +654,12 @@ export default function UserManagementScreen() {
         {[
           ['Total users', stats?.totalUsers ?? 0, 'people-outline', '#438BF5'],
           ['Active cooks', stats?.activeCooks ?? 0, 'restaurant-outline', '#24BFB1'],
-          ['Active customers', stats?.activeCustomers ?? 0, 'person-outline', '#4CAF50'],
+          [
+            'Active customers',
+            stats?.activeCustomers ?? 0,
+            'person-outline',
+            ADMIN_THEME.colors.green,
+          ],
           ['Flagged / restricted', stats?.flagged ?? 0, 'flag-outline', '#F56C73'],
           ['Pending verification', stats?.pendingVerification ?? 0, 'shield-outline', '#F4B740'],
         ].map(([label, value, icon, color]) => (
@@ -707,17 +713,17 @@ export default function UserManagementScreen() {
 
         <View style={styles.controls}>
           <View style={styles.searchBox}>
-            <Ionicons name="search-outline" size={19} color="#8A938D" />
+            <Ionicons name="search-outline" size={19} color={ADMIN_THEME.colors.textMuted} />
             <TextInput
               value={searchInput}
               onChangeText={setSearchInput}
               placeholder="Search UID, name, email or phone"
-              placeholderTextColor="#9AA29D"
+              placeholderTextColor={ADMIN_THEME.colors.textSubtle}
               style={styles.searchInput}
             />
             {searchInput ? (
               <TouchableOpacity onPress={() => setSearchInput('')}>
-                <Ionicons name="close-circle" size={18} color="#A0A8A3" />
+                <Ionicons name="close-circle" size={18} color={ADMIN_THEME.colors.textSubtle} />
               </TouchableOpacity>
             ) : null}
           </View>
@@ -746,7 +752,7 @@ export default function UserManagementScreen() {
             disabled={refreshing}
           >
             {refreshing ? (
-              <ActivityIndicator size="small" color="#4CAF50" />
+              <ActivityIndicator size="small" color={ADMIN_THEME.colors.green} />
             ) : (
               <Ionicons name="refresh" size={18} color="#47544C" />
             )}
@@ -755,7 +761,7 @@ export default function UserManagementScreen() {
 
         {error ? (
           <View style={styles.errorBanner}>
-            <Ionicons name="alert-circle-outline" size={18} color="#B42318" />
+            <Ionicons name="alert-circle-outline" size={18} color={ADMIN_THEME.colors.red} />
             <Text style={styles.errorText}>{error}</Text>
             <TouchableOpacity onPress={() => loadUsers()}>
               <Text style={styles.retryText}>Retry</Text>
@@ -765,7 +771,7 @@ export default function UserManagementScreen() {
 
         {loading && !response ? (
           <View style={styles.loadingState}>
-            <ActivityIndicator size="large" color="#4CAF50" />
+            <ActivityIndicator size="large" color={ADMIN_THEME.colors.green} />
             <Text style={styles.loadingText}>Loading user accounts…</Text>
           </View>
         ) : response?.users.length === 0 ? (
@@ -922,7 +928,7 @@ export default function UserManagementScreen() {
       >
         {detailsLoading ? (
           <View style={styles.dialogLoading}>
-            <ActivityIndicator size="large" color="#4CAF50" />
+            <ActivityIndicator size="large" color={ADMIN_THEME.colors.green} />
           </View>
         ) : detailsError ? (
           <View style={styles.dialogLoading}>
@@ -950,7 +956,7 @@ export default function UserManagementScreen() {
 
             {details.user.status !== 'active' ? (
               <View style={styles.restrictionBox}>
-                <Ionicons name="warning-outline" size={18} color="#9A6700" />
+                <Ionicons name="warning-outline" size={18} color={ADMIN_THEME.colors.amber} />
                 <Text style={styles.restrictionText}>
                   {details.user.suspensionReason ??
                     details.user.deactivationReason ??
@@ -1094,7 +1100,7 @@ export default function UserManagementScreen() {
                 ))}
                 {details.reportsSubmitted.map(report => (
                   <View key={`submitted-${report.id}`} style={styles.listRow}>
-                    <Ionicons name="flag-outline" size={17} color="#667085" />
+                    <Ionicons name="flag-outline" size={17} color={ADMIN_THEME.colors.slate} />
                     <View style={styles.listRowCopy}>
                       <Text style={styles.listRowTitle}>Submitted: {report.target_label}</Text>
                       <Text style={styles.listRowMeta}>
@@ -1145,7 +1151,11 @@ export default function UserManagementScreen() {
               </View>
             ) : (
               <View style={styles.selfProtection}>
-                <Ionicons name="shield-checkmark-outline" size={18} color="#237A3B" />
+                <Ionicons
+                  name="shield-checkmark-outline"
+                  size={18}
+                  color={ADMIN_THEME.colors.greenDark}
+                />
                 <Text style={styles.selfProtectionText}>
                   Your own administrator account is protected from edits and restrictions.
                 </Text>
@@ -1260,7 +1270,11 @@ export default function UserManagementScreen() {
               multiline
             />
             <View style={styles.infoNotice}>
-              <Ionicons name="information-circle-outline" size={18} color="#175CD3" />
+              <Ionicons
+                name="information-circle-outline"
+                size={18}
+                color={ADMIN_THEME.colors.blue}
+              />
               <Text style={styles.infoNoticeText}>
                 The user can sign in and browse. New orders and other mutations are blocked; cooks
                 may finish existing orders.
@@ -1270,7 +1284,7 @@ export default function UserManagementScreen() {
         ) : actionMode === 'deactivate' ? (
           <View style={styles.formStack}>
             <View style={styles.dangerNotice}>
-              <Ionicons name="warning-outline" size={20} color="#B42318" />
+              <Ionicons name="warning-outline" size={20} color={ADMIN_THEME.colors.red} />
               <Text style={styles.dangerNoticeText}>
                 This is a reversible soft deletion. Login will be banned, listings hidden, and
                 historical records retained.
@@ -1294,7 +1308,7 @@ export default function UserManagementScreen() {
               multiline
             />
             <View style={styles.infoNotice}>
-              <Ionicons name="mail-outline" size={18} color="#175CD3" />
+              <Ionicons name="mail-outline" size={18} color={ADMIN_THEME.colors.blue} />
               <Text style={styles.infoNoticeText}>
                 This will create an in-app notification and send an email through the configured
                 provider.
@@ -1352,11 +1366,11 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#EEF1EF',
+    backgroundColor: ADMIN_THEME.colors.borderSoft,
   },
   filterCountActive: { backgroundColor: '#CDEED6' },
   filterCountText: { fontFamily: 'mon-b', fontSize: 8, color: '#6F7973' },
-  filterCountTextActive: { color: '#237A3B' },
+  filterCountTextActive: { color: ADMIN_THEME.colors.greenDark },
   controls: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 17 },
   searchBox: ADMIN_SHARED_STYLES.searchBox,
   searchInput: ADMIN_SHARED_STYLES.searchInput,
@@ -1366,17 +1380,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 13,
     borderRadius: 9,
     borderWidth: 1,
-    borderColor: '#D8DEDA',
+    borderColor: ADMIN_THEME.colors.border,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: ADMIN_THEME.colors.surface,
   },
-  actionButtonPrimary: { backgroundColor: '#4CAF50', borderColor: '#4CAF50' },
+  actionButtonPrimary: {
+    backgroundColor: ADMIN_THEME.colors.green,
+    borderColor: ADMIN_THEME.colors.green,
+  },
   actionButtonDanger: { backgroundColor: '#FFF4F3', borderColor: '#F6C6C2' },
   actionButtonDisabled: { opacity: 0.4 },
   actionButtonText: { fontFamily: 'mon-sb', fontSize: 9, color: '#626D66' },
-  actionButtonTextPrimary: { color: '#FFFFFF' },
-  actionButtonTextDanger: { color: '#B42318' },
+  actionButtonTextPrimary: { color: ADMIN_THEME.colors.surface },
+  actionButtonTextDanger: { color: ADMIN_THEME.colors.red },
   errorBanner: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1387,7 +1404,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   errorText: { flex: 1, fontFamily: 'mon', fontSize: 10, color: '#8A241A' },
-  retryText: { fontFamily: 'mon-b', fontSize: 9, color: '#B42318' },
+  retryText: { fontFamily: 'mon-b', fontSize: 9, color: ADMIN_THEME.colors.red },
   loadingState: { minHeight: 360, alignItems: 'center', justifyContent: 'center', gap: 12 },
   loadingText: { fontFamily: 'mon', fontSize: 10, color: '#818A84' },
   emptyState: { minHeight: 340, alignItems: 'center', justifyContent: 'center', gap: 8 },
@@ -1396,7 +1413,7 @@ const styles = StyleSheet.create({
   table: {
     minWidth: 1130,
     borderWidth: 1,
-    borderColor: '#E4E9E6',
+    borderColor: ADMIN_THEME.colors.border,
     borderRadius: 12,
     overflow: 'hidden',
   },
@@ -1406,7 +1423,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 14,
     borderBottomWidth: 1,
-    borderBottomColor: '#EDF1EE',
+    borderBottomColor: ADMIN_THEME.colors.borderSoft,
   },
   tableHeader: ADMIN_SHARED_STYLES.tableHeader,
   tableHeaderText: ADMIN_SHARED_STYLES.tableHeaderText,
@@ -1421,7 +1438,12 @@ const styles = StyleSheet.create({
   reportColumn: { width: 75 },
   actionsColumn: { flex: 1, minWidth: 250 },
   personCell: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  avatar: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#EDF1EE' },
+  avatar: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: ADMIN_THEME.colors.borderSoft,
+  },
   avatarFallback: {
     width: 38,
     height: 38,
@@ -1430,15 +1452,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarText: { fontFamily: 'mon-b', fontSize: 10, color: '#237A3B' },
+  avatarText: { fontFamily: 'mon-b', fontSize: 10, color: ADMIN_THEME.colors.greenDark },
   personCopy: { flex: 1, minWidth: 0 },
   personName: { fontFamily: 'mon-sb', fontSize: 10, color: '#303C35' },
-  personEmail: { fontFamily: 'mon', fontSize: 8, color: '#929A95', marginTop: 3 },
+  personEmail: {
+    fontFamily: 'mon',
+    fontSize: 8,
+    color: ADMIN_THEME.colors.textSubtle,
+    marginTop: 3,
+  },
   rowActions: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 7 },
-  protectedText: { fontFamily: 'mon-sb', fontSize: 8, color: '#237A3B' },
-  reportCountFlagged: { fontFamily: 'mon-b', fontSize: 10, color: '#B42318' },
+  protectedText: { fontFamily: 'mon-sb', fontSize: 8, color: ADMIN_THEME.colors.greenDark },
+  reportCountFlagged: { fontFamily: 'mon-b', fontSize: 10, color: ADMIN_THEME.colors.red },
   userCards: { gap: 10 },
-  userCard: { padding: 14, borderWidth: 1, borderColor: '#E3E8E5', borderRadius: 13, gap: 12 },
+  userCard: {
+    padding: 14,
+    borderWidth: 1,
+    borderColor: ADMIN_THEME.colors.border,
+    borderRadius: 13,
+    gap: 12,
+  },
   userCardTop: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1458,8 +1491,8 @@ const styles = StyleSheet.create({
   metaPillFlagged: {
     fontFamily: 'mon-sb',
     fontSize: 8,
-    color: '#B42318',
-    backgroundColor: '#FEE4E2',
+    color: ADMIN_THEME.colors.red,
+    backgroundColor: ADMIN_THEME.status.danger.background,
     paddingHorizontal: 9,
     paddingVertical: 6,
     borderRadius: 99,
@@ -1477,7 +1510,12 @@ const styles = StyleSheet.create({
   dialogLoading: { minHeight: 300, alignItems: 'center', justifyContent: 'center' },
   detailsContent: { gap: 20 },
   detailsHero: { flexDirection: 'row', alignItems: 'center', gap: 13 },
-  detailsAvatar: { width: 62, height: 62, borderRadius: 22, backgroundColor: '#EDF1EE' },
+  detailsAvatar: {
+    width: 62,
+    height: 62,
+    borderRadius: 22,
+    backgroundColor: ADMIN_THEME.colors.borderSoft,
+  },
   detailsAvatarFallback: {
     width: 62,
     height: 62,
@@ -1486,7 +1524,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  detailsAvatarText: { fontFamily: 'mon-b', fontSize: 17, color: '#237A3B' },
+  detailsAvatarText: { fontFamily: 'mon-b', fontSize: 17, color: ADMIN_THEME.colors.greenDark },
   detailsHeroCopy: { flex: 1 },
   detailsName: { fontFamily: 'mon-b', fontSize: 20, color: '#26322B' },
   detailsMeta: { fontFamily: 'mon', fontSize: 9, lineHeight: 15, color: '#818B84', marginTop: 4 },
@@ -1510,7 +1548,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   detailStatValue: { fontFamily: 'mon-b', fontSize: 17, color: '#27332B' },
-  detailStatLabel: { fontFamily: 'mon', fontSize: 8, color: '#8A938D', marginTop: 4 },
+  detailStatLabel: {
+    fontFamily: 'mon',
+    fontSize: 8,
+    color: ADMIN_THEME.colors.textMuted,
+    marginTop: 4,
+  },
   detailSectionTitle: {
     fontFamily: 'mon-b',
     fontSize: 9,
@@ -1522,12 +1565,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     borderWidth: 1,
-    borderColor: '#DDE3DF',
+    borderColor: ADMIN_THEME.colors.border,
     borderRadius: 12,
     overflow: 'hidden',
   },
   infoCell: { width: '50%', minHeight: 65, padding: 12, borderWidth: 0.5, borderColor: '#E1E6E3' },
-  infoLabel: { fontFamily: 'mon', fontSize: 8, color: '#8A938D', marginBottom: 4 },
+  infoLabel: {
+    fontFamily: 'mon',
+    fontSize: 8,
+    color: ADMIN_THEME.colors.textMuted,
+    marginBottom: 4,
+  },
   infoValue: { fontFamily: 'mon-sb', fontSize: 10, color: '#303B34' },
   sectionTitleRow: {
     flexDirection: 'row',
@@ -1535,7 +1583,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 10,
   },
-  listSection: { borderWidth: 1, borderColor: '#E3E8E5', borderRadius: 12, overflow: 'hidden' },
+  listSection: {
+    borderWidth: 1,
+    borderColor: ADMIN_THEME.colors.border,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
   listRow: {
     minHeight: 60,
     flexDirection: 'row',
@@ -1543,11 +1596,16 @@ const styles = StyleSheet.create({
     gap: 10,
     padding: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#EDF1EE',
+    borderBottomColor: ADMIN_THEME.colors.borderSoft,
   },
   listRowCopy: { flex: 1 },
-  listRowTitle: { fontFamily: 'mon-sb', fontSize: 9, color: '#344039' },
-  listRowMeta: { fontFamily: 'mon', fontSize: 8, color: '#89928C', marginTop: 4 },
+  listRowTitle: { fontFamily: 'mon-sb', fontSize: 9, color: ADMIN_THEME.colors.textStrong },
+  listRowMeta: {
+    fontFamily: 'mon',
+    fontSize: 8,
+    color: ADMIN_THEME.colors.textMuted,
+    marginTop: 4,
+  },
   reportMarker: { width: 7, height: 28, borderRadius: 4, backgroundColor: '#F56C73' },
   inlineActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
   documentActions: { alignItems: 'flex-end', gap: 7 },
@@ -1559,13 +1617,23 @@ const styles = StyleSheet.create({
     width: 9,
     height: 9,
     borderRadius: 5,
-    backgroundColor: '#4CAF50',
+    backgroundColor: ADMIN_THEME.colors.green,
     marginTop: 5,
     marginRight: 12,
   },
-  timelineCopy: { flex: 1, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: '#EDF1EE' },
+  timelineCopy: {
+    flex: 1,
+    paddingBottom: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: ADMIN_THEME.colors.borderSoft,
+  },
   timelineTitle: { fontFamily: 'mon-sb', fontSize: 9, color: '#38443C' },
-  timelineDate: { fontFamily: 'mon', fontSize: 8, color: '#929A95', marginTop: 3 },
+  timelineDate: {
+    fontFamily: 'mon',
+    fontSize: 8,
+    color: ADMIN_THEME.colors.textSubtle,
+    marginTop: 3,
+  },
   dangerZone: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -1598,12 +1666,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 13,
     paddingVertical: 11,
     borderWidth: 1,
-    borderColor: '#D8DEDA',
+    borderColor: ADMIN_THEME.colors.border,
     borderRadius: 10,
     fontFamily: 'mon',
     fontSize: 10,
     color: '#303B34',
-    backgroundColor: '#FBFCFB',
+    backgroundColor: ADMIN_THEME.colors.surfaceMuted,
   },
   textarea: { minHeight: 110, textAlignVertical: 'top' },
   choiceRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
@@ -1612,13 +1680,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 13,
     borderRadius: 9,
     borderWidth: 1,
-    borderColor: '#D8DEDA',
+    borderColor: ADMIN_THEME.colors.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
   choiceActive: { backgroundColor: '#E8F7ED', borderColor: '#9ED6AE' },
   choiceText: { fontFamily: 'mon-sb', fontSize: 9, color: '#737D77' },
-  choiceTextActive: { color: '#237A3B' },
+  choiceTextActive: { color: ADMIN_THEME.colors.greenDark },
   infoNotice: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -1637,5 +1705,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#FEF3F2',
   },
   dangerNoticeText: { flex: 1, fontFamily: 'mon', fontSize: 9, lineHeight: 15, color: '#8A241A' },
-  formError: { fontFamily: 'mon-sb', fontSize: 9, lineHeight: 15, color: '#B42318', marginTop: 13 },
+  formError: {
+    fontFamily: 'mon-sb',
+    fontSize: 9,
+    lineHeight: 15,
+    color: ADMIN_THEME.colors.red,
+    marginTop: 13,
+  },
 });

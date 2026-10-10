@@ -1,5 +1,6 @@
 import React from 'react';
 import { Text, StyleSheet } from 'react-native';
+import theme from '@/src/styles/theme';
 
 interface PriceLabelProps {
   amount: number;
@@ -19,7 +20,7 @@ const styles = StyleSheet.create({
   price: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
+    color: theme.colors.textStrong,
   },
 });
 

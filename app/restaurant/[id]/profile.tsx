@@ -21,6 +21,7 @@ import {
   type RestaurantProfilePayload,
   type RestaurantReview,
 } from '@/src/utils/restaurantProfile';
+import theme from '@/src/styles/theme';
 
 type SortKey = 'recent' | 'highest' | 'lowest';
 type StarFilter = 'all' | 1 | 2 | 3 | 4 | 5;
@@ -109,7 +110,7 @@ export default function RestaurantProfileScreen() {
     return (
       <SafeAreaView style={styles.page}>
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color="#4CAF50" />
+          <ActivityIndicator size="large" color={theme.colors.primary} />
         </View>
       </SafeAreaView>
     );
@@ -177,7 +178,7 @@ export default function RestaurantProfileScreen() {
     <SafeAreaView style={styles.page}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} hitSlop={10}>
-          <Ionicons name="arrow-back" size={26} color="#1A1A1A" />
+          <Ionicons name="arrow-back" size={26} color={theme.colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle} numberOfLines={1}>
           {displayName}
@@ -215,7 +216,7 @@ export default function RestaurantProfileScreen() {
           </View>
           {hasAchievements ? (
             <View style={[styles.detailSegment, styles.detailSegmentBordered]}>
-              <Ionicons name="shield-checkmark" size={21} color="#2E7D32" />
+              <Ionicons name="shield-checkmark" size={21} color={theme.colors.primaryOnLight} />
               <Text style={styles.detailHint}>Food safety</Text>
             </View>
           ) : null}
@@ -225,7 +226,7 @@ export default function RestaurantProfileScreen() {
               <Text style={styles.detailHint}>{distanceLabel}</Text>
             </View>
           ) : null}
-          <Ionicons name="chevron-forward" size={20} color="#5F6368" />
+          <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
         </TouchableOpacity>
 
         <View style={styles.ratingBlock}>
@@ -281,7 +282,7 @@ export default function RestaurantProfileScreen() {
                   />
                   {pick.badge ? (
                     <View style={styles.pickBadge}>
-                      <Ionicons name="ribbon" size={11} color="#2E7D32" />
+                      <Ionicons name="ribbon" size={11} color={theme.colors.primaryOnLight} />
                       <Text style={styles.pickBadgeText}>{pick.badge}</Text>
                     </View>
                   ) : null}
@@ -310,7 +311,9 @@ export default function RestaurantProfileScreen() {
               <Ionicons
                 name="swap-vertical"
                 size={13}
-                color={sort === option.key ? '#00794F' : '#5F6368'}
+                color={
+                  sort === option.key ? theme.colors.primaryAction : theme.colors.textSecondary
+                }
               />
               <Text
                 style={[styles.filterChipText, sort === option.key && styles.filterChipTextActive]}
@@ -333,10 +336,7 @@ export default function RestaurantProfileScreen() {
             >
               {value !== 'all' ? <Ionicons name="star" size={12} color="#F5B700" /> : null}
               <Text
-                style={[
-                  styles.filterChipText,
-                  starFilter === value && styles.filterChipTextActive,
-                ]}
+                style={[styles.filterChipText, starFilter === value && styles.filterChipTextActive]}
               >
                 {value === 'all' ? 'All ratings' : `${value}`}
               </Text>
@@ -362,7 +362,7 @@ export default function RestaurantProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: '#FFFFFF' },
+  page: { flex: 1, backgroundColor: theme.colors.surface },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 },
   header: {
     flexDirection: 'row',
@@ -373,14 +373,14 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: '#E4E6E4',
   },
-  headerTitle: { flex: 1, fontSize: 17, fontWeight: '700', color: '#1A1A1A' },
+  headerTitle: { flex: 1, fontSize: 17, fontWeight: '700', color: theme.colors.text },
   content: { padding: 20, paddingBottom: 44 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 16 },
   avatar: { width: 58, height: 58, borderRadius: 14, backgroundColor: '#EEF2EF' },
   titleCopy: { flex: 1 },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  name: { flexShrink: 1, fontSize: 21, fontWeight: '800', color: '#1A1A1A' },
-  cuisines: { fontSize: 13, color: '#5F6368', marginTop: 4 },
+  name: { flexShrink: 1, fontSize: 21, fontWeight: '800', color: theme.colors.text },
+  cuisines: { fontSize: 13, color: theme.colors.textSecondary, marginTop: 4 },
   detailCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -396,17 +396,22 @@ const styles = StyleSheet.create({
     borderLeftWidth: StyleSheet.hairlineWidth,
     borderLeftColor: '#DCE0DC',
   },
-  openText: { fontSize: 15, fontWeight: '800', color: '#2E7D32' },
-  closedText: { color: '#C62828' },
-  detailHint: { fontSize: 12, color: '#5F6368' },
+  openText: { fontSize: 15, fontWeight: '800', color: theme.colors.primaryOnLight },
+  closedText: { color: theme.colors.error },
+  detailHint: { fontSize: 12, color: theme.colors.textSecondary },
   ratingBlock: { flexDirection: 'row', gap: 24, marginBottom: 26 },
   ratingSummary: { alignItems: 'flex-start', gap: 5 },
-  ratingBig: { fontSize: 40, fontWeight: '800', color: '#1A1A1A' },
+  ratingBig: { fontSize: 40, fontWeight: '800', color: theme.colors.text },
   ratingCount: { fontSize: 12, color: '#8B928D' },
   starsRow: { flexDirection: 'row', gap: 2 },
   histogram: { flex: 1, justifyContent: 'center', gap: 5 },
   histogramRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  histogramStar: { width: 10, fontSize: 11, color: '#5F6368', textAlign: 'center' },
+  histogramStar: {
+    width: 10,
+    fontSize: 11,
+    color: theme.colors.textSecondary,
+    textAlign: 'center',
+  },
   histogramTrack: {
     flex: 1,
     height: 6,
@@ -415,7 +420,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   histogramFill: { height: 6, borderRadius: 3, backgroundColor: '#F5B700' },
-  sectionTitle: { fontSize: 19, fontWeight: '800', color: '#1A1A1A', marginBottom: 14 },
+  sectionTitle: { fontSize: 19, fontWeight: '800', color: theme.colors.text, marginBottom: 14 },
   picksRow: { gap: 12, paddingBottom: 26, paddingRight: 20 },
   pickCard: { width: 132 },
   pickImage: { width: 132, height: 96, borderRadius: 12, backgroundColor: '#EEF2EF' },
@@ -424,15 +429,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
     alignSelf: 'flex-start',
-    backgroundColor: '#E8F5E9',
+    backgroundColor: theme.colors.primarySoft,
     borderRadius: 8,
     paddingHorizontal: 7,
     paddingVertical: 3,
     marginTop: 7,
   },
-  pickBadgeText: { fontSize: 10, fontWeight: '800', color: '#2E7D32' },
-  pickTitle: { fontSize: 13, fontWeight: '600', color: '#1A1A1A', marginTop: 6, lineHeight: 18 },
-  pickPrice: { fontSize: 12, color: '#5F6368', marginTop: 3 },
+  pickBadgeText: { fontSize: 10, fontWeight: '800', color: theme.colors.primaryOnLight },
+  pickTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: theme.colors.text,
+    marginTop: 6,
+    lineHeight: 18,
+  },
+  pickPrice: { fontSize: 12, color: theme.colors.textSecondary, marginTop: 3 },
   filterRow: { gap: 8, paddingBottom: 12, paddingRight: 20 },
   filterChip: {
     flexDirection: 'row',
@@ -443,11 +454,14 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     paddingHorizontal: 13,
     paddingVertical: 8,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.surface,
   },
-  filterChipActive: { borderColor: '#00A651', backgroundColor: '#E8F5E9' },
-  filterChipText: { fontSize: 13, fontWeight: '600', color: '#5F6368' },
-  filterChipTextActive: { color: '#00794F' },
+  filterChipActive: {
+    borderColor: theme.colors.primary,
+    backgroundColor: theme.colors.primarySoft,
+  },
+  filterChipText: { fontSize: 13, fontWeight: '600', color: theme.colors.textSecondary },
+  filterChipTextActive: { color: theme.colors.primaryAction },
   reviewRow: { flexDirection: 'row', gap: 12, marginTop: 18 },
   reviewAvatar: {
     width: 40,
@@ -459,25 +473,25 @@ const styles = StyleSheet.create({
   },
   reviewAvatarText: { fontSize: 16, fontWeight: '800', color: '#1565C0' },
   reviewBody: { flex: 1 },
-  reviewName: { fontSize: 15, fontWeight: '700', color: '#1A1A1A' },
+  reviewName: { fontSize: 15, fontWeight: '700', color: theme.colors.text },
   reviewMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
   reviewTime: { fontSize: 12, color: '#8B928D' },
   reviewComment: { fontSize: 14, color: '#333B36', lineHeight: 20, marginTop: 7 },
   emptyReviews: { alignItems: 'center', gap: 8, paddingVertical: 30 },
   stateText: {
     fontSize: 13,
-    color: '#666',
+    color: theme.colors.textSecondary,
     textAlign: 'center',
     lineHeight: 19,
     maxWidth: 260,
     marginTop: 6,
   },
   stateButton: {
-    backgroundColor: '#237A3B',
+    backgroundColor: theme.colors.primaryAction,
     borderRadius: 20,
     marginTop: 14,
     paddingHorizontal: 20,
     paddingVertical: 10,
   },
-  stateButtonText: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
+  stateButtonText: { color: theme.colors.textOnAction, fontSize: 13, fontWeight: '700' },
 });

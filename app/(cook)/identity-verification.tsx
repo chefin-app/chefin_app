@@ -16,6 +16,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import { useAuth } from '@/src/services/auth-context';
 import { supabase } from '@/src/utils/supabaseClient';
 import { useCookApplication } from '@/src/hooks/useCookApplication';
+import theme from '@/src/styles/theme';
 
 const BUCKET = 'cook-identity-documents';
 type Citizenship = 'malaysian_citizen' | 'permanent_resident';
@@ -104,7 +105,7 @@ export default function IdentityVerificationScreen() {
     return (
       <SafeAreaView style={styles.page}>
         <View style={styles.loading}>
-          <ActivityIndicator color="#237A3B" />
+          <ActivityIndicator color={theme.colors.primaryAction} />
         </View>
       </SafeAreaView>
     );
@@ -115,14 +116,14 @@ export default function IdentityVerificationScreen() {
       <SafeAreaView style={styles.page} edges={['top', 'left', 'right']}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} style={styles.closeButton}>
-            <Ionicons name="close" size={22} color="#344039" />
+            <Ionicons name="close" size={22} color={theme.colors.textStrong} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Identity verification</Text>
           <View style={styles.closeButton} />
         </View>
         <View style={styles.lockedState}>
           <View style={styles.lockedIcon}>
-            <Ionicons name="checkmark-circle" size={36} color="#237A3B" />
+            <Ionicons name="checkmark-circle" size={36} color={theme.colors.primaryAction} />
           </View>
           <Text style={styles.lockedTitle}>Identity submitted</Text>
           <Text style={styles.lockedBody}>
@@ -141,14 +142,14 @@ export default function IdentityVerificationScreen() {
     <SafeAreaView style={styles.page} edges={['top', 'left', 'right']}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.closeButton}>
-          <Ionicons name="close" size={22} color="#344039" />
+          <Ionicons name="close" size={22} color={theme.colors.textStrong} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Identity verification</Text>
         <View style={styles.closeButton} />
       </View>
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.lockCallout}>
-          <Ionicons name="lock-closed-outline" size={22} color="#237A3B" />
+          <Ionicons name="lock-closed-outline" size={22} color={theme.colors.primaryAction} />
           <View style={styles.flex}>
             <Text style={styles.calloutTitle}>Private and access-controlled</Text>
             <Text style={styles.calloutBody}>
@@ -179,7 +180,11 @@ export default function IdentityVerificationScreen() {
               {asset ? (
                 asset.isPdf ? (
                   <View style={styles.fileSummary}>
-                    <Ionicons name="document-lock-outline" size={36} color="#344039" />
+                    <Ionicons
+                      name="document-lock-outline"
+                      size={36}
+                      color={theme.colors.textStrong}
+                    />
                     <Text style={styles.fileName}>{asset.name}</Text>
                     <Text style={styles.hint}>Tap to replace</Text>
                   </View>
@@ -202,7 +207,7 @@ export default function IdentityVerificationScreen() {
           onPress={submit}
         >
           {saving ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={theme.colors.textOnAction} />
           ) : (
             <Text style={styles.submitText}>Submit for review</Text>
           )}
@@ -232,14 +237,14 @@ function Choice({
       <Ionicons
         name={selected ? 'radio-button-on' : 'radio-button-off'}
         size={22}
-        color={selected ? '#4CAF50' : '#A4ADA7'}
+        color={selected ? theme.colors.primary : '#A4ADA7'}
       />
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: '#fff' },
+  page: { flex: 1, backgroundColor: theme.colors.surface },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -257,7 +262,7 @@ const styles = StyleSheet.create({
     gap: 11,
     padding: 15,
     borderRadius: 14,
-    backgroundColor: '#EAF7ED',
+    backgroundColor: theme.colors.primarySoft,
     marginBottom: 10,
   },
   calloutTitle: { fontSize: 14, fontWeight: '800', color: '#245D31' },
@@ -271,7 +276,7 @@ const styles = StyleSheet.create({
     borderRadius: 13,
     padding: 14,
   },
-  choiceSelected: { borderColor: '#4CAF50', backgroundColor: '#F3FBF5' },
+  choiceSelected: { borderColor: theme.colors.primary, backgroundColor: '#F3FBF5' },
   choiceTitle: { fontSize: 14, fontWeight: '700', color: '#28332C' },
   hint: { fontSize: 11, color: '#818A84', marginTop: 3 },
   upload: {
@@ -285,24 +290,29 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   fileSummary: { alignItems: 'center', gap: 6, padding: 20 },
-  fileName: { fontSize: 13, fontWeight: '700', color: '#344039', textAlign: 'center' },
+  fileName: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: theme.colors.textStrong,
+    textAlign: 'center',
+  },
   preview: { width: '100%', height: '100%' },
   submit: {
     marginTop: 18,
-    backgroundColor: '#237A3B',
+    backgroundColor: theme.colors.primaryAction,
     borderRadius: 13,
     alignItems: 'center',
     paddingVertical: 15,
   },
   submitDisabled: { opacity: 0.45 },
-  submitText: { color: '#fff', fontSize: 14, fontWeight: '800' },
+  submitText: { color: theme.colors.textOnAction, fontSize: 14, fontWeight: '800' },
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   lockedState: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 30 },
   lockedIcon: {
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: '#EAF7ED',
+    backgroundColor: theme.colors.primarySoft,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -319,10 +329,10 @@ const styles = StyleSheet.create({
     marginTop: 22,
     minHeight: 48,
     borderRadius: 24,
-    backgroundColor: '#237A3B',
+    backgroundColor: theme.colors.primaryAction,
     paddingHorizontal: 24,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  lockedButtonText: { color: '#fff', fontSize: 14, fontWeight: '800' },
+  lockedButtonText: { color: theme.colors.textOnAction, fontSize: 14, fontWeight: '800' },
 });

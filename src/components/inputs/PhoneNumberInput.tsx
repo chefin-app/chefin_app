@@ -1,4 +1,5 @@
 import { StyleSheet, View, TextInput } from 'react-native';
+import theme from '@/src/styles/theme';
 type PhoneNumberInputProps = {
   value: string; // phone number text
   onChangeText: (text: string) => void; // callback when typing
@@ -13,7 +14,7 @@ export const PhoneNumberInput: React.FC<PhoneNumberInputProps> = ({
     <TextInput
       style={styles.phoneInput}
       placeholder="Mobile number"
-      placeholderTextColor="#999"
+      placeholderTextColor={theme.colors.placeholder}
       value={value}
       onChangeText={onChangeText}
       keyboardType="phone-pad"
@@ -26,7 +27,7 @@ const styles = StyleSheet.create({
   phoneInput: {
     flex: 1,
     fontSize: 16,
-    color: '#333',
+    color: theme.colors.textStrong,
     paddingVertical: 4,
   },
 });

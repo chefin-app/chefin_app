@@ -8,6 +8,7 @@ import {
   Dimensions,
   StyleSheet,
 } from 'react-native';
+import theme from '@/src/styles/theme';
 
 const RatingStars = ({
   maxStars = 5,
@@ -15,7 +16,7 @@ const RatingStars = ({
   onRatingChange = () => {},
   starSize = 40,
   activeColor = '#FFD700',
-  inactiveColor = '#E0E0E0',
+  inactiveColor = theme.colors.border,
   spacing = 5,
   disabled = false,
 }) => {
@@ -159,11 +160,11 @@ const styles = StyleSheet.create({
     marginTop: 10,
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
+    color: theme.colors.textStrong,
   },
   demoContainer: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.colors.surfaceMuted,
     paddingTop: 50,
     paddingHorizontal: 20,
   },
@@ -172,7 +173,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textAlign: 'center',
     marginBottom: 40,
-    color: '#333',
+    color: theme.colors.textStrong,
   },
   ratingSection: {
     backgroundColor: 'white',
@@ -192,12 +193,12 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     textAlign: 'center',
-    color: '#666',
+    color: theme.colors.textSecondary,
     marginBottom: 15,
   },
   resultText: {
     fontSize: 14,
-    color: '#888',
+    color: theme.colors.textMuted,
     textAlign: 'center',
     marginTop: 10,
   },
@@ -207,7 +208,7 @@ const styles = StyleSheet.create({
   },
   instructionText: {
     fontSize: 16,
-    color: '#666',
+    color: theme.colors.textSecondary,
     textAlign: 'center',
     marginVertical: 3,
   },

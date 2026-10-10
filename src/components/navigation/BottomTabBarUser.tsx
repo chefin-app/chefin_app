@@ -127,7 +127,7 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     height: 90, // Consistent height from Figma
-    backgroundColor: '#fff', // White background
+    backgroundColor: theme.colors.surface, // White background
     borderTopWidth: 1, // Subtle border at the top
     borderTopColor: 'white',
     alignItems: 'center',
@@ -156,10 +156,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
     borderRadius: 9,
     borderWidth: 2,
-    borderColor: '#FFFFFF',
+    borderColor: theme.colors.surface,
     backgroundColor: '#E5484D',
   },
-  unreadBadgeText: { color: '#FFFFFF', fontSize: 9, fontWeight: '800' },
+  unreadBadgeText: { color: theme.colors.textOnAction, fontSize: 9, fontWeight: '800' },
 });
 
 export default BottomTabBarUser;

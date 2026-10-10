@@ -189,7 +189,7 @@ export default function ModerationScreen() {
         </View>
         <TouchableOpacity style={styles.refreshButton} onPress={load} disabled={loading}>
           {loading ? (
-            <ActivityIndicator size="small" color="#4CAF50" />
+            <ActivityIndicator size="small" color={ADMIN_THEME.colors.green} />
           ) : (
             <Ionicons name="refresh" size={18} color="#455149" />
           )}
@@ -204,7 +204,7 @@ export default function ModerationScreen() {
           [
             'Resolved',
             (counts.actioned ?? 0) + (counts.dismissed ?? 0),
-            '#4CAF50',
+            ADMIN_THEME.colors.green,
             'checkmark-circle-outline',
           ],
         ].map(([label, value, color, icon]) => (
@@ -242,12 +242,12 @@ export default function ModerationScreen() {
             </View>
           </ScrollView>
           <View style={styles.searchBox}>
-            <Ionicons name="search-outline" size={18} color="#89928C" />
+            <Ionicons name="search-outline" size={18} color={ADMIN_THEME.colors.textMuted} />
             <TextInput
               value={searchInput}
               onChangeText={setSearchInput}
               placeholder="Search reported listing or restaurant"
-              placeholderTextColor="#9AA29D"
+              placeholderTextColor={ADMIN_THEME.colors.textSubtle}
               style={styles.searchInput}
             />
           </View>
@@ -255,14 +255,14 @@ export default function ModerationScreen() {
 
         {error ? (
           <View style={styles.errorBanner}>
-            <Ionicons name="alert-circle-outline" size={18} color="#B42318" />
+            <Ionicons name="alert-circle-outline" size={18} color={ADMIN_THEME.colors.red} />
             <Text style={styles.errorText}>{error}</Text>
           </View>
         ) : null}
 
         {loading ? (
           <View style={styles.loadingState}>
-            <ActivityIndicator size="large" color="#4CAF50" />
+            <ActivityIndicator size="large" color={ADMIN_THEME.colors.green} />
             <Text style={styles.loadingText}>Loading moderation queue…</Text>
           </View>
         ) : reports.length === 0 ? (
@@ -386,7 +386,7 @@ export default function ModerationScreen() {
                     selected.target_type === 'listing' ? 'fast-food-outline' : 'restaurant-outline'
                   }
                   size={24}
-                  color="#237A3B"
+                  color={ADMIN_THEME.colors.greenDark}
                 />
               </View>
               <View style={styles.detailsHeaderCopy}>
@@ -526,12 +526,12 @@ const styles = StyleSheet.create({
   loadingState: { minHeight: 360, alignItems: 'center', justifyContent: 'center', gap: 12 },
   loadingText: { fontFamily: 'mon', fontSize: 10, color: '#818A84' },
   emptyState: { minHeight: 330, alignItems: 'center', justifyContent: 'center', gap: 8 },
-  emptyTitle: { fontFamily: 'mon-b', fontSize: 14, color: '#344039' },
-  emptyText: { fontFamily: 'mon', fontSize: 10, color: '#89928C' },
+  emptyTitle: { fontFamily: 'mon-b', fontSize: 14, color: ADMIN_THEME.colors.textStrong },
+  emptyText: { fontFamily: 'mon', fontSize: 10, color: ADMIN_THEME.colors.textMuted },
   table: {
     minWidth: 1120,
     borderWidth: 1,
-    borderColor: '#E4E9E6',
+    borderColor: ADMIN_THEME.colors.border,
     borderRadius: 12,
     overflow: 'hidden',
   },
@@ -541,7 +541,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 14,
     borderBottomWidth: 1,
-    borderBottomColor: '#EDF1EE',
+    borderBottomColor: ADMIN_THEME.colors.borderSoft,
   },
   tableHeader: ADMIN_SHARED_STYLES.tableHeader,
   tableHeaderText: ADMIN_SHARED_STYLES.tableHeaderText,
@@ -556,12 +556,17 @@ const styles = StyleSheet.create({
   statusColumn: { width: 120 },
   actionColumn: { flex: 1, minWidth: 145 },
   personCell: { flexDirection: 'row', alignItems: 'center', gap: 9 },
-  avatar: { width: 34, height: 34, borderRadius: 17, backgroundColor: '#EEF1EF' },
+  avatar: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: ADMIN_THEME.colors.borderSoft,
+  },
   avatarFallback: {
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: '#EEF1EF',
+    backgroundColor: ADMIN_THEME.colors.borderSoft,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -570,23 +575,32 @@ const styles = StyleSheet.create({
     paddingHorizontal: 13,
     borderRadius: 9,
     borderWidth: 1,
-    borderColor: '#D8DEDA',
-    backgroundColor: '#FFFFFF',
+    borderColor: ADMIN_THEME.colors.border,
+    backgroundColor: ADMIN_THEME.colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  buttonPrimary: { backgroundColor: '#4CAF50', borderColor: '#4CAF50' },
+  buttonPrimary: {
+    backgroundColor: ADMIN_THEME.colors.green,
+    borderColor: ADMIN_THEME.colors.green,
+  },
   buttonDanger: { backgroundColor: '#FFF4F3', borderColor: '#F4C7C3' },
   buttonDisabled: { opacity: 0.45 },
   buttonText: { fontFamily: 'mon-sb', fontSize: 9, color: '#626D66' },
-  buttonTextPrimary: { color: '#FFFFFF' },
-  buttonTextDanger: { color: '#B42318' },
+  buttonTextPrimary: { color: ADMIN_THEME.colors.surface },
+  buttonTextDanger: { color: ADMIN_THEME.colors.red },
   cards: { gap: 10 },
-  card: { padding: 14, borderWidth: 1, borderColor: '#E3E8E5', borderRadius: 13, gap: 10 },
+  card: {
+    padding: 14,
+    borderWidth: 1,
+    borderColor: ADMIN_THEME.colors.border,
+    borderRadius: 13,
+    gap: 10,
+  },
   cardTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   cardCopy: { flex: 1 },
-  cardTitle: { fontFamily: 'mon-sb', fontSize: 11, color: '#344039' },
-  cardMeta: { fontFamily: 'mon', fontSize: 8, color: '#89928C', marginTop: 4 },
+  cardTitle: { fontFamily: 'mon-sb', fontSize: 11, color: ADMIN_THEME.colors.textStrong },
+  cardMeta: { fontFamily: 'mon', fontSize: 8, color: ADMIN_THEME.colors.textMuted, marginTop: 4 },
   cardDetails: { fontFamily: 'mon', fontSize: 9, lineHeight: 15, color: '#626D66' },
   cardDate: { fontFamily: 'mon', fontSize: 8, color: '#969E99' },
   detailsContent: { gap: 18 },
@@ -612,13 +626,13 @@ const styles = StyleSheet.create({
     borderRadius: 11,
   },
   detailLabel: { fontFamily: 'mon-sb', fontSize: 8, color: '#7A847D', marginBottom: 6 },
-  detailValue: { fontFamily: 'mon-sb', fontSize: 10, color: '#344039' },
+  detailValue: { fontFamily: 'mon-sb', fontSize: 10, color: ADMIN_THEME.colors.textStrong },
   descriptionBox: {
     padding: 14,
     borderWidth: 1,
     borderColor: '#E1E6E3',
     borderRadius: 11,
-    backgroundColor: '#FBFCFB',
+    backgroundColor: ADMIN_THEME.colors.surfaceMuted,
   },
   descriptionText: { fontFamily: 'mon', fontSize: 10, lineHeight: 17, color: '#4E5A52' },
   snapshotRow: {
@@ -626,23 +640,28 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingVertical: 6,
     borderBottomWidth: 1,
-    borderBottomColor: '#EEF1EF',
+    borderBottomColor: ADMIN_THEME.colors.borderSoft,
   },
-  snapshotKey: { width: 140, fontFamily: 'mon-sb', fontSize: 8, color: '#7B857E' },
+  snapshotKey: {
+    width: 140,
+    fontFamily: 'mon-sb',
+    fontSize: 8,
+    color: ADMIN_THEME.colors.textMuted,
+  },
   snapshotValue: { flex: 1, fontFamily: 'mon', fontSize: 8, color: '#4E5A52' },
   resolutionBox: { padding: 14, borderRadius: 11, backgroundColor: '#EAF7EE' },
-  actionError: { fontFamily: 'mon-sb', fontSize: 9, color: '#B42318' },
+  actionError: { fontFamily: 'mon-sb', fontSize: 9, color: ADMIN_THEME.colors.red },
   resolutionForm: { gap: 8 },
   textarea: {
     minHeight: 130,
     padding: 13,
     borderWidth: 1,
-    borderColor: '#D8DEDA',
+    borderColor: ADMIN_THEME.colors.border,
     borderRadius: 10,
     fontFamily: 'mon',
     fontSize: 10,
     color: '#303B34',
     textAlignVertical: 'top',
   },
-  formHint: { fontFamily: 'mon', fontSize: 8, color: '#89928C' },
+  formHint: { fontFamily: 'mon', fontSize: 8, color: ADMIN_THEME.colors.textMuted },
 });

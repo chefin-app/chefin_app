@@ -3,6 +3,7 @@ import React from 'react';
 import BaseText from './BaseText';
 import { BaseTextProps } from './types';
 import { Ionicons } from '@expo/vector-icons';
+import theme from '@/src/styles/theme';
 
 interface EmptyStateMessageProps {
   icon?: keyof typeof Ionicons.glyphMap;
@@ -16,11 +17,11 @@ interface EmptyStateMessageProps {
 const emptyStateConfig = {
   default: {
     icon: 'document-outline' as keyof typeof Ionicons.glyphMap,
-    iconColor: '#999999',
+    iconColor: theme.colors.placeholder,
   },
   search: {
     icon: 'search-outline' as keyof typeof Ionicons.glyphMap,
-    iconColor: '#999999',
+    iconColor: theme.colors.placeholder,
   },
   network: {
     icon: 'cloud-offline-outline' as keyof typeof Ionicons.glyphMap,
@@ -28,15 +29,15 @@ const emptyStateConfig = {
   },
   cart: {
     icon: 'bag-outline' as keyof typeof Ionicons.glyphMap,
-    iconColor: '#999999',
+    iconColor: theme.colors.placeholder,
   },
   favourites: {
     icon: 'heart-outline' as keyof typeof Ionicons.glyphMap,
-    iconColor: '#999999',
+    iconColor: theme.colors.placeholder,
   },
   orders: {
     icon: 'receipt-outline' as keyof typeof Ionicons.glyphMap,
-    iconColor: '#999999',
+    iconColor: theme.colors.placeholder,
   },
 };
 
@@ -102,7 +103,7 @@ const styles = StyleSheet.create({
     maxWidth: 280,
   },
   actionButton: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: theme.colors.primary,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,

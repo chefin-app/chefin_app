@@ -20,6 +20,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/src/services/auth-context';
 import { supabase } from '@/src/utils/supabaseClient';
+import theme from '@/src/styles/theme';
 
 type SelectionType = 'single' | 'multiple';
 type DraftOption = {
@@ -370,9 +371,9 @@ export default function OptionGroupEditor() {
               onValueChange={charge =>
                 updateOption(option.key, { charge, price: charge ? option.price : '' })
               }
-              trackColor={{ false: '#D9DEDB', true: '#8CDDA6' }}
-              ios_backgroundColor="#D9DEDB"
-              thumbColor={option.charge ? '#20A84F' : '#FFFFFF'}
+              trackColor={{ false: theme.colors.border, true: '#8CDDA6' }}
+              ios_backgroundColor={theme.colors.border}
+              thumbColor={option.charge ? theme.colors.primary : theme.colors.surface}
             />
           </View>
           {option.charge ? (
@@ -398,7 +399,7 @@ export default function OptionGroupEditor() {
         style={styles.secondaryButton}
         onPress={() => setOptions(current => [...current, blankOption()])}
       >
-        <Ionicons name="add" size={22} color="#1473E6" />
+        <Ionicons name="add" size={22} color={theme.colors.link} />
         <Text style={styles.secondaryButtonText}>Add another option</Text>
       </TouchableOpacity>
       <Text style={styles.fieldTitle}>How can customers choose?</Text>
@@ -487,7 +488,7 @@ export default function OptionGroupEditor() {
               <Ionicons
                 name={selected ? 'checkbox' : 'square-outline'}
                 size={27}
-                color={selected ? '#20A84F' : '#B8BFBA'}
+                color={selected ? theme.colors.primary : '#B8BFBA'}
               />
             </TouchableOpacity>
           );
@@ -542,7 +543,11 @@ export default function OptionGroupEditor() {
             accessibilityRole="button"
             accessibilityLabel={step === 0 ? 'Exit option group' : 'Go to previous step'}
           >
-            <Ionicons name={step === 0 ? 'close' : 'chevron-back'} size={27} color="#202622" />
+            <Ionicons
+              name={step === 0 ? 'close' : 'chevron-back'}
+              size={27}
+              color={theme.colors.text}
+            />
           </TouchableOpacity>
           <View style={styles.headerCopy}>
             <Text style={styles.headerTitle}>
@@ -577,7 +582,7 @@ export default function OptionGroupEditor() {
             onPress={step === 3 ? save : next}
           >
             {saving ? (
-              <ActivityIndicator color="#FFFFFF" />
+              <ActivityIndicator color={theme.colors.textOnAction} />
             ) : (
               <Text style={styles.primaryText}>
                 {step === 3 ? 'Save option group' : 'Continue'}
@@ -604,7 +609,7 @@ function Choice({
       <Ionicons
         name={selected ? 'radio-button-on' : 'radio-button-off'}
         size={22}
-        color={selected ? '#20A84F' : '#ABB3AE'}
+        color={selected ? theme.colors.primary : '#ABB3AE'}
       />
       <Text style={[styles.choiceText, selected && styles.choiceTextSelected]}>{label}</Text>
     </TouchableOpacity>
@@ -612,8 +617,13 @@ function Choice({
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFFFFF' },
-  loading: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF' },
+  container: { flex: 1, backgroundColor: theme.colors.surface },
+  loading: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.colors.surface,
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -622,7 +632,7 @@ const styles = StyleSheet.create({
   },
   backButton: { width: 42, height: 42, alignItems: 'center', justifyContent: 'center' },
   headerCopy: { flex: 1 },
-  headerTitle: { fontFamily: 'mon-b', fontSize: 22, color: '#202622' },
+  headerTitle: { fontFamily: 'mon-b', fontSize: 22, color: theme.colors.text },
   headerStep: { marginTop: 2, fontFamily: 'mon', fontSize: 12, color: '#7B847E' },
   progress: { flexDirection: 'row', gap: 6, paddingHorizontal: 22, paddingBottom: 12 },
   progressBar: { flex: 1, height: 4, borderRadius: 2, backgroundColor: '#E5E9E6' },
@@ -639,7 +649,7 @@ const styles = StyleSheet.create({
     fontFamily: 'mon',
     fontSize: 15,
     color: '#232A26',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.surface,
   },
   fieldTitle: { marginTop: 7, fontFamily: 'mon-sb', fontSize: 16, color: '#27302A' },
   segmentRow: { flexDirection: 'row', gap: 10 },
@@ -687,7 +697,7 @@ const styles = StyleSheet.create({
     borderColor: '#CFE0F4',
     borderRadius: 14,
   },
-  secondaryButtonText: { fontFamily: 'mon-sb', fontSize: 14, color: '#1473E6' },
+  secondaryButtonText: { fontFamily: 'mon-sb', fontSize: 14, color: theme.colors.link },
   dishRow: {
     minHeight: 72,
     flexDirection: 'row',
@@ -710,7 +720,7 @@ const styles = StyleSheet.create({
     color: '#858D88',
   },
   empty: { padding: 22, borderRadius: 16, backgroundColor: '#F4F6F4' },
-  emptyText: { textAlign: 'center', fontFamily: 'mon', color: '#747D77' },
+  emptyText: { textAlign: 'center', fontFamily: 'mon', color: theme.colors.textSecondary },
   reviewCard: { padding: 20, borderRadius: 18, backgroundColor: '#EFFAF2' },
   reviewEyebrow: { fontFamily: 'mon-b', fontSize: 10, letterSpacing: 0.8, color: '#4A7957' },
   reviewTitle: { marginTop: 7, fontFamily: 'mon-b', fontSize: 24, color: '#1F2B23' },
@@ -737,7 +747,12 @@ const styles = StyleSheet.create({
     color: '#66716A',
     backgroundColor: '#F4F6F4',
   },
-  footer: { padding: 16, borderTopWidth: 1, borderTopColor: '#ECEFEC', backgroundColor: '#FFFFFF' },
+  footer: {
+    padding: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#ECEFEC',
+    backgroundColor: theme.colors.surface,
+  },
   primaryButton: {
     minHeight: 55,
     alignItems: 'center',
@@ -745,6 +760,6 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     backgroundColor: '#22AE50',
   },
-  primaryText: { fontFamily: 'mon-b', fontSize: 16, color: '#FFFFFF' },
+  primaryText: { fontFamily: 'mon-b', fontSize: 16, color: theme.colors.textOnAction },
   disabled: { opacity: 0.55 },
 });

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import DateTimePickerModalLib from 'react-native-modal-datetime-picker';
+import theme from '@/src/styles/theme';
 
 export type PickerMode = 'date' | 'time' | 'datetime';
 
@@ -56,14 +57,14 @@ const styles = StyleSheet.create({
     marginVertical: 8,
   },
   button: {
-    backgroundColor: '#237A3B',
+    backgroundColor: theme.colors.primaryAction,
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 8,
     alignItems: 'center',
   },
   buttonText: {
-    color: '#FFFFFF',
+    color: theme.colors.textOnAction,
     fontSize: 16,
   },
 });

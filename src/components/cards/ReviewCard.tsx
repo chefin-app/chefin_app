@@ -2,6 +2,7 @@ import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import React, { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { images } from '@/src/constants/images';
+import theme from '@/src/styles/theme';
 
 const ReviewCard = () => {
   const [expanded, setExpanded] = useState(false);
@@ -40,7 +41,7 @@ const ReviewCard = () => {
 const styles = StyleSheet.create({
   card: {
     width: 300,
-    backgroundColor: '#ffffff',
+    backgroundColor: theme.colors.surface,
     borderRadius: 10,
     elevation: 4,
     shadowColor: '#000000',
@@ -92,7 +93,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   title: {
-    color: '#333333',
+    color: theme.colors.textStrong,
     fontSize: 16,
     fontWeight: 'bold',
     marginLeft: 8,
@@ -100,13 +101,13 @@ const styles = StyleSheet.create({
     maxWidth: '70%',
   },
   subtitle: {
-    color: '#666666',
+    color: theme.colors.textSecondary,
     fontSize: 12,
     marginTop: 2,
     marginLeft: 8,
   },
   available: {
-    color: '#4CAF50',
+    color: theme.colors.primary,
     fontSize: 12,
     marginTop: 2,
     marginLeft: 14,

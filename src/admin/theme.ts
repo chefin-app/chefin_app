@@ -15,6 +15,22 @@ export const ADMIN_THEME = {
     greenSoft: '#EAF8EE',
     red: '#B42318',
     redSoft: '#FFF3F2',
+    slate: '#667085',
+    blue: '#175CD3',
+    amber: '#9A6700',
+  },
+
+  /**
+   * Status-badge tones. Every admin status chip — order, cook, dish,
+   * moderation, payment and verification — resolves to one of these five
+   * text/background pairs, so a new status only has to pick a tone.
+   */
+  status: {
+    positive: { text: '#237A3B', background: '#DDF6E5' },
+    info: { text: '#175CD3', background: '#E7F0FF' },
+    warning: { text: '#9A6700', background: '#FFF1C2' },
+    danger: { text: '#B42318', background: '#FEE4E2' },
+    neutral: { text: '#667085', background: '#EEF1EF' },
   },
   fonts: {
     regular: 'mon',

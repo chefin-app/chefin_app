@@ -4,6 +4,7 @@ import { Alert, View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { createShadowStyle } from '../../utils/platform-utils';
 import { useAuth } from '@/src/services/auth-context';
+import theme from '@/src/styles/theme';
 
 interface NavBarProps {
   options?: {
@@ -95,7 +96,7 @@ export default function TopNavBarHomeCook({ options }: NavBarProps) {
             )
           }
         >
-          <Ionicons name="help-circle-outline" size={27} color="#242A26" />
+          <Ionicons name="help-circle-outline" size={27} color={theme.colors.text} />
         </TouchableOpacity>
       );
     }
@@ -115,7 +116,7 @@ export default function TopNavBarHomeCook({ options }: NavBarProps) {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#f8f9fa',
+    backgroundColor: theme.colors.surfaceAlt,
   },
   header: {
     flexDirection: 'row',
@@ -126,12 +127,12 @@ const styles = StyleSheet.create({
   },
   greeting: {
     fontSize: 16,
-    color: '#666',
+    color: theme.colors.textSecondary,
   },
   userName: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#333',
+    color: theme.colors.textStrong,
   },
   calendarHeader: {
     justifyContent: 'center',
@@ -139,7 +140,7 @@ const styles = StyleSheet.create({
   calendarTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#333',
+    color: theme.colors.textStrong,
   },
   headerSpacer: { width: 44, height: 44 },
   plusButton: {
@@ -157,7 +158,7 @@ const styles = StyleSheet.create({
     }),
   },
   welcomeCard: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
     borderRadius: 16,
     padding: 20,
     marginBottom: 24,
@@ -172,17 +173,17 @@ const styles = StyleSheet.create({
   welcomeTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#333',
+    color: theme.colors.textStrong,
     marginBottom: 8,
   },
   welcomeSubtitle: {
     fontSize: 14,
-    color: '#666',
+    color: theme.colors.textSecondary,
     lineHeight: 20,
     marginBottom: 16,
   },
   joinButton: {
-    backgroundColor: '#237A3B',
+    backgroundColor: theme.colors.primaryAction,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -193,7 +194,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   joinButtonText: {
-    color: '#fff',
+    color: theme.colors.textOnAction,
     fontSize: 14,
     fontWeight: '600',
   },
@@ -209,11 +210,11 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#333',
+    color: theme.colors.textStrong,
     marginBottom: 16,
   },
   seeAllText: {
-    color: '#4CAF50',
+    color: theme.colors.primary,
     fontSize: 14,
     fontWeight: '500',
   },

@@ -11,6 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useCookApplication } from '@/src/hooks/useCookApplication';
+import theme from '@/src/styles/theme';
 
 function humanizeStatus(value: string | null) {
   if (!value || value === 'not_submitted') return 'Not submitted';
@@ -28,7 +29,7 @@ function StatusRow({ label, value }: { label: string; value: string | null }) {
         <Ionicons
           name={approved ? 'checkmark' : 'time-outline'}
           size={17}
-          color={approved ? '#237A3B' : '#8A6100'}
+          color={approved ? theme.colors.primaryAction : '#8A6100'}
         />
       </View>
       <View style={styles.statusCopy}>
@@ -46,7 +47,7 @@ export default function ApplicationStatusScreen() {
   if (application.loading) {
     return (
       <SafeAreaView style={styles.loading}>
-        <ActivityIndicator size="large" color="#4CAF50" />
+        <ActivityIndicator size="large" color={theme.colors.primary} />
       </SafeAreaView>
     );
   }
@@ -65,7 +66,7 @@ export default function ApplicationStatusScreen() {
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
+          <Ionicons name="arrow-back" size={24} color={theme.colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Application status</Text>
         <View style={styles.headerSpacer} />
@@ -76,7 +77,7 @@ export default function ApplicationStatusScreen() {
           <Ionicons
             name={rejected ? 'document-text-outline' : 'hourglass-outline'}
             size={34}
-            color={rejected ? '#B3261E' : '#8A6100'}
+            color={rejected ? theme.colors.error : '#8A6100'}
           />
         </View>
         <Text style={styles.title}>{title}</Text>
@@ -124,20 +125,31 @@ export default function ApplicationStatusScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8F9FA' },
-  loading: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff' },
+  container: { flex: 1, backgroundColor: theme.colors.surfaceAlt },
+  loading: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.colors.surface,
+  },
   header: {
     height: 56,
     paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#E5E5E5',
+    borderBottomColor: theme.colors.border,
   },
   backButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   headerSpacer: { width: 44 },
-  headerTitle: { flex: 1, textAlign: 'center', fontSize: 17, fontWeight: '800', color: '#1A1A1A' },
+  headerTitle: {
+    flex: 1,
+    textAlign: 'center',
+    fontSize: 17,
+    fontWeight: '800',
+    color: theme.colors.text,
+  },
   content: { padding: 24, paddingBottom: 48 },
   heroIcon: {
     width: 68,
@@ -147,11 +159,22 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: '#FFF3CD',
   },
-  heroIconRejected: { backgroundColor: '#FDECEA' },
-  title: { fontSize: 25, lineHeight: 31, fontWeight: '800', color: '#1A1A1A', marginTop: 18 },
-  body: { fontSize: 14, lineHeight: 21, color: '#666', marginTop: 8 },
-  submittedAt: { fontSize: 12, color: '#888', fontWeight: '600', marginTop: 12 },
-  card: { backgroundColor: '#fff', borderRadius: 16, paddingHorizontal: 16, marginTop: 24 },
+  heroIconRejected: { backgroundColor: theme.colors.errorSoft },
+  title: {
+    fontSize: 25,
+    lineHeight: 31,
+    fontWeight: '800',
+    color: theme.colors.text,
+    marginTop: 18,
+  },
+  body: { fontSize: 14, lineHeight: 21, color: theme.colors.textSecondary, marginTop: 8 },
+  submittedAt: { fontSize: 12, color: theme.colors.textMuted, fontWeight: '600', marginTop: 12 },
+  card: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    marginTop: 24,
+  },
   statusRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 16 },
   statusIcon: {
     width: 32,
@@ -161,16 +184,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: '#FFF3CD',
   },
-  statusIconApproved: { backgroundColor: '#E8F5E9' },
+  statusIconApproved: { backgroundColor: theme.colors.primarySoft },
   statusCopy: { flex: 1 },
-  statusLabel: { fontSize: 13, color: '#777' },
-  statusValue: { fontSize: 15, color: '#1A1A1A', fontWeight: '700', marginTop: 2 },
-  divider: { height: StyleSheet.hairlineWidth, backgroundColor: '#E5E5E5' },
+  statusLabel: { fontSize: 13, color: theme.colors.textSecondary },
+  statusValue: { fontSize: 15, color: theme.colors.text, fontWeight: '700', marginTop: 2 },
+  divider: { height: StyleSheet.hairlineWidth, backgroundColor: theme.colors.border },
   feedbackCard: {
     marginTop: 18,
     padding: 16,
     borderRadius: 14,
-    backgroundColor: '#FDECEA',
+    backgroundColor: theme.colors.errorSoft,
     borderWidth: 1,
     borderColor: '#F6C7C3',
   },
@@ -182,7 +205,7 @@ const styles = StyleSheet.create({
     borderRadius: 26,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#237A3B',
+    backgroundColor: theme.colors.primaryAction,
   },
-  primaryButtonText: { color: '#fff', fontSize: 15, fontWeight: '800' },
+  primaryButtonText: { color: theme.colors.textOnAction, fontSize: 15, fontWeight: '800' },
 });

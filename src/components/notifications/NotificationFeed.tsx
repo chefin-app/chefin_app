@@ -7,6 +7,7 @@ import {
   NOTIFICATION_TYPE_META,
 } from '@/src/constants/notificationTypes';
 import type { AppNotification } from '@/src/context/NotificationsContext';
+import theme from '@/src/styles/theme';
 
 interface NotificationFeedProps {
   notifications: AppNotification[];
@@ -81,9 +82,9 @@ export default function NotificationFeed({
         !loading ? (
           <View style={styles.empty}>
             <View style={styles.emptyIconWrap}>
-              <Ionicons name="checkmark-done" size={52} color="#237A3B" />
+              <Ionicons name="checkmark-done" size={52} color={theme.colors.primaryAction} />
               <View style={styles.emptySparkle}>
-                <Ionicons name="sparkles" size={20} color="#FFFFFF" />
+                <Ionicons name="sparkles" size={20} color={theme.colors.textOnAction} />
               </View>
             </View>
             <Text style={styles.emptyTitle}>{emptyTitle}</Text>
@@ -104,7 +105,7 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingHorizontal: 20,
     paddingVertical: 15,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.surface,
   },
   rowUnread: { backgroundColor: '#F3FAF5' },
   iconWrap: {

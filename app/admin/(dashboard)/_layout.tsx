@@ -7,6 +7,7 @@ import { useAdminAuth } from '@/src/admin/AdminAuthContext';
 import { showAdminFailure, showAdminSuccess } from '@/src/admin/feedback';
 import { useAuth } from '@/src/services/auth-context';
 import AdminShell from '@/src/components/admin/AdminShell';
+import { ADMIN_THEME } from '@/src/admin/theme';
 
 export default function ProtectedAdminLayout() {
   const router = useRouter();
@@ -20,7 +21,7 @@ export default function ProtectedAdminLayout() {
   if (status === 'checking' || status === 'unauthenticated') {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#4CAF50" />
+        <ActivityIndicator size="large" color={ADMIN_THEME.colors.green} />
         <Text style={styles.checkingText}>Verifying admin access...</Text>
       </View>
     );
@@ -30,7 +31,7 @@ export default function ProtectedAdminLayout() {
     return (
       <View style={styles.centered}>
         <View style={styles.iconWrapError}>
-          <Ionicons name="shield-outline" size={36} color="#B42318" />
+          <Ionicons name="shield-outline" size={36} color={ADMIN_THEME.colors.red} />
         </View>
         <Text style={styles.title}>Admin access required</Text>
         <Text style={styles.body}>
@@ -62,7 +63,7 @@ export default function ProtectedAdminLayout() {
     return (
       <View style={styles.centered}>
         <View style={styles.iconWrapWarning}>
-          <Ionicons name="cloud-offline-outline" size={36} color="#9A6700" />
+          <Ionicons name="cloud-offline-outline" size={36} color={ADMIN_THEME.colors.amber} />
         </View>
         <Text style={styles.title}>Couldn&apos;t verify access</Text>
         <Text style={styles.body}>{error ?? 'The admin service is temporarily unavailable.'}</Text>
@@ -93,7 +94,7 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 22,
-    backgroundColor: '#FEE4E2',
+    backgroundColor: ADMIN_THEME.status.danger.background,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 20,
@@ -102,7 +103,7 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 22,
-    backgroundColor: '#FFF1C2',
+    backgroundColor: ADMIN_THEME.status.warning.background,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 20,
@@ -124,10 +125,10 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   primaryButton: {
-    backgroundColor: '#237A3B',
+    backgroundColor: ADMIN_THEME.colors.greenDark,
     paddingHorizontal: 24,
     paddingVertical: 13,
     borderRadius: 12,
   },
-  primaryButtonText: { fontFamily: 'mon-b', fontSize: 12, color: '#FFFFFF' },
+  primaryButtonText: { fontFamily: 'mon-b', fontSize: 12, color: ADMIN_THEME.colors.surface },
 });

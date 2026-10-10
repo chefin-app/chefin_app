@@ -3,6 +3,7 @@ import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import type { Listing } from '@/src/types/models';
 import { formatRating, getRatingSummary, type RatedReview } from '@/src/utils/ratings';
+import theme from '@/src/styles/theme';
 
 export interface MenuItemCardProps extends Omit<Listing, 'reviews'> {
   reviews?: RatedReview[];
@@ -194,7 +195,7 @@ const MenuItemCard: React.FC<MenuItemCardProps> = ({
 const styles = StyleSheet.create({
   card: {
     minHeight: 126,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.surface,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: '#E8EBE9',
   },
@@ -206,7 +207,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
   },
   cardUnavailable: {
-    backgroundColor: '#F7F8F7',
+    backgroundColor: theme.colors.surfaceAlt,
   },
   imageContainer: {
     width: 98,
@@ -315,7 +316,7 @@ const styles = StyleSheet.create({
   },
   addButtonText: {
     marginTop: -2,
-    color: '#FFFFFF',
+    color: theme.colors.textOnAction,
     fontSize: 20,
     fontWeight: '700',
     lineHeight: 28,
@@ -327,7 +328,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: '#168A49',
     borderRadius: 15,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.surface,
     shadowColor: '#163D27',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.08,

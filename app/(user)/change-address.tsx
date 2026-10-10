@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import theme from '@/src/styles/theme';
 
 const ChangeAddressScreen = () => {
   const router = useRouter();
@@ -56,10 +57,15 @@ const ChangeAddressScreen = () => {
       >
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color="#333" />
+            <Ionicons name="arrow-back" size={24} color={theme.colors.textStrong} />
           </TouchableOpacity>
           <View style={styles.searchContainer}>
-            <Ionicons name="location" size={20} color="#FF4D4D" style={styles.locationIcon} />
+            <Ionicons
+              name="location"
+              size={20}
+              color={theme.colors.destructive}
+              style={styles.locationIcon}
+            />
             <TextInput
               style={styles.searchInput}
               placeholder="Deliver now"
@@ -68,7 +74,7 @@ const ChangeAddressScreen = () => {
               autoFocus
             />
             <TouchableOpacity style={styles.cameraButton}>
-              <Ionicons name="camera-outline" size={20} color="#666" />
+              <Ionicons name="camera-outline" size={20} color={theme.colors.textSecondary} />
             </TouchableOpacity>
           </View>
           <View style={styles.countryBadge}>
@@ -90,7 +96,7 @@ const ChangeAddressScreen = () => {
 
         <ScrollView style={styles.content}>
           <View style={styles.infoBanner}>
-            <Ionicons name="help-circle" size={24} color="#666" />
+            <Ionicons name="help-circle" size={24} color={theme.colors.textSecondary} />
             <View style={styles.infoTextContainer}>
               <Text style={styles.infoTitle}>Can't find the place?</Text>
               <TouchableOpacity>
@@ -98,14 +104,14 @@ const ChangeAddressScreen = () => {
               </TouchableOpacity>
             </View>
             <TouchableOpacity style={styles.closeBanner}>
-              <Ionicons name="close" size={20} color="#666" />
+              <Ionicons name="close" size={20} color={theme.colors.textSecondary} />
             </TouchableOpacity>
           </View>
 
           {recentAddresses.map(item => (
             <TouchableOpacity key={item.id} style={styles.addressItem}>
               <View style={styles.addressIconContainer}>
-                <Ionicons name={item.icon as any} size={20} color="#333" />
+                <Ionicons name={item.icon as any} size={20} color={theme.colors.textStrong} />
               </View>
               <View style={styles.addressTextContainer}>
                 <Text style={styles.addressName}>{item.name}</Text>
@@ -114,13 +120,13 @@ const ChangeAddressScreen = () => {
                 </Text>
               </View>
               <TouchableOpacity style={styles.moreButton}>
-                <Ionicons name="ellipsis-vertical" size={16} color="#666" />
+                <Ionicons name="ellipsis-vertical" size={16} color={theme.colors.textSecondary} />
               </TouchableOpacity>
             </TouchableOpacity>
           ))}
 
           <TouchableOpacity style={styles.mapButton}>
-            <Ionicons name="map-outline" size={20} color="#333" />
+            <Ionicons name="map-outline" size={20} color={theme.colors.textStrong} />
             <Text style={styles.mapButtonText}>Choose on GrabMaps</Text>
           </TouchableOpacity>
         </ScrollView>
@@ -132,7 +138,7 @@ const ChangeAddressScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
   },
   header: {
     flexDirection: 'row',
@@ -148,10 +154,10 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F7F7F7',
+    backgroundColor: theme.colors.surfaceAlt,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#00B14F',
+    borderColor: theme.colors.primary,
     paddingHorizontal: 12,
     height: 44,
   },
@@ -161,7 +167,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 16,
-    color: '#333',
+    color: theme.colors.textStrong,
   },
   cameraButton: {
     padding: 4,
@@ -177,31 +183,31 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     gap: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: theme.colors.separator,
     paddingBottom: 12,
   },
   tab: {
     paddingVertical: 4,
   },
   activeTab: {
-    backgroundColor: '#E8F5E9',
+    backgroundColor: theme.colors.primarySoft,
     paddingHorizontal: 12,
     borderRadius: 16,
   },
   tabText: {
     fontSize: 16,
-    color: '#666',
+    color: theme.colors.textSecondary,
     fontWeight: '500',
   },
   activeTabText: {
-    color: '#00B14F',
+    color: theme.colors.primary,
   },
   content: {
     flex: 1,
   },
   infoBanner: {
     flexDirection: 'row',
-    backgroundColor: '#F7F7F7',
+    backgroundColor: theme.colors.surfaceAlt,
     margin: 16,
     padding: 16,
     borderRadius: 12,
@@ -214,7 +220,7 @@ const styles = StyleSheet.create({
   infoTitle: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#333',
+    color: theme.colors.textStrong,
     marginBottom: 4,
   },
   infoLink: {
@@ -236,7 +242,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#F0F0F0',
+    backgroundColor: theme.colors.separator,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -246,12 +252,12 @@ const styles = StyleSheet.create({
   addressName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: theme.colors.textStrong,
     marginBottom: 2,
   },
   addressDetail: {
     fontSize: 14,
-    color: '#666',
+    color: theme.colors.textSecondary,
     lineHeight: 18,
   },
   moreButton: {
@@ -264,13 +270,13 @@ const styles = StyleSheet.create({
     margin: 16,
     padding: 12,
     borderRadius: 8,
-    backgroundColor: '#F7F7F7',
+    backgroundColor: theme.colors.surfaceAlt,
     gap: 8,
   },
   mapButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: theme.colors.textStrong,
   },
 });
 

@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import AccountRestrictionBanner from '@/src/components/feedback/AccountRestrictionBanner';
 import { useCookApplication } from '@/src/hooks/useCookApplication';
 import { useEffect } from 'react';
+import theme from '@/src/styles/theme';
 
 const NavBar = (props: any) => <TopNavBarHomeCook {...props} />;
 const TabBar = (props: any) => <BottomTabBarCook {...props} />;
@@ -95,7 +96,7 @@ export default function CookTabsLayout() {
                       <Ionicons
                         name={identityStageSubmitted ? 'checkmark-circle' : 'chevron-forward'}
                         size={14}
-                        color="#237A3B"
+                        color={theme.colors.primaryAction}
                       />
                     </TouchableOpacity>
                     <TouchableOpacity
@@ -115,7 +116,7 @@ export default function CookTabsLayout() {
                       <Ionicons
                         name={foodStageSubmitted ? 'checkmark-circle' : 'chevron-forward'}
                         size={14}
-                        color="#237A3B"
+                        color={theme.colors.primaryAction}
                       />
                     </TouchableOpacity>
                   </>
@@ -130,7 +131,7 @@ export default function CookTabsLayout() {
                     <Text style={styles.applicationLink}>
                       {applicationRejected ? 'Review decision' : 'View status'}
                     </Text>
-                    <Ionicons name="chevron-forward" size={14} color="#237A3B" />
+                    <Ionicons name="chevron-forward" size={14} color={theme.colors.primaryAction} />
                   </TouchableOpacity>
                 )}
               </View>
@@ -200,11 +201,11 @@ export default function CookTabsLayout() {
 }
 
 const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: '#F8F9FA' },
+  page: { flex: 1, backgroundColor: theme.colors.surfaceAlt },
   topSafeArea: { zIndex: 1 },
   suspendedSafeArea: { backgroundColor: '#FFF4D6' },
-  applicationSafeArea: { backgroundColor: '#FFF8E1' },
-  navigationSafeArea: { backgroundColor: '#F8F9FA' },
+  applicationSafeArea: { backgroundColor: theme.colors.warningSoft },
+  navigationSafeArea: { backgroundColor: theme.colors.surfaceAlt },
   applicationBanner: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -212,7 +213,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 11,
     paddingBottom: 12,
-    backgroundColor: '#FFF8E1',
+    backgroundColor: theme.colors.warningSoft,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: '#F4C95D',
   },
@@ -227,7 +228,7 @@ const styles = StyleSheet.create({
   applicationContent: { flex: 1, minWidth: 0 },
   applicationTitle: { fontSize: 14, lineHeight: 18, fontWeight: '800', color: '#6F4E00' },
   applicationBody: { fontSize: 12, color: '#7A641E', lineHeight: 17, marginTop: 2 },
-  applicationLink: { color: '#237A3B', fontSize: 12, fontWeight: '800' },
+  applicationLink: { color: theme.colors.primaryAction, fontSize: 12, fontWeight: '800' },
   applicationActions: {
     flexDirection: 'row',
     flexWrap: 'wrap',

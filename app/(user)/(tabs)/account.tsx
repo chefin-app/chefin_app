@@ -16,6 +16,7 @@ import { createShadowStyle } from '../../../src/utils/platform-utils';
 import { useAuth } from '@/src/services/auth-context';
 import { supabase } from '@/src/utils/supabaseClient';
 import { useFavourites } from '@/src/context/FavouritesContext';
+import theme from '@/src/styles/theme';
 
 type ProfileData = {
   id: string;
@@ -127,7 +128,7 @@ export default function AccountScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#4CAF50" />
+          <ActivityIndicator size="large" color={theme.colors.primary} />
           <Text style={styles.loadingText}>Loading your account...</Text>
         </View>
       </SafeAreaView>
@@ -286,7 +287,7 @@ export default function AccountScreen() {
           <Text style={styles.sectionTitle}>Account Information</Text>
 
           <View style={styles.detailRow}>
-            <Ionicons name="shield-checkmark" size={20} color="#666" />
+            <Ionicons name="shield-checkmark" size={20} color={theme.colors.textSecondary} />
             <View style={styles.detailText}>
               <Text style={styles.detailLabel}>Login Method</Text>
               <Text style={styles.detailValue}>{getLoginMethod()}</Text>
@@ -294,7 +295,7 @@ export default function AccountScreen() {
           </View>
 
           <View style={styles.detailRow}>
-            <Ionicons name="checkmark-circle" size={20} color="#666" />
+            <Ionicons name="checkmark-circle" size={20} color={theme.colors.textSecondary} />
             <View style={styles.detailText}>
               <Text style={styles.detailLabel}>Verification Status</Text>
               <Text
@@ -311,7 +312,7 @@ export default function AccountScreen() {
           </View>
 
           <View style={styles.detailRow}>
-            <Ionicons name="calendar" size={20} color="#666" />
+            <Ionicons name="calendar" size={20} color={theme.colors.textSecondary} />
             <View style={styles.detailText}>
               <Text style={styles.detailLabel}>Member Since</Text>
               <Text style={styles.detailValue}>
@@ -329,12 +330,16 @@ export default function AccountScreen() {
               style={[styles.menuItem, index === menuItems.length - 1 && styles.lastMenuItem]}
               onPress={item.onPress}
             >
-              <Ionicons name={item.icon as keyof typeof Ionicons.glyphMap} size={24} color="#666" />
+              <Ionicons
+                name={item.icon as keyof typeof Ionicons.glyphMap}
+                size={24}
+                color={theme.colors.textSecondary}
+              />
               <View style={styles.menuItemContent}>
                 <Text style={styles.menuItemTitle}>{item.title}</Text>
                 <Text style={styles.menuItemSubtitle}>{item.subtitle}</Text>
               </View>
-              <Ionicons name="chevron-forward" size={20} color="#999" />
+              <Ionicons name="chevron-forward" size={20} color={theme.colors.placeholder} />
             </TouchableOpacity>
           ))}
         </View>
@@ -347,10 +352,10 @@ export default function AccountScreen() {
             disabled={isSigningOut}
           >
             {isSigningOut ? (
-              <ActivityIndicator color="#fff" size="small" />
+              <ActivityIndicator color={theme.colors.textOnAction} size="small" />
             ) : (
               <>
-                <Ionicons name="log-out" size={20} color="#fff" />
+                <Ionicons name="log-out" size={20} color={theme.colors.textOnAction} />
                 <Text style={styles.signOutButtonText}>Sign Out</Text>
               </>
             )}
@@ -367,7 +372,7 @@ export default function AccountScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: theme.colors.surfaceAlt,
   },
   loadingContainer: {
     flex: 1,
@@ -377,13 +382,13 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 16,
-    color: '#666',
+    color: theme.colors.textSecondary,
   },
   scrollView: {
     flex: 1,
   },
   userCard: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
     margin: 20,
     borderRadius: 16,
     padding: 24,
@@ -404,7 +409,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#237A3B',
+    backgroundColor: theme.colors.primaryAction,
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
@@ -412,7 +417,7 @@ const styles = StyleSheet.create({
   avatarText: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#fff',
+    color: theme.colors.textOnAction,
   },
   avatarImage: {
     width: '100%',
@@ -421,12 +426,12 @@ const styles = StyleSheet.create({
   userName: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#333',
+    color: theme.colors.textStrong,
     marginBottom: 4,
   },
   userEmail: {
     fontSize: 14,
-    color: '#666',
+    color: theme.colors.textSecondary,
     marginBottom: 20,
   },
   statsContainer: {
@@ -440,20 +445,20 @@ const styles = StyleSheet.create({
   statNumber: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
+    color: theme.colors.textStrong,
     marginBottom: 2,
   },
   statLabel: {
     fontSize: 12,
-    color: '#666',
+    color: theme.colors.textSecondary,
   },
   statDivider: {
     width: 1,
     height: 30,
-    backgroundColor: '#E0E0E0',
+    backgroundColor: theme.colors.border,
   },
   detailsCard: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
     marginHorizontal: 20,
     borderRadius: 16,
     padding: 20,
@@ -469,7 +474,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
+    color: theme.colors.textStrong,
     marginBottom: 16,
   },
   detailRow: {
@@ -477,7 +482,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: theme.colors.separator,
   },
   detailText: {
     marginLeft: 12,
@@ -485,22 +490,22 @@ const styles = StyleSheet.create({
   },
   detailLabel: {
     fontSize: 12,
-    color: '#666',
+    color: theme.colors.textSecondary,
     marginBottom: 2,
   },
   detailValue: {
     fontSize: 14,
-    color: '#333',
+    color: theme.colors.textStrong,
     fontWeight: '500',
   },
   verified: {
-    color: '#4CAF50',
+    color: theme.colors.primary,
   },
   notVerified: {
     color: '#FF9800',
   },
   menuCard: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
     marginHorizontal: 20,
     borderRadius: 16,
     marginBottom: 20,
@@ -518,7 +523,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: theme.colors.separator,
   },
   lastMenuItem: {
     borderBottomWidth: 0,
@@ -530,12 +535,12 @@ const styles = StyleSheet.create({
   menuItemTitle: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#333',
+    color: theme.colors.textStrong,
     marginBottom: 2,
   },
   menuItemSubtitle: {
     fontSize: 12,
-    color: '#666',
+    color: theme.colors.textSecondary,
   },
   signOutContainer: {
     paddingHorizontal: 20,
@@ -545,7 +550,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FF5252',
+    backgroundColor: theme.colors.destructive,
     paddingVertical: 16,
     borderRadius: 12,
     gap: 8,
@@ -554,14 +559,14 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   signOutButtonText: {
-    color: '#fff',
+    color: theme.colors.textOnAction,
     fontSize: 16,
     fontWeight: '600',
   },
   versionText: {
     textAlign: 'center',
     fontSize: 12,
-    color: '#999',
+    color: theme.colors.placeholder,
     marginBottom: 20,
   },
 });

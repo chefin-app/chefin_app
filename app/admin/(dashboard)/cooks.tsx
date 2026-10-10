@@ -133,7 +133,7 @@ function SuccessFeedback({
   return (
     <View style={styles.successFeedback} accessibilityRole="alert">
       <View style={styles.successIcon}>
-        <Ionicons name="checkmark" size={18} color="#FFFFFF" />
+        <Ionicons name="checkmark" size={18} color={ADMIN_THEME.colors.surface} />
       </View>
       <View style={styles.flexOne}>
         <Text style={styles.successTitle}>{title}</Text>
@@ -754,7 +754,7 @@ export default function CookManagementScreen() {
               value={searchInput}
               onChangeText={setSearchInput}
               placeholder="Search cook ID, name, restaurant or email"
-              placeholderTextColor="#9AA29D"
+              placeholderTextColor={ADMIN_THEME.colors.textSubtle}
             />
           </View>
           <AdminSelect
@@ -768,7 +768,7 @@ export default function CookManagementScreen() {
           />
           <TouchableOpacity style={styles.refresh} onPress={() => loadCooks(true)}>
             {refreshing ? (
-              <ActivityIndicator color="#4CAF50" />
+              <ActivityIndicator color={ADMIN_THEME.colors.green} />
             ) : (
               <Ionicons name="refresh" size={19} color="#47544C" />
             )}
@@ -782,7 +782,7 @@ export default function CookManagementScreen() {
           </View>
         ) : loading && !response ? (
           <View style={styles.empty}>
-            <ActivityIndicator size="large" color="#4CAF50" />
+            <ActivityIndicator size="large" color={ADMIN_THEME.colors.green} />
           </View>
         ) : response?.cooks.length === 0 ? (
           <View style={styles.empty}>
@@ -941,7 +941,7 @@ export default function CookManagementScreen() {
         ) : null}
         {detailsLoading ? (
           <View style={styles.empty}>
-            <ActivityIndicator size="large" color="#4CAF50" />
+            <ActivityIndicator size="large" color={ADMIN_THEME.colors.green} />
           </View>
         ) : detailsError ? (
           <Text style={styles.errorText}>{detailsError}</Text>
@@ -1018,7 +1018,7 @@ export default function CookManagementScreen() {
             <Text style={styles.sectionTitle}>STEP 1 · IDENTITY REVIEW</Text>
             {!details.canReviewIdentity ? (
               <View style={styles.permissionBox}>
-                <Ionicons name="lock-closed" size={18} color="#9A6700" />
+                <Ionicons name="lock-closed" size={18} color={ADMIN_THEME.colors.amber} />
                 <Text style={styles.permissionText}>
                   Identity documents are hidden. This admin lacks the identity_review permission.
                 </Text>
@@ -1157,7 +1157,11 @@ export default function CookManagementScreen() {
                   <Ionicons
                     name={applicationApproved ? 'checkmark' : 'shield-checkmark-outline'}
                     size={20}
-                    color={applicationApproved ? '#FFFFFF' : '#237A3B'}
+                    color={
+                      applicationApproved
+                        ? ADMIN_THEME.colors.surface
+                        : ADMIN_THEME.colors.greenDark
+                    }
                   />
                 </View>
                 <View style={styles.flexOne}>
@@ -1385,7 +1389,11 @@ export default function CookManagementScreen() {
             <View style={styles.approvalConfirmation}>
               <View style={styles.confirmationHero}>
                 <View style={styles.confirmationIcon}>
-                  <Ionicons name="shield-checkmark" size={24} color="#237A3B" />
+                  <Ionicons
+                    name="shield-checkmark"
+                    size={24}
+                    color={ADMIN_THEME.colors.greenDark}
+                  />
                 </View>
                 <View style={styles.flexOne}>
                   <Text style={styles.confirmationTitle}>{details.cook.name}</Text>
@@ -1454,7 +1462,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 5,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#EEF1EF',
+    backgroundColor: ADMIN_THEME.colors.borderSoft,
   },
   countBadgeActive: { backgroundColor: '#CDEED6' },
   countBadgeText: {
@@ -1462,7 +1470,7 @@ const styles = StyleSheet.create({
     fontSize: ADMIN_THEME.sizes.caption,
     color: '#6F7973',
   },
-  countBadgeTextActive: { color: '#237A3B' },
+  countBadgeTextActive: { color: ADMIN_THEME.colors.greenDark },
   controls: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -1479,7 +1487,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     minHeight: ADMIN_THEME.layout.tableRowHeight,
     borderBottomWidth: 1,
-    borderBottomColor: '#EDF1EE',
+    borderBottomColor: ADMIN_THEME.colors.borderSoft,
     paddingHorizontal: 8,
   },
   tableHeader: { ...ADMIN_SHARED_STYLES.tableHeader, borderRadius: 10 },
@@ -1494,8 +1502,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarText: { fontFamily: 'mon-b', fontSize: 10, color: '#237A3B' },
-  personName: { fontFamily: 'mon-sb', fontSize: 10, color: '#27322B' },
+  avatarText: { fontFamily: 'mon-b', fontSize: 10, color: ADMIN_THEME.colors.greenDark },
+  personName: { fontFamily: 'mon-sb', fontSize: 10, color: ADMIN_THEME.colors.text },
   meta: { fontFamily: 'mon', fontSize: 8, color: '#818A84', marginTop: 3 },
   cell: ADMIN_SHARED_STYLES.tableCell,
   rowActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, alignItems: 'center' },
@@ -1510,13 +1518,16 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     backgroundColor: '#fff',
   },
-  buttonPrimary: { backgroundColor: '#4CAF50', borderColor: '#4CAF50' },
+  buttonPrimary: {
+    backgroundColor: ADMIN_THEME.colors.green,
+    borderColor: ADMIN_THEME.colors.green,
+  },
   buttonDanger: { backgroundColor: '#FFF4F3', borderColor: '#F1B3AE' },
   buttonDisabled: { opacity: 0.42 },
   buttonText: ADMIN_SHARED_STYLES.buttonText,
   buttonTextPrimary: { color: '#fff' },
-  buttonTextDanger: { color: '#B42318' },
-  protected: { fontFamily: 'mon-sb', fontSize: 8, color: '#237A3B' },
+  buttonTextDanger: { color: ADMIN_THEME.colors.red },
+  protected: { fontFamily: 'mon-sb', fontSize: 8, color: ADMIN_THEME.colors.greenDark },
   mobileCard: { borderWidth: 1, borderColor: '#E6EBE7', borderRadius: 14, padding: 14, gap: 12 },
   mobileCards: { gap: 12 },
   pagination: {
@@ -1529,13 +1540,13 @@ const styles = StyleSheet.create({
   emptyTitle: { fontFamily: 'mon-b', fontSize: 14, color: '#5F6963' },
   errorBox: {
     padding: 14,
-    backgroundColor: '#FFF3F2',
+    backgroundColor: ADMIN_THEME.colors.redSoft,
     borderRadius: 10,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  errorText: { fontFamily: 'mon', color: '#B42318', fontSize: 10 },
+  errorText: { fontFamily: 'mon', color: ADMIN_THEME.colors.red, fontSize: 10 },
   successFeedback: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -1578,18 +1589,18 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 130,
     borderWidth: 1,
-    borderColor: '#E3E8E5',
+    borderColor: ADMIN_THEME.colors.border,
     borderRadius: 12,
     padding: 14,
   },
-  detailValue: { fontFamily: 'mon-b', fontSize: 17, color: '#27322B' },
+  detailValue: { fontFamily: 'mon-b', fontSize: 17, color: ADMIN_THEME.colors.text },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   sectionTitle: { fontFamily: 'mon-b', fontSize: 9, color: '#6A746E', letterSpacing: 0.8 },
   infoGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     borderWidth: 1,
-    borderColor: '#E3E8E5',
+    borderColor: ADMIN_THEME.colors.border,
     borderRadius: 12,
     overflow: 'hidden',
   },
@@ -1598,9 +1609,14 @@ const styles = StyleSheet.create({
     minHeight: 65,
     padding: 12,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: '#E3E8E5',
+    borderColor: ADMIN_THEME.colors.border,
   },
-  infoLabel: { fontFamily: 'mon', fontSize: 8, color: '#8A938D', letterSpacing: 0.5 },
+  infoLabel: {
+    fontFamily: 'mon',
+    fontSize: 8,
+    color: ADMIN_THEME.colors.textMuted,
+    letterSpacing: 0.5,
+  },
   infoValue: { fontFamily: 'mon-sb', fontSize: 10, color: '#28332C', marginTop: 5 },
   documentRow: {
     flexDirection: 'row',
@@ -1608,14 +1624,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 9,
     borderWidth: 1,
-    borderColor: '#E4E9E6',
+    borderColor: ADMIN_THEME.colors.border,
     borderRadius: 12,
     padding: 13,
   },
   documentRowHighlighted: {
-    borderColor: '#4CAF50',
+    borderColor: ADMIN_THEME.colors.green,
     backgroundColor: '#EFFAF2',
-    shadowColor: '#237A3B',
+    shadowColor: ADMIN_THEME.colors.greenDark,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.12,
     shadowRadius: 8,
@@ -1680,7 +1696,7 @@ const styles = StyleSheet.create({
     gap: 9,
     padding: 12,
     borderRadius: 10,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: ADMIN_THEME.colors.surface,
   },
   checklistRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
   checklistText: { flex: 1, fontFamily: 'mon', fontSize: 9, lineHeight: 15, color: '#4D5951' },

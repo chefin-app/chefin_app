@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, StyleSheet, DimensionValue } from 'react-native';
+import theme from '@/src/styles/theme';
 
 interface SkeletonProps {
   width?: DimensionValue; // ✅ fixes type error
@@ -17,7 +18,7 @@ const SkeletonLoader: React.FC<SkeletonProps> = ({
 
 const styles = StyleSheet.create({
   skeleton: {
-    backgroundColor: '#E0E0E0',
+    backgroundColor: theme.colors.border,
     overflow: 'hidden',
   },
 });

@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { type AppNotification, useNotifications } from '@/src/context/NotificationsContext';
 import NotificationFeed from './NotificationFeed';
+import theme from '@/src/styles/theme';
 
 export default function BuyerNotificationCenter({
   showBackButton = false,
@@ -90,7 +91,7 @@ export default function BuyerNotificationCenter({
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFFFFF' },
+  container: { flex: 1, backgroundColor: theme.colors.surface },
   header: {
     minHeight: 64,
     flexDirection: 'row',
@@ -102,6 +103,6 @@ const styles = StyleSheet.create({
   sideButton: { width: 76, minHeight: 44, alignItems: 'flex-start', justifyContent: 'center' },
   title: { flex: 1, color: '#1D241F', fontSize: 19, fontWeight: '800', textAlign: 'center' },
   readAllButton: { alignItems: 'flex-end' },
-  readAllText: { color: '#237A3B', fontSize: 13, fontWeight: '800' },
+  readAllText: { color: theme.colors.primaryAction, fontSize: 13, fontWeight: '800' },
   readAllTextDisabled: { color: '#A5AEA8' },
 });
