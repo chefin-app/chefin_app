@@ -73,7 +73,6 @@ describe('LocationPromptModal', () => {
     expect(screen.getByText('Delivery area')).toBeTruthy();
     expect(screen.getByText('Delivery time')).toBeTruthy();
     expect(screen.getByText('Now')).toBeTruthy();
-    expect(screen.getByText(/exact delivery address at checkout/i)).toBeTruthy();
   });
 
   it('opens the region-bounded location picker', () => {

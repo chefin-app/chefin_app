@@ -1004,3 +1004,196 @@ resolves through `theme` or `ADMIN_THEME`.
 Three times the scripted import-insertion missed a file whose import block didn't match the
 regex, producing `Cannot find name 'theme'`. Each was caught by `tsc` and fixed. **Run `tsc`
 after every scripted batch** — the replacement succeeds silently, so only type-checking surfaces it.
+
+### Admin screens — COMPLETE (2026-10-10)
+
+The Admin Section had only 3 of 8 routes. Built the 5 missing ones, all 1440x1024 desktop:
+
+| Frame | Node | Source |
+|---|---|---|
+| Admin / Login | `59:1748` | `app/admin/login.tsx` |
+| Admin / User Management | `59:1224` | `app/admin/(dashboard)/users.tsx` |
+| Admin / Dish Management | `59:1357` | `app/admin/(dashboard)/dishes.tsx` |
+| Admin / Order Monitoring | `59:1482` | `app/admin/(dashboard)/orders.tsx` |
+| Admin / Payments | `59:1611` | `app/admin/(dashboard)/payments.tsx` |
+
+Composed from `Admin / Sidebar`, `Admin / Topbar`, `Admin / Select` and `Admin / StatCard`
+instances. Status chips use the five `ADMIN_THEME.status` tones added during the token migration,
+so the Figma badges and the code badges now resolve through the same five roles.
+
+Real copy taken from each route (`ADMIN DASHBOARD` / `CATALOGUE OPERATIONS` / `OPERATIONS` /
+`FINANCE` eyebrows, the real stat labels, real table columns).
+
+**Admin Section now has all 8 routes.** `app/admin/index.tsx` and the two `_layout.tsx` files are
+non-visual (redirect + chrome), so they are intentionally not frames.
+
+**Phase 4 total: 43 screen frames** across Auth (8), Buyer (11), Cook (11), Shared (5), Admin (8).
+
+### Known issue carried forward
+`Admin / Login` first rendered with a collapsed card — the same counter-axis sizing trap recorded
+earlier (`resize(w, 10)` before children are appended locks the height). Fixed by setting
+`primaryAxisSizingMode='AUTO'` on the card and its children.
+
+## Red tests FIXED — full suite green (2026-10-10)
+
+Both failures predated all design-system work; they were repo-state problems, not code bugs.
+
+### 1. `foodSafetyWaiver.test.ts` — missing migration file restored
+
+The test reads `prisma/migrations/20260722020000_add_cook_compliance_acceptances/migration.sql`
+to verify the legal waiver shown to cooks matches the canonical copy seeded to the database.
+**The directory existed but was empty** — `git log` showed 0 commits had ever touched that file.
+Five migration directories are in this state (22 tracked vs 26 on disk).
+
+**The canonical text was verified before the file was written, not after.** The clause and
+acceptance label were read from `cook_compliance_clause_versions` in the live database and
+compared against `src/constants/foodSafetyWaiver.ts`:
+
+```
+code len: 2260   db len: 2260
+BODY MATCH:   true
+ACCEPT MATCH: true
+```
+
+Byte-identical, so **no drift existed** — only the migration record was missing. Reconstructing it
+from the constant was therefore safe. Had the texts differed, that difference would have been the
+real finding and generating the file would have destroyed the only thing this test checks.
+
+The migration recreates both tables, seeds the `2026-07-22-v1` clause inside the `$clause$` /
+`$acceptance$` dollar-quoted blocks the test parses, and restores the RLS posture the Prisma
+schema documents: clause versions readable by any authenticated user; acceptances SELECT/INSERT
+own-row only, with **no UPDATE or DELETE policy** so consent evidence stays append-only.
+
+### 2. `LocationPromptModal.test.tsx` — stale assertion removed
+
+Asserted on copy (`/exact delivery address at checkout/i`) that no longer renders. The line was
+already absent at `b45b791` — the same commit that last touched the test — so the buyer-discovery
+redesign dropped the reassurance copy and the assertion was not updated. The other three
+assertions still match the component. Confirmed deliberate; assertion deleted.
+
+### Result
+`jest` — **189 passed, 40 suites, 0 failed.** `tsc --noEmit` clean.
+
+### ⚠ Still outstanding: 4 more empty migration directories
+`20260722000000_add_content_reports`, `20260722010000_add_availability_enabled`,
+`20260802000000_secure_admin_roles`, `20260913170000_cook_delivery_preference`.
+
+No test reads these, so nothing is red — but **`prisma migrate deploy` on a fresh database would
+produce a different schema than the running one.** Same fix pattern: read the live schema for
+those objects and reconstruct. Worth doing before anyone provisions a new environment.
+
+### Empty migrations — 2 of 5 restored, 3 need the live schema (2026-10-10)
+
+**Restored**
+
+| Migration | Basis |
+|---|---|
+| `20260722020000_add_cook_compliance_acceptances` | clause text verified byte-identical against the live DB before writing |
+| `20260722000000_add_content_reports` | fully specified by the `content_reports` Prisma model + the `ALTER TABLE` in `20260804000000_admin_user_management`, which proves the shape it expects |
+
+The `content_reports` reconstruction is well-evidenced: the Prisma model gives every column, type
+and index (including the three `@@index` map names), and `admin_user_management` later adds
+`updated_at` / `reviewed_by` / `resolved_at` / `resolution_note` — so those four are correctly
+*absent* from the original CREATE. The schema comment documents the service-role-only RLS posture
+and the deliberate lack of a foreign key on `target_id`.
+
+**NOT restored — would require guessing**
+
+| Migration | Why |
+|---|---|
+| `20260722010000_add_availability_enabled` | `availability_enabled` appears in **no** Prisma model, **no** committed migration and **no** source file. Nothing describes what it did. |
+| `20260802000000_secure_admin_roles` | `user_roles` is never created by any committed migration, and there is no baseline/init migration. Its CREATE, its RLS policies and the original `user_roles_role_allowed` constraint all predate the committed history. `20260804000000` only *mutates* the constraint, so it reveals the end state, not the start. |
+| `20260913170000_cook_delivery_preference` | `delivery_preference` appears nowhere in schema or code. |
+
+These three were deliberately left empty rather than invented. A migration that does not match
+the live database is worse than a missing one: `prisma migrate deploy` would succeed and produce
+a silently wrong schema.
+
+**To finish them**, run against the live database and paste the output:
+
+```sql
+-- secure_admin_roles
+select column_name, data_type, is_nullable, column_default
+from information_schema.columns where table_name = 'user_roles';
+select conname, pg_get_constraintdef(oid) from pg_constraint
+where conrelid = 'public.user_roles'::regclass;
+select policyname, cmd, qual, with_check from pg_policies
+where tablename = 'user_roles';
+
+-- the other two: confirm whether these columns exist at all
+select table_name, column_name from information_schema.columns
+where column_name in ('availability_enabled', 'delivery_preference');
+```
+
+If the last query returns nothing, those two migrations were likely renamed or abandoned and the
+empty directories should simply be deleted.
+
+**Status: `jest` 189 passed / 40 suites / 0 failed. `tsc` clean.**
+
+### `secure_admin_roles` restored (2026-10-10)
+
+Reconstructed from three independent sources, not guessed:
+- **Columns / FK / unique index** — the `user_roles` Prisma model (`fk_user_roles_user`,
+  `user_roles_user_id_role` map names included).
+- **RLS policies** — read from `pg_policies` on the live database.
+- **Intent** — `app/start-restaurant.tsx` self-assigns the `cook` role, and
+  `backend/middleware/requireAdmin.ts` reads roles server-side, which confirms the
+  "self-assign cook only, everything else via service role" split.
+
+Written **idempotently** (`CREATE TABLE IF NOT EXISTS`, `DROP POLICY IF EXISTS`, a guarded
+`DO $$` block for the FK) because the table predates the committed history — running it against
+the live database is a no-op.
+
+#### ⚠ Finding: duplicate RLS policies on `user_roles`
+
+`pg_policies` shows five policies implementing three rules — two pairs are exact duplicates under
+different names:
+
+| Rule | Policy names |
+|---|---|
+| read own roles | `Users can view their own roles` **and** `user_roles_read_own` |
+| self-assign cook | `Users can register themselves as cooks` **and** `user_roles_create_own_cook_role` |
+| service-role assign | `Service role can assign roles` |
+
+This is almost certainly the original Supabase-dashboard policies plus a later migration that
+re-created them under snake_case names without dropping the originals. **Not a security hole** —
+`PERMISSIVE` policies OR together, and both members of each pair have identical predicates, so the
+effective permission set is unchanged. It is redundancy, not exposure.
+
+The migration creates only the snake_case set. To drop the legacy duplicates on the live database:
+
+```sql
+DROP POLICY IF EXISTS "Users can view their own roles" ON public.user_roles;
+DROP POLICY IF EXISTS "Users can register themselves as cooks" ON public.user_roles;
+```
+
+Verify the three snake_case / service-role policies remain before and after.
+
+**All 5 empty migration directories resolved.**
+
+### Migration history REPAIRED — complete (2026-10-10)
+
+`information_schema` confirmed **no rows** for `availability_enabled` or `delivery_preference`:
+neither column exists in the live database, so those two migrations were never applied. Both
+directories were untracked by git and referenced by no code, so they were **deleted** rather than
+filled with invented SQL.
+
+| Migration | Outcome |
+|---|---|
+| `20260722000000_add_content_reports` | restored from Prisma model + the later `ALTER TABLE` that pins its original shape |
+| `20260722020000_add_cook_compliance_acceptances` | restored; clause text verified byte-identical against the live DB first |
+| `20260802000000_secure_admin_roles` | restored from Prisma model + live `pg_policies` + code intent; written idempotently |
+| `20260722010000_add_availability_enabled` | **deleted** — column does not exist |
+| `20260913170000_cook_delivery_preference` | **deleted** — column does not exist |
+
+**`prisma/migrations` is now internally consistent: 24 directories, 24 `migration.sql` files.**
+A fresh `prisma migrate deploy` should now reproduce the live schema rather than silently
+diverging from it.
+
+> Not verified by this work: whether the three restored files produce a byte-identical schema to
+> the live database when replayed from scratch. They are faithful to every source available
+> (Prisma models, dependent migrations, live `pg_policies`, application code), but the only real
+> proof is running `prisma migrate deploy` against an empty database and diffing. Worth doing
+> before provisioning a new environment.
+
+**Full suite: 189 passed / 40 suites / 0 failed. `tsc` clean.**
