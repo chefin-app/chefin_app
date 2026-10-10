@@ -1197,3 +1197,233 @@ diverging from it.
 > before provisioning a new environment.
 
 **Full suite: 189 passed / 40 suites / 0 failed. `tsc` clean.**
+
+## Code Connect — NOT AVAILABLE on this plan (2026-10-10)
+
+Attempted, then blocked by a hard prerequisite I should have checked first. The Figma API is
+explicit:
+
+> You need a Dev or Full seat on an **Organization or Enterprise** plan to use Code Connect.
+
+`whoami` confirms the `chefin` team is `tier: "pro"` with a Full seat. Professional is not enough;
+Organization is roughly $45/seat/month billed annually and needs org-level setup. Verified against
+the live API (`get_code_connect_suggestions`), not just the documentation.
+
+## Library publish-readiness + description enrichment (done instead)
+
+### Publish readiness
+`figma.teamLibrary` exists in the Plugin API but **exposes no methods** — publishing is a UI-only
+action. Prepared the file instead:
+
+- **`Primitives` collection set to `hiddenFromPublishing = true`.** Raw values (`green/500`,
+  `neutral/900`) should not appear in consumers' variable pickers; they consume the semantic layer
+  (`color/primary`, `color/text/default`), which aliases to them.
+- Audited what would publish: **25 component sets + 81 standalone components = 106**,
+  45 text styles, 1 effect style, 7 published variable collections (132 variables).
+- **Every one of the 106 components already has a description — zero gaps.**
+
+**To publish:** Figma → Assets panel → Libraries → Publish. UI-only; cannot be scripted.
+
+### Description enrichment — 30 components now carry their real code signature
+
+Parsed `src/components/**` for prop types and appended a `— CODE —` block to each matching Figma
+component: source path, import line, and the full TypeScript prop list with defaults.
+
+The parser needed three passes to be accurate:
+1. plain `interface XProps { … }`
+2. `interface XProps extends Listing { … }` — `MealCard` and `MenuItemCard` reported **0 props**
+   until `extends` was handled
+3. inline literals (`}: { cookId: string }`) and props imported from a sibling `types.ts`
+   (`BaseText`) — both initially reported 0
+
+`LoadingSpinner`, `AccountRestrictionBanner`, `ActiveOrderBanner` and `FloatingCartButton`
+genuinely take no props; those are recorded as `(no props)` rather than left blank.
+
+#### Figma escapes description HTML
+Descriptions round-trip through HTML, so `'`, `"`, `<`, `>` and `&` come back as `&#39;`, `&gt;`
+and so on — and **decoding then rewriting re-escapes them**. Resolved by substituting characters
+that survive: `'`→`’`, `"`→`”`, `=>`→`→`, `<`/`>`→`‹`/`›`, `&`→`and`. Final audit:
+**0 escaped entities across all 106 components.**
+
+This is a static substitute for Code Connect — roughly the same information in Dev Mode, minus the
+live link and the automatic drift detection when props change.
+
+## Deferred modal surfaces — COMPLETE (2026-10-10)
+
+**14 modal/overlay frames** in a new `Modals` Section on the Screens page. Each is a full-bleed
+frame with the real scrim (`rgba(20,28,23,~0.5)`) plus the sheet, dialog or popover on top, so the
+overlay reads as it does in the app rather than as a floating card.
+
+| Frame | Source |
+|---|---|
+| Modal / Dish Order | `src/components/restaurant/DishOrderModal.tsx` |
+| Modal / Restaurant Schedule | `restaurant/RestaurantScheduleSheet.tsx` |
+| Modal / Delivery Address | `delivery/DeliveryAddressModal.tsx` |
+| Modal / Payment Method | `cart/PaymentMethodSelector.tsx` |
+| Modal / Order Fulfilled | `orders/OrderFulfilledPopup.tsx` |
+| Modal / Pickup PIN | `orders/PickupPinModal.tsx` |
+| Modal / Location Prompt | `location/LocationPromptModal.tsx` |
+| Modal / Global Cart Overview | `cart/GlobalCartOverview.tsx` |
+| Modal / Buyer Notification Center | `notifications/BuyerNotificationCenter.tsx` |
+| Modal / Menu Option Selector | `restaurant/MenuOptionSelector.tsx` |
+| Modal / Direct Payment | `orders/DirectPaymentCard.tsx` |
+| Modal / Payment Settings | `settings/PaymentSettingsUI.tsx` |
+| Modal / Admin Notification Feed | `admin/AdminNotificationFeed.tsx` (desktop popover) |
+| Modal / Admin Date Filter | `admin/AdminDateFilter.tsx` (desktop popover) |
+
+Three shells reused across them: **bottom sheet** (26px top radius + 42×4 handle), **centred
+dialog** (24px radius), **desktop popover** (14px radius, 1px border, elevated shadow). Mobile
+uses `theme` tokens, the two admin popovers use `ADMIN_THEME` — the same split as the code.
+
+`AdminOverviewUI` was not built as its own frame: it is the status-badge/stat-card helper already
+rendered inside the five Admin dashboard screens, not a separate surface.
+
+### Two bugs found and fixed
+- **Collapsed popovers.** The recurring counter-axis trap again (`resize(w, 10)` before children
+  are appended). Fixed on both admin popovers.
+- **Black Date Filter popover.** A stray `bf(d, …)` inside a conditional overwrote the container
+  fill. The variable binding was correct, but the paint's *fallback* colour was black and the
+  renderer used that; rebinding with a white base colour alongside the variable fixed it. Worth
+  remembering: `setBoundVariableForPaint` keeps the literal colour you pass as fallback.
+
+## Phase 4 FINAL — 57 frames
+Auth 8 · Buyer 11 · Cook 11 · Shared 5 · Admin 8 · **Modals 14**
+
+## Library PUBLISHED + post-publish cleanup (2026-10-10)
+
+`get_libraries` confirms **Chefin Design System** is live as a `team` library, and
+`search_design_system` resolves components, variables and text styles from it — including the
+enriched `— CODE —` descriptions. `Primitives` is correctly absent (hidden from publishing).
+
+### Bug found in the published output: icon namespace collision
+
+Searching the library for `MealCard` returned **two** results — the real component **and** an
+Ionicon named `restaurant`. 19 of the 70 icons had bare generic names (`restaurant`, `card`,
+`menu`, `person`, `search`, `star`, `close`, `mail`, `flag`, `location`, `notifications`,
+`calendar`, `camera`, `checkmark`, `add`, `remove`, `refresh`, `pencil`, `flash`) that collide
+with real UI component names in the asset browser.
+
+**All 70 renamed to `Icon/<name>`.** Verified afterwards: **259 screen instances, 0 broken links**
+— renaming a main component does not detach its instances.
+
+### Grouping drift corrected
+Three components had drifted into the wrong Section's bounds — `BankSelect`,
+`SocialMediaButtons` and `DateTimePickerModal` were sitting inside *Group 3 — Cards & Filters*
+despite being inputs. Moved back to *Group 2 — Inputs* and both sections re-laid out.
+
+Final: G1 Leaves 7 · G2 Inputs 8 · G3 Cards & Filters 7 · G4 Composites 8 · G5 Admin 6 ·
+Icons 70 = **106**. No section overlaps, no loose components at page root.
+
+> **Action required:** the icon rename and regrouping happened *after* publishing, so the library
+> needs **republishing** to pick them up. Figma → Assets → Libraries → Publish.
+
+## Coverage audit — user challenge was correct (2026-10-10)
+
+Two problems raised: *"some pages look a bit off (cook/order detail)"* and *"are you sure you've
+completed ALL pages?"* **Both were right.**
+
+### 1. Cook / Order Detail was wrong
+
+The frame had only two cards floating in ~480px of empty space. Comparing against
+`app/(cook)/order/[orderId].tsx` showed it was missing almost everything the real screen has:
+customer, order items, subtotal/total breakdown, and the Cancel / Mark-as-ready actions.
+
+Rebuilt with the real structure. A follow-up screenshot caught a second bug — the action bar
+overlapped the BuyerRatingCard because the body was fixed-height — fixed by moving the actions out
+of the scrolling body and pinning them to the frame bottom, which is how the screen actually
+behaves.
+
+### 2. Three more screens were under-built
+
+A content-density audit (deepest painted pixel vs frame height) across all 57 frames found:
+
+| Screen | Was | Missing |
+|---|---|---|
+| `Buyer / Food Orders` | 306px of 852 | date grouping, only 3 of 5 orders |
+| `Buyer / Payment Methods` | 310px | the entire add-card form (CARD NUMBER / EXPIRY / CVC) |
+| `Cook / Payout Details` | 391px | the Customer Payment Options section |
+
+All three rebuilt from source.
+
+### 3. Fifteen routes had NO frame at all
+
+Diffing all 57 route files against the built frames:
+
+**Cook (10):** profile-information · identity-verification · edit-dish · option-group · address ·
+add-selling-schedule · help-support · direct-payment-settings · customer-reviews/[orderId] ·
+review-customer/[orderId]
+**Buyer (3):** profile-info · help-support · change-address
+**Shared (2):** restaurant/[id]/profile · restaurant/[id]/details
+
+All 15 built from their real copy and structure.
+
+**Correctly excluded (4):** `index` and `admin/index` are one-line `<Redirect>`; `notifications`
+(3 lines) and `(user)/notifications` (6 lines) are thin re-exports with no UI of their own.
+
+### Final coverage: 57 routes → 53 visual + 4 non-visual. All 53 built.
+
+| Section | Frames |
+|---|---|
+| Auth | 8 |
+| Buyer | 14 |
+| Cook | 21 |
+| Shared | 7 |
+| Admin | 8 |
+| Modals | 14 |
+| **Total** | **72** |
+
+(72 > 53 because several routes have multiple states — empty/filled, the two email-login steps —
+and the 14 modal overlays are surfaces rather than routes.)
+
+Sections reflowed vertically; **no overlaps**. Four screens still read as "thin" by the density
+metric — `Cook / Help & Support`, `Buyer / Help & Support`, `Cook / Customer Reviews`,
+`Shared / Restaurant Details` — but screenshots confirm these are genuinely short screens
+(a four-item menu is a four-item menu). The metric measures empty space, not correctness.
+
+### Lesson
+The earlier "Phase 4 complete" claim was made from a list of what I had built, never diffed
+against the route tree. **Coverage claims need a diff, not a tally.**
+
+## Component audit (2026-10-10)
+
+Same diff approach that found the screen gaps, applied to all 36 components: Figma variant
+properties pulled via `componentPropertyDefinitions`, compared against the states each component
+actually implements in source.
+
+### 5 missing variants found and added
+
+| Component | Added | Evidence in code |
+|---|---|---|
+| `MenuItemCard` | `Trailing=stepper-max` | `increaseDisabled` greys the `+` to `#AEB6B0` at `maxQuantity` |
+| `BuyerPickupCodeCard` | `State=copied` | icon swaps to `checkmark-circle` for 1.5s after copy |
+| `BuyerRatingCard` | `State=expanded-empty` | renders "No written reviews yet." when `recentReviews` is empty |
+| `BuyerRatingCard` | `State=expanded-viewall` | "View all N reviews" row when `writtenReviewCount > 3` |
+| `CustomerRefundRequestCard` | `State=open-with-note` | amber note block when `decision_note` is present |
+
+Counts now: MenuItemCard 4 · BuyerPickupCodeCard 4 · BuyerRatingCard 6 ·
+CustomerRefundRequestCard 3.
+
+### Confirmed correct (not gaps)
+- `SocialMediaButtons` 7 variants — email has no `Disabled=true` because the code's email branch
+  genuinely ignores `disabled`. The asymmetry is faithful.
+- `BottomTabBar` 8 — unread badge only on the inactive notifications tab, matching code.
+- `FoodComplianceAcknowledgement` 3 — `Accepted=false, ReadOnly=true` is unreachable in code.
+- `SearchBar` / `TextInputField` have no focus or error variants because **neither exists in the
+  source**. Adding them would invent UI.
+
+### 🔴 Collapsed-frame sweep found a bug that screenshots had hidden
+
+A programmatic check (child extent vs frame height) across every variant found **all 20
+`CuisineFilter / Item` variants were 10px tall holding 71px of content** — the recurring
+`resize(w, 10)`-before-appending trap. They had been clipping in `Buyer / Home` since Phase 3 and
+no screenshot had caught it, because the clipped row still looked plausible at thumbnail scale.
+
+`BuyerRatingCard`'s new variants hit the same trap during this audit and were fixed the same way.
+
+**Final sweep: 0 collapsed frames across all components and all 72 screens. 320 screen instances,
+0 broken links.**
+
+### Lesson
+Screenshots verify what is *visible*; they do not catch a frame that clips its own content and
+still looks reasonable. **Geometry needs a programmatic assertion** — compare child extent against
+frame height — not just a visual check.
