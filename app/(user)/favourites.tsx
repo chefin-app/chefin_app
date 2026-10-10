@@ -132,7 +132,7 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   findButton: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#237A3B',
     paddingVertical: 16,
     paddingHorizontal: 24,
     borderRadius: 12,

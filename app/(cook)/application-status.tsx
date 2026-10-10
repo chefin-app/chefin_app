@@ -182,7 +182,7 @@ const styles = StyleSheet.create({
     borderRadius: 26,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#237A3B',
   },
   primaryButtonText: { color: '#fff', fontSize: 15, fontWeight: '800' },
 });

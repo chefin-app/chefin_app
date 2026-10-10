@@ -3,6 +3,7 @@ import { router, useLocalSearchParams, type Href } from 'expo-router';
 import { supabase } from '@/src/utils/supabaseClient';
 import React, { useEffect, useRef, useState } from 'react';
 import { NativeSyntheticEvent, TextInputKeyPressEventData } from 'react-native';
+import theme from '@/src/styles/theme';
 
 import {
   ActivityIndicator,
@@ -206,93 +207,93 @@ export default function PhoneVerifyStep2() {
   return (
     <SafeAreaView style={styles.container}>
       <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-      <View style={styles.content}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={24} color="#333" />
-          </TouchableOpacity>
-        </View>
+        <View style={styles.content}>
+          {/* Header */}
+          <View style={styles.header}>
+            <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+              <Ionicons name="arrow-back" size={24} color={theme.colors.textStrong} />
+            </TouchableOpacity>
+          </View>
 
-        {/* Title */}
-        <Text style={styles.title}>Enter the 4-digit code sent to you at</Text>
-        <Text style={styles.phoneNumber}>{displayNumber}</Text>
+          {/* Title */}
+          <Text style={styles.title}>Enter the 4-digit code sent to you at</Text>
+          <Text style={styles.phoneNumber}>{displayNumber}</Text>
 
-        {/* OTP Input Container */}
-        <View style={styles.otpContainer}>
-          {otp.map((digit, index) => (
-            <TextInput
-              key={index}
-              ref={ref => {
-                if (ref) inputRefs.current[index] = ref;
-              }}
-              style={[
-                styles.otpInput,
-                focusedIndex === index && styles.otpInputFocused,
-                digit && styles.otpInputFilled,
-              ]}
-              value={digit}
-              onChangeText={value => handleOtpChange(value, index)}
-              onKeyPress={e => handleKeyPress(e, index)}
-              onFocus={() => setFocusedIndex(index)}
-              keyboardType="number-pad"
-              maxLength={1}
-              textAlign="center"
-              selectTextOnFocus
-            />
-          ))}
-        </View>
-
-        {/* Resend Section */}
-        <View style={styles.resendContainer}>
-          <TouchableOpacity
-            onPress={resendOTP}
-            disabled={timer > 0 || isResending}
-            style={styles.resendButton}
-          >
-            {isResending ? (
-              <ActivityIndicator size="small" color="#666" />
-            ) : (
-              <Text
+          {/* OTP Input Container */}
+          <View style={styles.otpContainer}>
+            {otp.map((digit, index) => (
+              <TextInput
+                key={index}
+                ref={ref => {
+                  if (ref) inputRefs.current[index] = ref;
+                }}
                 style={[
-                  styles.resendText,
-                  timer > 0 ? styles.resendTextDisabled : styles.resendTextEnabled,
+                  styles.otpInput,
+                  focusedIndex === index && styles.otpInputFocused,
+                  digit && styles.otpInputFilled,
                 ]}
-              >
-                {timer > 0 ? `I haven't received a code (${formatTimer(timer)})` : 'Resend Code'}
-              </Text>
-            )}
-          </TouchableOpacity>
+                value={digit}
+                onChangeText={value => handleOtpChange(value, index)}
+                onKeyPress={e => handleKeyPress(e, index)}
+                onFocus={() => setFocusedIndex(index)}
+                keyboardType="number-pad"
+                maxLength={1}
+                textAlign="center"
+                selectTextOnFocus
+              />
+            ))}
+          </View>
+
+          {/* Resend Section */}
+          <View style={styles.resendContainer}>
+            <TouchableOpacity
+              onPress={resendOTP}
+              disabled={timer > 0 || isResending}
+              style={styles.resendButton}
+            >
+              {isResending ? (
+                <ActivityIndicator size="small" color={theme.colors.textSecondary} />
+              ) : (
+                <Text
+                  style={[
+                    styles.resendText,
+                    timer > 0 ? styles.resendTextDisabled : styles.resendTextEnabled,
+                  ]}
+                >
+                  {timer > 0 ? `I haven't received a code (${formatTimer(timer)})` : 'Resend Code'}
+                </Text>
+              )}
+            </TouchableOpacity>
+          </View>
+
+          {/* Spacer */}
+          <View style={styles.spacer} />
+
+          {/* Bottom Navigation */}
+          <View style={styles.bottomNav}>
+            <TouchableOpacity style={styles.navButton} onPress={() => router.back()}>
+              <Ionicons name="arrow-back" size={24} color={theme.colors.textStrong} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.nextButton,
+                (isLoading || otp.join('').length !== 6) && styles.nextButtonDisabled,
+              ]}
+              onPress={() => verifyOTP()}
+              disabled={isLoading || otp.join('').length !== 6}
+            >
+              {isLoading ? (
+                <ActivityIndicator color={theme.colors.textOnAction} size="small" />
+              ) : (
+                <>
+                  <Text style={styles.nextButtonText}>Next</Text>
+                  <Ionicons name="arrow-forward" size={20} color={theme.colors.textOnAction} />
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
         </View>
-
-        {/* Spacer */}
-        <View style={styles.spacer} />
-
-        {/* Bottom Navigation */}
-        <View style={styles.bottomNav}>
-          <TouchableOpacity style={styles.navButton} onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={24} color="#333" />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.nextButton,
-              (isLoading || otp.join('').length !== 6) && styles.nextButtonDisabled,
-            ]}
-            onPress={() => verifyOTP()}
-            disabled={isLoading || otp.join('').length !== 6}
-          >
-            {isLoading ? (
-              <ActivityIndicator color="#fff" size="small" />
-            ) : (
-              <>
-                <Text style={styles.nextButtonText}>Next</Text>
-                <Ionicons name="arrow-forward" size={20} color="#fff" />
-              </>
-            )}
-          </TouchableOpacity>
-        </View>
-      </View>
       </TouchableWithoutFeedback>
     </SafeAreaView>
   );
@@ -301,7 +302,7 @@ export default function PhoneVerifyStep2() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.background,
   },
   content: {
     flex: 1,
@@ -319,13 +320,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: '600',
-    color: '#333',
+    color: theme.colors.textStrong,
     marginBottom: 8,
     marginTop: 20,
   },
   phoneNumber: {
     fontSize: 18,
-    color: '#4CAF50',
+    color: theme.colors.primary,
     fontWeight: '500',
     marginBottom: 40,
   },
@@ -339,20 +340,20 @@ const styles = StyleSheet.create({
     width: 45,
     height: 55,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: theme.colors.border,
     borderRadius: 12,
     fontSize: 24,
     fontWeight: '600',
-    color: '#333',
-    backgroundColor: '#F9F9F9',
+    color: theme.colors.textStrong,
+    backgroundColor: theme.colors.surfaceAlt,
   },
   otpInputFocused: {
-    borderColor: '#4CAF50',
-    backgroundColor: '#fff',
+    borderColor: theme.colors.primary,
+    backgroundColor: theme.colors.background,
   },
   otpInputFilled: {
-    borderColor: '#4CAF50',
-    backgroundColor: '#F0F8FF',
+    borderColor: theme.colors.primary,
+    backgroundColor: theme.colors.surfaceAlt,
   },
   resendContainer: {
     alignItems: 'center',
@@ -366,10 +367,10 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   resendTextDisabled: {
-    color: '#999',
+    color: theme.colors.placeholder,
   },
   resendTextEnabled: {
-    color: '#4CAF50',
+    color: theme.colors.primary,
     fontWeight: '500',
   },
   spacer: {
@@ -385,12 +386,12 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: theme.colors.surfaceMuted,
     justifyContent: 'center',
     alignItems: 'center',
   },
   nextButton: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: theme.colors.primaryAction,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 24,
@@ -399,11 +400,11 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   nextButtonDisabled: {
-    backgroundColor: '#E0E0E0',
+    backgroundColor: theme.colors.border,
   },
   nextButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    color: theme.colors.textOnAction,
+    fontFamily: theme.fonts.semibold,
+    fontSize: theme.fontSizes.base,
   },
 });

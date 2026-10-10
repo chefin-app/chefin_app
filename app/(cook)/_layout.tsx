@@ -117,7 +117,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   gateBtn: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#237A3B',
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 24,

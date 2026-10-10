@@ -123,7 +123,7 @@ const styles = StyleSheet.create({
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, padding: 30 },
   errorText: { color: '#666', fontSize: 14, lineHeight: 20, textAlign: 'center' },
   retryButton: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#237A3B',
     borderRadius: 22,
     paddingHorizontal: 20,
     paddingVertical: 10,

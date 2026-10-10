@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useState } from 'react';
 import { PhoneNumberInput } from '@/src/components/inputs/PhoneNumberInput';
+import theme from '@/src/styles/theme';
 import { CountryCodeSelector } from '@/src/components/inputs/CountryCodeSelector';
 import { DEFAULT_COUNTRY } from '@/src/constants/countryCodes';
 import {
@@ -94,7 +95,7 @@ export default function PhoneLoginScreen() {
           {/* Header */}
           <View style={styles.header}>
             <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-              <Ionicons name="arrow-back" size={24} color="#333" />
+              <Ionicons name="arrow-back" size={24} color={theme.colors.textStrong} />
             </TouchableOpacity>
           </View>
 
@@ -121,11 +122,11 @@ export default function PhoneLoginScreen() {
             disabled={loading || !phoneNumber.trim()}
           >
             {loading ? (
-              <ActivityIndicator color="#fff" />
+              <ActivityIndicator color={theme.colors.textOnAction} />
             ) : (
               <>
                 <Text style={styles.nextButtonText}>Next</Text>
-                <Ionicons name="arrow-forward" size={20} color="#fff" />
+                <Ionicons name="arrow-forward" size={20} color={theme.colors.textOnAction} />
               </>
             )}
           </TouchableOpacity>
@@ -144,7 +145,7 @@ export default function PhoneLoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.background,
   },
   content: {
     flex: 1,
@@ -160,22 +161,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   title: {
-    fontSize: 24,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 32,
+    fontFamily: theme.fonts.semibold,
+    fontSize: theme.fontSizes.title,
+    color: theme.colors.textStrong,
+    marginBottom: theme.spacing['3xl'],
     marginTop: 20,
   },
   phoneContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    borderBottomColor: theme.colors.border,
     paddingBottom: 12,
     marginBottom: 32,
   },
   nextButton: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: theme.colors.primaryAction,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -188,13 +189,14 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   nextButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    color: theme.colors.textOnAction,
+    fontFamily: theme.fonts.semibold,
+    fontSize: theme.fontSizes.base,
   },
   disclaimer: {
-    fontSize: 12,
-    color: '#666',
+    fontFamily: theme.fonts.regular,
+    fontSize: theme.fontSizes.small,
+    color: theme.colors.textSecondary,
     lineHeight: 18,
     textAlign: 'left',
   },

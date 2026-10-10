@@ -1637,7 +1637,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   nextBtn: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#237A3B',
     borderRadius: 28,
     paddingVertical: 14,
     paddingHorizontal: 36,

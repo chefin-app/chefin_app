@@ -75,7 +75,7 @@ const SocialMediaButtons: React.FC<SocialMediaButtonsProps> = ({
 
 const styles = StyleSheet.create({
   emailButton: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#237A3B',
     paddingVertical: 16,
     paddingHorizontal: 24,
     borderRadius: 12,

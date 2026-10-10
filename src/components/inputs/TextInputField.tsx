@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TextInput, StyleSheet, TextStyle, ViewStyle } from 'react-native';
-import { BaseText } from '@/src/components/typography'; // Assuming you have a BaseText component for consistent typography
+import { BaseText } from '@/src/components/typography';
+import theme from '@/src/styles/theme';
 
 type TextInputFieldProps = {
   label?: string;
@@ -42,22 +43,23 @@ export const TextInputField = ({
 const styles = StyleSheet.create({
   container: {
     width: '100%',
-    marginBottom: 16,
+    marginBottom: theme.spacing.lg,
   },
   label: {
-    fontSize: 14,
-    color: '#333',
-    marginBottom: 8,
-    fontWeight: '500',
+    fontFamily: theme.fonts.semibold,
+    fontSize: theme.fontSizes.body,
+    color: theme.colors.textStrong,
+    marginBottom: theme.spacing.sm,
   },
   input: {
     height: 50,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    fontSize: 16,
-    color: '#333',
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radii.md,
+    paddingHorizontal: theme.spacing.lg,
+    fontFamily: theme.fonts.regular,
+    fontSize: theme.fontSizes.base,
+    color: theme.colors.textStrong,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: theme.colors.border,
   },
 });

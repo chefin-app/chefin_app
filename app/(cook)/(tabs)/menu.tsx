@@ -2022,7 +2022,7 @@ const styles = StyleSheet.create({
   primaryButton: {
     marginTop: 18,
     minHeight: 50,
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#237A3B',
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',

@@ -1,7 +1,8 @@
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet, ActivityIndicator, ViewStyle } from 'react-native';
 
-// mocking up he props for our reusable button
+import theme from '@/src/styles/theme';
+
 interface PrimaryButtonProps {
   title: string;
   onPress: () => void;
@@ -25,10 +26,8 @@ const PrimaryButton: React.FC<PrimaryButtonProps> = ({
       style={[styles.button, style, (isLoading || disabled) && styles.disabledButton]}
     >
       {isLoading ? (
-        //  a loading indicator if the button is in a loading state
-        <ActivityIndicator color="#ffffff" />
+        <ActivityIndicator color={theme.colors.textOnAction} />
       ) : (
-        // Otherwise, show the button's title
         <Text style={styles.buttonText}>{title}</Text>
       )}
     </TouchableOpacity>
@@ -38,25 +37,25 @@ const PrimaryButton: React.FC<PrimaryButtonProps> = ({
 const styles = StyleSheet.create({
   button: {
     width: '100%',
-    paddingVertical: 16,
-    borderRadius: 9999, // A large value to ensure a fully rounded shape
-    backgroundColor: '#4CAF50', // A vibrant green color
+    paddingVertical: theme.spacing.lg,
+    borderRadius: theme.radii.pill,
+    // primaryAction, not primary: white on #4CAF50 is 2.78:1 and fails WCAG AA.
+    backgroundColor: theme.colors.primaryAction,
     alignItems: 'center',
     justifyContent: 'center',
-    // Optional shadow for a more modern, elevated look
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
-    elevation: 8, // Android shadow
+    elevation: 8,
   },
   disabledButton: {
-    backgroundColor: '#a5d6a7', // Lighter green color when disabled
+    backgroundColor: theme.colors.primaryDisabled,
   },
   buttonText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#ffffff', // White text
+    fontFamily: theme.fonts.bold,
+    fontSize: theme.fontSizes.subtitle,
+    color: theme.colors.textOnAction,
   },
 });
 

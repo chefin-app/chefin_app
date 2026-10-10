@@ -522,7 +522,7 @@ const styles = StyleSheet.create({
   save: {
     minHeight: 54,
     borderRadius: 28,
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#237A3B',
     alignItems: 'center',
     justifyContent: 'center',
   },

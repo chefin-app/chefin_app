@@ -332,7 +332,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   submitButton: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#237A3B',
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',

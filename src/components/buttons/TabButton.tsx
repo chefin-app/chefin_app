@@ -35,7 +35,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   selectedButton: {
-    backgroundColor: '#4CAF50', // Selected button background
+    backgroundColor: '#237A3B', // Selected button background
     borderColor: '#4CAF50',
   },
   buttonText: {

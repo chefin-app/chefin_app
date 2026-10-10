@@ -84,7 +84,7 @@ export const paymentSettingsStyles = StyleSheet.create({
   },
   input: { flex: 1, fontSize: 16, color: '#222' },
   primaryButton: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#237A3B',
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',

@@ -45,6 +45,10 @@ export default function RootLayout() {
     mon: require('@/src/assets/fonts/Montserrat-Regular.ttf'),
     'mon-sb': require('@/src/assets/fonts/Montserrat-SemiBold.ttf'),
     'mon-b': require('@/src/assets/fonts/Montserrat-Bold.ttf'),
+    // Aliases used by src/components/typography/styles.ts. The .ttf files were
+    // always in the repo; without these registrations the weights silently fell
+    // back to the system font.
+    'mon-m': require('@/src/assets/fonts/Montserrat-Medium.ttf'),
   });
 
   useEffect(() => {

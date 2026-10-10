@@ -4,6 +4,8 @@ import { useRouter } from 'expo-router';
 import { useEffect } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
+import theme from '@/src/styles/theme';
+
 // Supabase returns the session in the URL *fragment* (after #), not the query
 // string, so expo-router's useLocalSearchParams can't see it. We read the raw
 // initial URL and parse the fragment ourselves, then set the session on the
@@ -97,7 +99,7 @@ export default function AuthCallback() {
 
   return (
     <View style={styles.container}>
-      <ActivityIndicator size="large" color="#4CAF50" />
+      <ActivityIndicator size="large" color={theme.colors.primary} />
       <Text style={styles.text}>Completing sign in...</Text>
     </View>
   );
@@ -108,11 +110,12 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    gap: 16,
+    backgroundColor: theme.colors.background,
+    gap: theme.spacing.lg,
   },
   text: {
-    fontSize: 16,
-    color: '#666',
+    fontFamily: theme.fonts.regular,
+    fontSize: theme.fontSizes.base,
+    color: theme.colors.textSecondary,
   },
 });

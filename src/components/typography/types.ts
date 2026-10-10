@@ -9,15 +9,12 @@ export type TextColor =
   | 'success'
   | 'error'
   | 'accent';
-export type TextWeight =
-  | 'thin'
-  | 'light'
-  | 'regular'
-  | 'medium'
-  | 'semibold'
-  | 'bold'
-  | 'extrabold'
-  | 'black';
+/**
+ * Only weights with a font registered in app/_layout.tsx are allowed. Adding
+ * one here means registering its .ttf there and adding a `weight_*` entry to
+ * ./styles.ts — otherwise it silently renders as the system font.
+ */
+export type TextWeight = 'regular' | 'medium' | 'semibold' | 'bold';
 export type TextAlign = 'left' | 'center' | 'right';
 
 export interface BaseTextProps {

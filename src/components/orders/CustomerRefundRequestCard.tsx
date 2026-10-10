@@ -492,7 +492,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 16,
     borderRadius: 10,
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#237A3B',
   },
   submitText: { fontSize: 12, fontWeight: '800', color: '#FFFFFF' },
 });

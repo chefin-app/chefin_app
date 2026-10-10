@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+
+import theme from '@/src/styles/theme';
 import {
   View,
   Text,
@@ -75,12 +77,12 @@ export default function SetupPasswordStep3() {
 
   const getPasswordStrength = () => {
     if (password.length === 0) return null;
-    if (password.length < 6) return { strength: 'Weak', color: '#FF5252' };
-    if (password.length < 8) return { strength: 'Fair', color: '#FF9800' };
+    if (password.length < 6) return { strength: 'Weak', color: theme.colors.strength.weak };
+    if (password.length < 8) return { strength: 'Fair', color: theme.colors.strength.fair };
     if (password.length >= 8 && /[A-Z]/.test(password) && /[0-9]/.test(password)) {
-      return { strength: 'Strong', color: '#4CAF50' };
+      return { strength: 'Strong', color: theme.colors.primary };
     }
-    return { strength: 'Good', color: '#2196F3' };
+    return { strength: 'Good', color: theme.colors.strength.good };
   };
 
   const passwordStrength = getPasswordStrength();
@@ -103,10 +105,10 @@ export default function SetupPasswordStep3() {
   ].filter((message): message is string => Boolean(message));
   const showValidationSummary = submitted && validationErrors.length > 0;
 
-  const matchTextColor = isPasswordMatching ? '#4CAF50' : '#FF5252';
-  const minLengthColor = hasMinLength ? '#4CAF50' : '#999';
-  const uppercaseColor = hasUppercase ? '#4CAF50' : '#999';
-  const numberColor = hasNumber ? '#4CAF50' : '#999';
+  const matchTextColor = isPasswordMatching ? theme.colors.primary : theme.colors.strength.weak;
+  const minLengthColor = hasMinLength ? theme.colors.primary : theme.colors.placeholder;
+  const uppercaseColor = hasUppercase ? theme.colors.primary : theme.colors.placeholder;
+  const numberColor = hasNumber ? theme.colors.primary : theme.colors.placeholder;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -118,7 +120,7 @@ export default function SetupPasswordStep3() {
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={24} color="#333" />
+            <Ionicons name="arrow-back" size={24} color={theme.colors.textStrong} />
           </TouchableOpacity>
         </View>
 
@@ -135,7 +137,7 @@ export default function SetupPasswordStep3() {
             accessibilityLiveRegion="assertive"
             testID="password-validation-error"
           >
-            <Ionicons name="alert-circle" size={24} color="#B42318" />
+            <Ionicons name="alert-circle" size={24} color={theme.colors.error} />
             <View style={styles.validationSummaryCopy}>
               <Text style={styles.validationSummaryTitle}>Password requirements not met</Text>
               {validationErrors.map(message => (
@@ -154,7 +156,7 @@ export default function SetupPasswordStep3() {
             <TextInput
               style={styles.passwordInput}
               placeholder="Enter your password"
-              placeholderTextColor="#999"
+              placeholderTextColor={theme.colors.placeholder}
               value={password}
               onChangeText={setPassword}
               secureTextEntry={!showPassword}
@@ -164,7 +166,11 @@ export default function SetupPasswordStep3() {
               style={styles.eyeButton}
               onPress={() => setShowPassword(!showPassword)}
             >
-              <Ionicons name={showPassword ? 'eye' : 'eye-off'} size={20} color="#666" />
+              <Ionicons
+                name={showPassword ? 'eye' : 'eye-off'}
+                size={20}
+                color={theme.colors.textSecondary}
+              />
             </TouchableOpacity>
           </View>
           {showPasswordError && (
@@ -191,7 +197,7 @@ export default function SetupPasswordStep3() {
             <TextInput
               style={styles.passwordInput}
               placeholder="Confirm your password"
-              placeholderTextColor="#999"
+              placeholderTextColor={theme.colors.placeholder}
               value={confirmPassword}
               onChangeText={setConfirmPassword}
               secureTextEntry={!showConfirmPassword}
@@ -201,7 +207,11 @@ export default function SetupPasswordStep3() {
               style={styles.eyeButton}
               onPress={() => setShowConfirmPassword(!showConfirmPassword)}
             >
-              <Ionicons name={showConfirmPassword ? 'eye' : 'eye-off'} size={20} color="#666" />
+              <Ionicons
+                name={showConfirmPassword ? 'eye' : 'eye-off'}
+                size={20}
+                color={theme.colors.textSecondary}
+              />
             </TouchableOpacity>
           </View>
           {showConfirmError && (
@@ -236,12 +246,12 @@ export default function SetupPasswordStep3() {
                 hasMinLength ? 'checkmark-circle' : submitted ? 'close-circle' : 'ellipse-outline'
               }
               size={18}
-              color={submitted && !hasMinLength ? '#C62828' : minLengthColor}
+              color={submitted && !hasMinLength ? theme.colors.error : minLengthColor}
             />
             <Text
               style={[
                 styles.requirementText,
-                { color: submitted && !hasMinLength ? '#C62828' : minLengthColor },
+                { color: submitted && !hasMinLength ? theme.colors.error : minLengthColor },
               ]}
             >
               At least 6 characters
@@ -253,12 +263,12 @@ export default function SetupPasswordStep3() {
                 hasUppercase ? 'checkmark-circle' : submitted ? 'close-circle' : 'ellipse-outline'
               }
               size={18}
-              color={submitted && !hasUppercase ? '#C62828' : uppercaseColor}
+              color={submitted && !hasUppercase ? theme.colors.error : uppercaseColor}
             />
             <Text
               style={[
                 styles.requirementText,
-                { color: submitted && !hasUppercase ? '#C62828' : uppercaseColor },
+                { color: submitted && !hasUppercase ? theme.colors.error : uppercaseColor },
               ]}
             >
               One uppercase letter
@@ -268,12 +278,12 @@ export default function SetupPasswordStep3() {
             <Ionicons
               name={hasNumber ? 'checkmark-circle' : submitted ? 'close-circle' : 'ellipse-outline'}
               size={18}
-              color={submitted && !hasNumber ? '#C62828' : numberColor}
+              color={submitted && !hasNumber ? theme.colors.error : numberColor}
             />
             <Text
               style={[
                 styles.requirementText,
-                { color: submitted && !hasNumber ? '#C62828' : numberColor },
+                { color: submitted && !hasNumber ? theme.colors.error : numberColor },
               ]}
             >
               One number
@@ -295,7 +305,7 @@ export default function SetupPasswordStep3() {
           disabled={isLoading}
         >
           {isLoading ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={theme.colors.textOnAction} />
           ) : (
             <Text style={styles.createButtonText}>Create Account</Text>
           )}
@@ -315,7 +325,7 @@ export default function SetupPasswordStep3() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.background,
   },
   content: {
     flexGrow: 1,
@@ -333,13 +343,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: '600',
-    color: '#333',
+    color: theme.colors.textStrong,
     marginBottom: 8,
     marginTop: 20,
   },
   subtitle: {
     fontSize: 16,
-    color: '#666',
+    color: theme.colors.textSecondary,
     lineHeight: 22,
     marginBottom: 32,
   },
@@ -349,24 +359,24 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#333',
+    color: theme.colors.textStrong,
     marginBottom: 8,
   },
   passwordContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: theme.colors.border,
     borderRadius: 12,
-    backgroundColor: '#F9F9F9',
+    backgroundColor: theme.colors.surfaceAlt,
   },
   inputError: {
-    borderColor: '#C62828',
-    backgroundColor: '#FFF8F7',
+    borderColor: theme.colors.errorBorder,
+    backgroundColor: theme.colors.errorSoft,
   },
   submitError: {
     marginTop: 7,
-    color: '#C62828',
+    color: theme.colors.error,
     fontSize: 13,
     lineHeight: 18,
     fontWeight: '700',
@@ -378,21 +388,21 @@ const styles = StyleSheet.create({
     padding: 14,
     marginBottom: 24,
     borderWidth: 2,
-    borderColor: '#D92D20',
+    borderColor: theme.colors.errorBorder,
     borderRadius: 12,
-    backgroundColor: '#FEF3F2',
+    backgroundColor: theme.colors.errorSoft,
   },
   validationSummaryCopy: {
     flex: 1,
   },
   validationSummaryTitle: {
-    color: '#B42318',
+    color: theme.colors.error,
     fontSize: 15,
     fontWeight: '800',
     marginBottom: 5,
   },
   validationSummaryText: {
-    color: '#B42318',
+    color: theme.colors.error,
     fontSize: 13,
     fontWeight: '600',
     lineHeight: 19,
@@ -402,7 +412,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 16,
     fontSize: 16,
-    color: '#333',
+    color: theme.colors.textStrong,
   },
   eyeButton: {
     padding: 16,
@@ -433,20 +443,20 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   requirementsContainer: {
-    backgroundColor: '#F9F9F9',
+    backgroundColor: theme.colors.surfaceAlt,
     borderRadius: 12,
     padding: 16,
     marginBottom: 32,
   },
   requirementsError: {
     borderWidth: 2,
-    borderColor: '#D92D20',
-    backgroundColor: '#FEF3F2',
+    borderColor: theme.colors.errorBorder,
+    backgroundColor: theme.colors.errorSoft,
   },
   requirementsTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#333',
+    color: theme.colors.textStrong,
     marginBottom: 12,
   },
   requirementItem: {
@@ -463,29 +473,29 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   createButton: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: theme.colors.primaryAction,
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
     marginBottom: 16,
   },
   createButtonDisabled: {
-    backgroundColor: '#E0E0E0',
+    backgroundColor: theme.colors.border,
   },
   createButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    color: theme.colors.textOnAction,
+    fontFamily: theme.fonts.semibold,
+    fontSize: theme.fontSizes.base,
   },
   termsText: {
     fontSize: 12,
-    color: '#666',
+    color: theme.colors.textSecondary,
     textAlign: 'center',
     lineHeight: 18,
     marginBottom: 20,
   },
   linkText: {
-    color: '#4CAF50',
+    color: theme.colors.primary,
     fontWeight: '500',
   },
 });

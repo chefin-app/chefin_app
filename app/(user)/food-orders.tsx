@@ -231,7 +231,7 @@ const styles = StyleSheet.create({
   cancelledTag: { fontSize: 12, fontWeight: '700', color: '#C62828', marginTop: 6 },
   starsRow: { flexDirection: 'row', gap: 8, marginTop: 12 },
   retryButton: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#237A3B',
     borderRadius: 20,
     marginTop: 14,
     paddingHorizontal: 20,

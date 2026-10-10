@@ -289,7 +289,7 @@ const styles = StyleSheet.create({
   preview: { width: '100%', height: '100%' },
   submit: {
     marginTop: 18,
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#237A3B',
     borderRadius: 13,
     alignItems: 'center',
     paddingVertical: 15,

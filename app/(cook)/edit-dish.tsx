@@ -782,7 +782,7 @@ const styles = StyleSheet.create({
   createSchedule: { color: '#1473E6', fontSize: 13, fontWeight: '800', paddingVertical: 10 },
 
   saveBtn: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#237A3B',
     borderRadius: 28,
     paddingVertical: 16,
     alignItems: 'center',

@@ -1,4 +1,5 @@
 import { useAuth } from '@/src/services/auth-context';
+import theme from '@/src/styles/theme';
 import { supabase } from '@/src/utils/supabaseClient';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams, type Href } from 'expo-router';
@@ -278,7 +279,7 @@ export default function EmailLoginScreen() {
               style={styles.backButton}
               onPress={() => (onEmailStep ? router.back() : handleChangeEmail())}
             >
-              <Ionicons name="arrow-back" size={24} color="#333" />
+              <Ionicons name="arrow-back" size={24} color={theme.colors.textStrong} />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>{headerTitle}</Text>
             <View style={styles.placeholder} />
@@ -301,7 +302,7 @@ export default function EmailLoginScreen() {
                         emailTouched && !emailValid && email.length > 0 && styles.inputError,
                       ]}
                       placeholder="Enter your email"
-                      placeholderTextColor="#c3c3c3ff"
+                      placeholderTextColor={theme.colors.placeholder}
                       value={email}
                       onChangeText={setEmail}
                       onBlur={() => setEmailTouched(true)}
@@ -330,7 +331,7 @@ export default function EmailLoginScreen() {
                     disabled={checkingEmail}
                   >
                     {checkingEmail ? (
-                      <ActivityIndicator color="#fff" />
+                      <ActivityIndicator color={theme.colors.textOnAction} />
                     ) : (
                       <Text style={styles.submitButtonText}>Continue</Text>
                     )}
@@ -346,7 +347,7 @@ export default function EmailLoginScreen() {
 
                   {/* Locked-in email with change affordance */}
                   <TouchableOpacity style={styles.emailChip} onPress={handleChangeEmail}>
-                    <Ionicons name="mail-outline" size={16} color="#666" />
+                    <Ionicons name="mail-outline" size={16} color={theme.colors.textSecondary} />
                     <Text style={styles.emailChipText}>{email.trim()}</Text>
                     <Text style={styles.emailChipChange}>Change</Text>
                   </TouchableOpacity>
@@ -365,7 +366,7 @@ export default function EmailLoginScreen() {
                         testID="password-input"
                         style={styles.passwordInput}
                         placeholder={isSignUp ? 'Create a password' : 'Enter your password'}
-                        placeholderTextColor="#c3c3c3ff"
+                        placeholderTextColor={theme.colors.placeholder}
                         value={password}
                         onChangeText={setPassword}
                         onBlur={() => setPasswordTouched(true)}
@@ -379,7 +380,11 @@ export default function EmailLoginScreen() {
                         style={styles.eyeButton}
                         onPress={() => setShowPassword(!showPassword)}
                       >
-                        <Ionicons name={showPassword ? 'eye' : 'eye-off'} size={20} color="#666" />
+                        <Ionicons
+                          name={showPassword ? 'eye' : 'eye-off'}
+                          size={20}
+                          color={theme.colors.textSecondary}
+                        />
                       </TouchableOpacity>
                     </View>
 
@@ -390,7 +395,7 @@ export default function EmailLoginScreen() {
                         accessibilityLiveRegion="assertive"
                         testID="password-validation-error"
                       >
-                        <Ionicons name="alert-circle" size={20} color="#B42318" />
+                        <Ionicons name="alert-circle" size={20} color={theme.colors.error} />
                         <View style={styles.passwordErrorCopy}>
                           <Text style={styles.passwordErrorTitle}>
                             Password requirements not met
@@ -421,7 +426,11 @@ export default function EmailLoginScreen() {
                               }
                               size={16}
                               color={
-                                check.ok ? '#4CAF50' : passwordSubmitAttempted ? '#C62828' : '#999'
+                                check.ok
+                                  ? theme.colors.primary
+                                  : passwordSubmitAttempted
+                                    ? theme.colors.error
+                                    : theme.colors.placeholder
                               }
                             />
                             <Text
@@ -454,7 +463,7 @@ export default function EmailLoginScreen() {
                     disabled={busy}
                   >
                     {busy ? (
-                      <ActivityIndicator color="#fff" />
+                      <ActivityIndicator color={theme.colors.textOnAction} />
                     ) : (
                       <Text style={styles.submitButtonText}>
                         {isSignUp ? 'Create Account' : 'Sign In'}
@@ -474,7 +483,7 @@ export default function EmailLoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.background,
   },
   keyboardView: {
     flex: 1,
@@ -486,7 +495,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: theme.colors.separator,
   },
   backButton: {
     padding: 8,
@@ -494,7 +503,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
+    color: theme.colors.textStrong,
   },
   placeholder: {
     width: 40,
@@ -509,7 +518,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 16,
-    color: '#666',
+    color: theme.colors.textSecondary,
     textAlign: 'center',
     marginBottom: 32,
   },
@@ -518,7 +527,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     alignSelf: 'center',
     gap: 8,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: theme.colors.surfaceMuted,
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 8,
@@ -526,12 +535,12 @@ const styles = StyleSheet.create({
   },
   emailChipText: {
     fontSize: 14,
-    color: '#333',
+    color: theme.colors.textStrong,
     fontWeight: '500',
   },
   emailChipChange: {
     fontSize: 14,
-    color: '#4CAF50',
+    color: theme.colors.primary,
     fontWeight: '600',
   },
   inputContainer: {
@@ -540,23 +549,23 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#333',
+    color: theme.colors.textStrong,
     marginBottom: 8,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: theme.colors.border,
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 16,
     fontSize: 16,
-    backgroundColor: '#F9F9F9',
+    backgroundColor: theme.colors.surfaceAlt,
   },
   inputError: {
-    borderColor: '#E53935',
+    borderColor: theme.colors.errorBorder,
   },
   errorText: {
-    color: '#E53935',
+    color: theme.colors.error,
     fontSize: 13,
     marginTop: 6,
   },
@@ -571,27 +580,27 @@ const styles = StyleSheet.create({
   },
   checkText: {
     fontSize: 13,
-    color: '#999',
+    color: theme.colors.placeholder,
   },
   checkTextOk: {
-    color: '#4CAF50',
+    color: theme.colors.primary,
   },
   checkTextError: {
-    color: '#C62828',
+    color: theme.colors.error,
     fontWeight: '600',
   },
   passwordContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: theme.colors.border,
     borderRadius: 12,
-    backgroundColor: '#F9F9F9',
+    backgroundColor: theme.colors.surfaceAlt,
   },
   passwordContainerError: {
     borderWidth: 2,
-    borderColor: '#D92D20',
-    backgroundColor: '#FFF8F7',
+    borderColor: theme.colors.errorBorder,
+    backgroundColor: theme.colors.errorSoft,
   },
   passwordErrorSummary: {
     flexDirection: 'row',
@@ -600,21 +609,21 @@ const styles = StyleSheet.create({
     marginTop: 10,
     padding: 12,
     borderWidth: 1,
-    borderColor: '#D92D20',
+    borderColor: theme.colors.errorBorder,
     borderRadius: 10,
-    backgroundColor: '#FEF3F2',
+    backgroundColor: theme.colors.errorSoft,
   },
   passwordErrorCopy: {
     flex: 1,
   },
   passwordErrorTitle: {
-    color: '#B42318',
+    color: theme.colors.error,
     fontSize: 14,
     fontWeight: '800',
     marginBottom: 4,
   },
   passwordErrorText: {
-    color: '#B42318',
+    color: theme.colors.error,
     fontSize: 13,
     fontWeight: '600',
     lineHeight: 19,
@@ -633,12 +642,12 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   forgotPasswordText: {
-    color: '#4CAF50',
+    color: theme.colors.primary,
     fontSize: 14,
     fontWeight: '500',
   },
   submitButton: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: theme.colors.primaryAction,
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
@@ -648,8 +657,8 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   submitButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    color: theme.colors.textOnAction,
+    fontFamily: theme.fonts.semibold,
+    fontSize: theme.fontSizes.base,
   },
 });

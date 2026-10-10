@@ -18,6 +18,7 @@ import { useAuth } from '@/src/services/auth-context';
 import { supabase } from '@/src/utils/supabaseClient';
 import { CountryCodeSelector } from '@/src/components/inputs/CountryCodeSelector';
 import { DEFAULT_COUNTRY, Country } from '@/src/constants/countryCodes';
+import theme from '@/src/styles/theme';
 
 /**
  * First-run onboarding shown right after sign-up. Collects the user's name and
@@ -154,27 +155,28 @@ export default function OnboardingScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  content: { padding: 24, paddingTop: 40 },
-  iconWrap: { alignItems: 'center', marginBottom: 12 },
+  container: { flex: 1, backgroundColor: theme.colors.background },
+  content: { padding: theme.spacing['2xl'], paddingTop: 40 },
+  iconWrap: { alignItems: 'center', marginBottom: theme.spacing.md },
   title: {
+    fontFamily: theme.fonts.bold,
     fontSize: 26,
-    fontWeight: '800',
-    color: '#1A1A1A',
+    color: theme.colors.text,
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: theme.spacing.sm,
   },
   subtitle: {
+    fontFamily: theme.fonts.regular,
     fontSize: 15,
-    color: '#666',
+    color: theme.colors.textSecondary,
     textAlign: 'center',
     lineHeight: 21,
-    marginBottom: 32,
+    marginBottom: theme.spacing['3xl'],
   },
   label: {
+    fontFamily: theme.fonts.semibold,
     fontSize: 11,
-    fontWeight: '600',
-    color: '#888',
+    color: theme.colors.textMuted,
     marginBottom: 6,
     letterSpacing: 0.6,
   },
@@ -182,21 +184,37 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 12,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radii.md,
     paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingVertical: theme.spacing.md,
     marginBottom: 18,
   },
   inputIcon: { marginRight: 10 },
-  input: { flex: 1, fontSize: 16, color: '#1A1A1A' },
-  hint: { fontSize: 12, color: '#999', marginTop: -8, marginBottom: 28, lineHeight: 17 },
+  input: {
+    flex: 1,
+    fontFamily: theme.fonts.regular,
+    fontSize: theme.fontSizes.base,
+    color: theme.colors.text,
+  },
+  hint: {
+    fontFamily: theme.fonts.regular,
+    fontSize: theme.fontSizes.small,
+    color: theme.colors.placeholder,
+    marginTop: -8,
+    marginBottom: 28,
+    lineHeight: 17,
+  },
   button: {
-    backgroundColor: '#4CAF50',
-    borderRadius: 12,
-    paddingVertical: 16,
+    backgroundColor: theme.colors.primaryAction,
+    borderRadius: theme.radii.md,
+    paddingVertical: theme.spacing.lg,
     alignItems: 'center',
   },
-  buttonDisabled: { backgroundColor: '#a5d6a7' },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  buttonDisabled: { backgroundColor: theme.colors.primaryDisabled },
+  buttonText: {
+    fontFamily: theme.fonts.semibold,
+    color: theme.colors.textOnAction,
+    fontSize: theme.fontSizes.base,
+  },
 });

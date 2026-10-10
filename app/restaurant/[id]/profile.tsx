@@ -473,7 +473,7 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   stateButton: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#237A3B',
     borderRadius: 20,
     marginTop: 14,
     paddingHorizontal: 20,

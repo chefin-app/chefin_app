@@ -446,7 +446,7 @@ const styles = StyleSheet.create({
   errorTitle: { fontSize: 18, fontWeight: '800', color: '#1A1A1A' },
   errorText: { fontSize: 14, color: '#666', lineHeight: 20, textAlign: 'center' },
   retryButton: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#237A3B',
     borderRadius: 22,
     paddingHorizontal: 22,
     paddingVertical: 11,
@@ -538,7 +538,7 @@ const styles = StyleSheet.create({
   },
   characterCount: { fontSize: 11, color: '#999', textAlign: 'right', marginTop: 4 },
   submitButton: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#237A3B',
     borderRadius: 25,
     paddingVertical: 15,
     alignItems: 'center',

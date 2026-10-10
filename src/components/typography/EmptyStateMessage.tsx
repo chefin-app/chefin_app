@@ -55,7 +55,7 @@ export default function EmptyStateMessage({
   return (
     <View style={styles.container}>
       <View style={styles.iconContainer}>
-        <Ionicons name={displayIcon} sie={64} color={iconColor} />
+        <Ionicons name={displayIcon} size={64} color={iconColor} />
       </View>
 
       <BaseText weight="semibold" color="primary" align="center" style={styles.title}>

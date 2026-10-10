@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { BaseText } from '@/src/components/typography';
+import theme from '@/src/styles/theme';
 
 type RadioButtonProps = {
   label: string;
@@ -25,30 +26,30 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: theme.spacing.md,
   },
   outerCircle: {
     height: 24,
     width: 24,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: '#ccc',
+    borderColor: theme.colors.border,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginRight: theme.spacing.md,
   },
   selectedOuterCircle: {
-    borderColor: '#4CAF50',
+    borderColor: theme.colors.primary,
   },
   innerCircle: {
     height: 12,
     width: 12,
     borderRadius: 6,
-    backgroundColor: '#4CAF50',
+    backgroundColor: theme.colors.primary,
   },
   labelText: {
-    fontSize: 16,
-    color: '#333',
-    fontWeight: '500',
+    fontFamily: theme.fonts.semibold,
+    fontSize: theme.fontSizes.base,
+    color: theme.colors.textStrong,
   },
 });

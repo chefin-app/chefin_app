@@ -13,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import SocialMediaButtons from '@/src/components/buttons/SocialMediaButtons';
 import { useAuth } from '@/src/services/auth-context';
+import theme from '@/src/styles/theme';
 
 export default function LoginScreen() {
   const { signInWithFacebook, signInWithGoogle, signInWithApple } = useAuth();
@@ -47,7 +48,7 @@ export default function LoginScreen() {
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={24} color="#333" />
+            <Ionicons name="arrow-back" size={24} color={theme.colors.textStrong} />
           </TouchableOpacity>
         </View>
 
@@ -79,15 +80,6 @@ export default function LoginScreen() {
             <SocialMediaButtons buttonName={'apple'} onPress={signInWithApple} disabled />
             <SocialMediaButtons buttonName={'google'} onPress={signInWithGoogle} disabled />
             <SocialMediaButtons buttonName={'email'} onPress={handleEmailLogin} />
-
-            {/* <TouchableOpacity style={styles.facebookButton} onPress={signInWithFacebook}>
-            <View style={styles.socialButtonContent}>
-              <Ionicons name="logo-facebook" size={20} color="#fff" />
-              <Text style={styles.facebookButtonText}>Continue with Facebook</Text>
-            </View>
-          </TouchableOpacity>
-
-          {/* Google Login */}
             {/* <TouchableOpacity style={styles.googleButton} onPress={signInWithGoogle}>
             <View style={styles.socialButtonContent}>
               <Ionicons name="logo-google" size={20} color="#DB4437" />
@@ -142,7 +134,7 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.background,
   },
   header: {
     paddingHorizontal: 16,
@@ -170,20 +162,21 @@ const styles = StyleSheet.create({
     marginBottom: 40,
   },
   loginText: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    marginBottom: 8,
+    fontFamily: theme.fonts.bold,
+    fontSize: theme.fontSizes.display,
+    marginBottom: theme.spacing.sm,
     textAlign: 'center',
   },
   loginGreen: {
-    color: '#4CAF50',
+    color: theme.colors.primary,
   },
   loginBlack: {
-    color: '#333',
+    color: theme.colors.textStrong,
   },
   subtitle: {
-    fontSize: 16,
-    color: '#666',
+    fontFamily: theme.fonts.regular,
+    fontSize: theme.fontSizes.base,
+    color: theme.colors.textSecondary,
     textAlign: 'center',
   },
   buttonContainer: {
@@ -196,6 +189,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 12,
   },
+  // Third-party brand colours — intentionally literal, not theme tokens.
   facebookButton: {
     backgroundColor: '#1877F2',
     paddingVertical: 16,
@@ -204,23 +198,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   facebookButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    color: theme.colors.textOnAction,
+    fontFamily: theme.fonts.semibold,
+    fontSize: theme.fontSizes.base,
   },
   googleButton: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
     paddingVertical: 16,
     paddingHorizontal: 24,
     borderRadius: 12,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: theme.colors.border,
   },
   googleButtonText: {
-    color: '#333',
-    fontSize: 16,
-    fontWeight: '600',
+    color: theme.colors.textStrong,
+    fontFamily: theme.fonts.semibold,
+    fontSize: theme.fontSizes.base,
   },
   appleButton: {
     backgroundColor: '#000',
@@ -230,21 +224,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   appleButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    color: theme.colors.textOnAction,
+    fontFamily: theme.fonts.semibold,
+    fontSize: theme.fontSizes.base,
   },
   emailButton: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: theme.colors.primaryAction,
     paddingVertical: 16,
     paddingHorizontal: 24,
     borderRadius: 12,
     alignItems: 'center',
   },
   emailButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    color: theme.colors.textOnAction,
+    fontFamily: theme.fonts.semibold,
+    fontSize: theme.fontSizes.base,
   },
   phoneButton: {
     backgroundColor: 'transparent',
@@ -253,12 +247,12 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: theme.colors.border,
   },
   phoneButtonText: {
-    color: '#333',
-    fontSize: 16,
-    fontWeight: '600',
+    color: theme.colors.textStrong,
+    fontFamily: theme.fonts.semibold,
+    fontSize: theme.fontSizes.base,
   },
   signupContainer: {
     flexDirection: 'row',
@@ -267,26 +261,28 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
   },
   signupPrompt: {
-    fontSize: 14,
-    color: '#666',
+    fontFamily: theme.fonts.regular,
+    fontSize: theme.fontSizes.body,
+    color: theme.colors.textSecondary,
   },
   signupLink: {
-    fontSize: 14,
-    color: '#4CAF50',
-    fontWeight: '600',
+    fontFamily: theme.fonts.semibold,
+    fontSize: theme.fontSizes.body,
+    color: theme.colors.primaryAction,
   },
   termsContainer: {
     alignItems: 'center',
     paddingHorizontal: 16,
   },
   termsText: {
-    fontSize: 12,
-    color: '#666',
+    fontFamily: theme.fonts.regular,
+    fontSize: theme.fontSizes.small,
+    color: theme.colors.textSecondary,
     textAlign: 'center',
     lineHeight: 18,
   },
   linkText: {
-    color: '#4CAF50',
+    color: theme.colors.primaryAction,
     textDecorationLine: 'underline',
   },
 });

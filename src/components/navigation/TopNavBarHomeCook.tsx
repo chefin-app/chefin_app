@@ -182,7 +182,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   joinButton: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#237A3B',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',

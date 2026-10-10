@@ -1,75 +1,110 @@
+/**
+ * Mobile design tokens.
+ *
+ * These values mirror the Figma library ("Chefin Design System"); the names
+ * below match the Figma variable names, so `colors.primary` here is
+ * `color/primary` there. Keep the two in step when either changes.
+ *
+ * Only Regular / SemiBold / Bold are registered in app/_layout.tsx, so
+ * `fonts` exposes exactly those three aliases and nothing else.
+ */
 const theme = {
   colors: {
-    primary: '#4ade80', // green-400
-    inactive: '#9e9e9e', // gray-500
-    background: '#ffffff', // white
-    surface: '#f3f4f6', // gray-100
-    text: '#111827', // gray-900
-    subtext: '#6b7280', // gray-600
-    border: '#d1d5db', // gray-300
-    success: '#22c55e', // green-600
-    error: '#ef4444', // red-600
-    tint: '#2f95dc',
-    tabIconDefault: '#ccc',
-    tabIconSelected: '#2f95dc',
-  },
+    // Brand
+    primary: '#4CAF50', // accents, borders, icons
+    /**
+     * Filled buttons and other large green surfaces carrying white text.
+     * #4CAF50 on white is 2.78:1 and fails WCAG AA; this is 5.36:1.
+     */
+    primaryAction: '#237A3B',
+    primarySoft: '#E8F5E9', // tinted backgrounds
+    primaryDisabled: '#A5D6A7',
 
-  modes: {
-    light: {
-      text: '#000',
-      background: '#fff',
-      tint: '#2f95dc',
-      tabIconDefault: '#ccc',
-      tabIconSelected: '#2f95dc',
+    // Surfaces
+    background: '#FFFFFF',
+    surface: '#FFFFFF',
+    surfaceAlt: '#F8F9FA',
+    surfaceMuted: '#F5F5F5',
+
+    // Text
+    text: '#1A1A1A',
+    textStrong: '#333333',
+    textSecondary: '#666666',
+    textMuted: '#888888',
+    textOnAction: '#FFFFFF',
+    placeholder: '#999999',
+
+    // Lines
+    border: '#E0E0E0',
+    separator: '#F0F0F0',
+
+    // Status
+    success: '#18884B',
+    error: '#B42318',
+    /** Border on an errored input or alert card. */
+    errorBorder: '#D92D20',
+    /** Tinted background behind inline error messaging. */
+    errorSoft: '#FEF3F2',
+    warning: '#8A5B00',
+    warningSoft: '#FFF4D6',
+
+    /** Password-strength meter — four steps, weakest to strongest. */
+    strength: {
+      weak: '#FF5252',
+      fair: '#FF9800',
+      good: '#2196F3',
+      strong: '#4CAF50',
     },
-    dark: {
-      text: '#fff',
-      background: '#000',
-      tint: '#fff',
-      tabIconDefault: '#ccc',
-      tabIconSelected: '#fff',
-    },
+    star: '#E4A11B',
+    /** MaterialIcons "verified" badge — intentionally blue, not brand green. */
+    verified: '#0084FF',
+
+    // Tab bar
+    inactive: '#888888',
   },
 
   spacing: {
     xs: 4,
     sm: 8,
-    md: 16,
-    lg: 24,
-    xl: 32,
-    '2xl': 40,
-    '3xl': 48,
-    '4xl': 64,
-    '5xl': 80,
-    '6xl': 96,
+    md: 12,
+    lg: 16,
+    xl: 20,
+    '2xl': 24,
+    '3xl': 32,
   },
 
   fontSizes: {
-    xs: 12,
-    sm: 14,
+    caption: 10,
+    small: 12,
+    body: 14,
     base: 16,
-    md: 18,
-    lg: 22,
-    xl: 28,
-    xxl: 36,
-    '2xl': 24,
-    '3xl': 30,
-    '4xl': 36,
-    '5xl': 48,
-    '6xl': 60,
+    subtitle: 18,
+    title: 22,
+    display: 28,
   },
 
+  lineHeights: {
+    caption: 14,
+    small: 16,
+    body: 20,
+    base: 22,
+    subtitle: 24,
+    title: 28,
+    display: 34,
+  },
+
+  /** Aliases registered by useFonts in app/_layout.tsx. */
   fonts: {
-    regular: 'Montseerrat_Regular',
-    medium: 'Montserrat_Medium',
-    semibold: 'Montserrat_SemiBold',
-    bold: 'Montserrat_Bold',
+    regular: 'mon',
+    semibold: 'mon-sb',
+    bold: 'mon-b',
   },
 
   radii: {
-    sm: 4,
-    md: 8,
+    sm: 8,
+    md: 12,
     lg: 16,
+    xl: 24,
     pill: 9999,
   },
 
