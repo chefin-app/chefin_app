@@ -165,26 +165,30 @@ const SearchScreen = () => {
       };
     }
 
+    reset(); // Invalidate older results immediately, including during the debounce.
     setQueryPending(true);
     if (discoveryMode === 'availableNow') setAvailabilityLoading(true);
 
-    const timeout = setTimeout(async () => {
-      try {
-        await loadCooks();
+    const timeout = setTimeout(
+      async () => {
+        try {
+          await loadCooks();
 
-        if (trimmedQuery) {
-          setSearchHistory(previous => {
-            const updatedHistory = [
-              trimmedQuery,
-              ...previous.filter(item => item !== trimmedQuery),
-            ];
-            return updatedHistory.slice(0, 10);
-          });
+          if (trimmedQuery) {
+            setSearchHistory(previous => {
+              const updatedHistory = [
+                trimmedQuery,
+                ...previous.filter(item => item !== trimmedQuery),
+              ];
+              return updatedHistory.slice(0, 10);
+            });
+          }
+        } finally {
+          if (isCurrent) setQueryPending(false);
         }
-      } finally {
-        if (isCurrent) setQueryPending(false);
-      }
-    }, 500);
+      },
+      trimmedQuery ? 200 : 0
+    );
 
     return () => {
       isCurrent = false;

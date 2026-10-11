@@ -31,28 +31,30 @@ router.get('/status', requireReadableAccount, (req: AccountRequest, res) => {
 
 router.get('/cook-performance', requireReadableAccount, async (req: AccountRequest, res) => {
   try {
-    const [{ data: role, error: roleError }, { data: profile, error: profileError }] =
-      await Promise.all([
-        supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', req.account!.userId)
-          .eq('role', 'cook')
-          .maybeSingle(),
-        supabase
-          .from('profiles')
-          .select('id, full_name, restaurant_name, profile_image')
-          .eq('id', req.account!.profileId)
-          .single(),
-      ]);
-    if (roleError || profileError) throw roleError ?? profileError;
+    const [
+      { data: role, error: roleError },
+      { data: profile, error: profileError },
+      { data: listings, error: listingsError },
+    ] = await Promise.all([
+      supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', req.account!.userId)
+        .eq('role', 'cook')
+        .maybeSingle(),
+      supabase
+        .from('profiles')
+        .select('id, full_name, restaurant_name, profile_image')
+        .eq('id', req.account!.profileId)
+        .single(),
+      supabase
+        .from('listings')
+        .select('id, status, is_active')
+        .eq('cook_id', req.account!.profileId),
+    ]);
+    if (roleError || profileError || listingsError)
+      throw roleError ?? profileError ?? listingsError;
     if (!role) return res.status(403).json({ error: 'Cook access is required.' });
-
-    const { data: listings, error: listingsError } = await supabase
-      .from('listings')
-      .select('id, status, is_active')
-      .eq('cook_id', profile.id);
-    if (listingsError) throw listingsError;
 
     const listingIds = (listings ?? []).map(listing => listing.id);
     const publishedListingIds = (listings ?? [])

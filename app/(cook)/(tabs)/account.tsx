@@ -56,6 +56,8 @@ const formatStat = (value: number): string =>
 const Account: React.FC = () => {
   const router = useRouter();
   const { session } = useAuth();
+  const requestSequence = React.useRef(0);
+  const loadedUserId = React.useRef<string | null>(null);
   const [isSigningOut, setIsSigningOut] = React.useState(false);
   const [overview, setOverview] = React.useState<CookOverview | null>(null);
   const [overviewLoading, setOverviewLoading] = React.useState(true);
@@ -68,6 +70,8 @@ const Account: React.FC = () => {
         setOverviewLoading(false);
         return;
       }
+      const requestId = ++requestSequence.current;
+      if (loadedUserId.current !== session.user.id) setOverview(null);
       if (manual) setRefreshing(true);
       else setOverviewLoading(true);
       setOverviewError(null);
@@ -80,22 +84,30 @@ const Account: React.FC = () => {
           error?: string;
         };
         if (!response.ok) throw new Error(payload.error ?? 'Performance overview is unavailable.');
+        if (requestId !== requestSequence.current) return;
+        loadedUserId.current = session.user.id;
         setOverview(payload);
       } catch (error: unknown) {
+        if (requestId !== requestSequence.current) return;
         setOverviewError(
           error instanceof Error ? error.message : 'Performance overview is unavailable.'
         );
       } finally {
-        setOverviewLoading(false);
-        setRefreshing(false);
+        if (requestId === requestSequence.current) {
+          setOverviewLoading(false);
+          setRefreshing(false);
+        }
       }
     },
-    [session?.access_token]
+    [session?.access_token, session?.user.id]
   );
 
   useFocusEffect(
     React.useCallback(() => {
       loadOverview();
+      return () => {
+        requestSequence.current += 1;
+      };
     }, [loadOverview])
   );
 
@@ -259,7 +271,7 @@ const Account: React.FC = () => {
         }
       >
         <View style={styles.performanceCard}>
-          {overviewLoading ? (
+          {overviewLoading && (!overview || loadedUserId.current !== session?.user.id) ? (
             <View style={styles.performanceLoading}>
               <ActivityIndicator color={theme.colors.primaryAction} />
               <Text style={styles.performanceLoadingText}>Loading your performance…</Text>

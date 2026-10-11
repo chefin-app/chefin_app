@@ -1,3 +1,4 @@
+import { withDiscoveryTimeout } from './discoveryCache';
 import type { Listing } from '@/src/types/models';
 
 export interface AvailabilityRecord {
@@ -441,24 +442,27 @@ export async function fetchAvailabilityRecords(
   }
 
   const responses = await Promise.all(
-    chunks.map(async listingIds => {
-      let response: Response;
-      try {
-        response = await fetch(`${apiUrl}/api/availability/batch`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ listingIds, days: 30 }),
-        });
-      } catch {
-        throw new Error(`Chefin could not reach the backend at ${apiUrl}.`);
-      }
-      const payload = (await response.json().catch(() => ({}))) as {
-        availability?: AvailabilityRecord[];
-        error?: string;
-      };
-      if (!response.ok) throw new Error(payload.error ?? 'Availability could not be loaded.');
-      return Array.isArray(payload.availability) ? payload.availability : [];
-    })
+    chunks.map(listingIds =>
+      withDiscoveryTimeout(async signal => {
+        let response: Response;
+        try {
+          response = await fetch(`${apiUrl}/api/availability/batch`, {
+            signal,
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ listingIds, days: 30 }),
+          });
+        } catch {
+          throw new Error(`Chefin could not reach the backend at ${apiUrl}.`);
+        }
+        const payload = (await response.json().catch(() => ({}))) as {
+          availability?: AvailabilityRecord[];
+          error?: string;
+        };
+        if (!response.ok) throw new Error(payload.error ?? 'Availability could not be loaded.');
+        return Array.isArray(payload.availability) ? payload.availability : [];
+      })
+    )
   );
   return responses.flat();
 }

@@ -152,8 +152,10 @@ router.post('/nearest-chefin-listings', async (req, res) => {
               .toLowerCase() === requestedCuisine
         )
       : queryEligibleRows;
-    const availableRows = await filterListingsWithFutureAvailability(cuisineEligibleRows);
-    const pausedCookIds = await getPausedCookProfileIds(availableRows.map(row => row.cook_id));
+    const [availableRows, pausedCookIds] = await Promise.all([
+      filterListingsWithFutureAvailability(cuisineEligibleRows),
+      getPausedCookProfileIds(cuisineEligibleRows.map(row => row.cook_id)),
+    ]);
     const eligibleRows = availableRows.filter(row => !pausedCookIds.has(row.cook_id));
     const cooksWithListings = new Set(eligibleRows.map(row => row.cook_id));
     const selectedCookIds = nearestLocations

@@ -1,10 +1,11 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
   ScrollView,
+  SectionList,
   ActivityIndicator,
   Alert,
   Modal,
@@ -111,6 +112,61 @@ const countdownTo = (iso: string, now: number): string | null => {
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')} min`;
 };
 
+const renderCardSubtitle = (order: OrderRow, now: number): string => {
+  if (order.status === 'cancelled') return 'Cancelled';
+  if (order.status === 'completed') return `Completed · ${formatDateHeading(order.scheduled_date)}`;
+  if (order.status === 'pending') {
+    const when = order.pickup_time ? ` · ${formatTime(order.pickup_time)}` : '';
+    return `Needs acceptance · ${formatDateHeading(order.scheduled_date)}${when}`;
+  }
+  if (!order.pickup_time) {
+    return order.status === 'ready'
+      ? order.fulfillment_type === 'delivery'
+        ? 'Awaiting Lalamove pickup'
+        : 'Awaiting pickup'
+      : `Prepare for ${formatDateHeading(order.scheduled_date)}`;
+  }
+  const remaining = countdownTo(order.pickup_time, now);
+  if (order.status === 'confirmed') {
+    return remaining ? `Ready in: ${remaining}` : 'Pickup time reached';
+  }
+  if (order.fulfillment_type === 'delivery') {
+    return remaining ? `${remaining} until Lalamove pickup` : 'Awaiting Lalamove rider';
+  }
+  return remaining ? `${remaining} till pickup` : 'Customer due for pickup';
+};
+
+// Each mounted card owns its clock. Hidden tabs and offscreen list rows do
+// not force the whole order screen to render every second.
+export const OrderSubtitle = React.memo(function OrderSubtitleContent({
+  order,
+}: {
+  order: OrderRow;
+}) {
+  const [now, setNow] = useState(Date.now);
+  useFocusEffect(
+    useCallback(() => {
+      setNow(Date.now());
+      const pickupAt = order.pickup_time ? new Date(order.pickup_time).getTime() : 0;
+      if (!['confirmed', 'ready'].includes(order.status) || pickupAt <= Date.now()) return;
+      const interval = setInterval(() => {
+        const current = Date.now();
+        setNow(current);
+        if (current >= pickupAt) clearInterval(interval);
+      }, 1000);
+      return () => clearInterval(interval);
+    }, [order.pickup_time, order.status])
+  );
+  return (
+    <Text
+      style={[styles.orderSubtitle, order.status === 'cancelled' && styles.orderCancelled]}
+      numberOfLines={1}
+    >
+      {renderCardSubtitle(order, now)}
+    </Text>
+  );
+});
+
 export default function Orders() {
   const router = useRouter();
   const { user, session } = useAuth();
@@ -122,7 +178,10 @@ export default function Orders() {
   const [pickupPinOrderId, setPickupPinOrderId] = useState<string | null>(null);
   const [reviewedOrderIds, setReviewedOrderIds] = useState<Set<string>>(new Set());
   const [openingHours, setOpeningHours] = useState<OpeningHour[]>([]);
-  const [now, setNow] = useState(() => Date.now());
+  const requestSequence = useRef(0);
+  const loadedUserId = useRef<string | null>(null);
+  const listingLookup = useRef<{ userId: string; promise: Promise<string[]> } | null>(null);
+  const [listingIds, setListingIds] = useState<string[]>([]);
 
   const [storeStatus, setStoreStatus] = useState<StoreStatus>('open');
   const [busyPrepMinutes, setBusyPrepMinutes] = useState(15);
@@ -136,23 +195,34 @@ export default function Orders() {
   const ORDER_SELECT =
     'id, quantity, total_price, scheduled_date, pickup_time, customer_note, fulfillment_type, status, created_at, listings(title), profiles(full_name)';
 
-  const getCookListingIds = useCallback(async (): Promise<string[] | null> => {
-    if (!user) return null;
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('user_id', user.id)
-      .single();
-    if (!profile) return null;
-    const { data: listings } = await supabase
-      .from('listings')
-      .select('id')
-      .eq('cook_id', profile.id);
-    return (listings ?? []).map(l => l.id);
-  }, [user]);
+  const getCookListingIds = useCallback(async (): Promise<string[]> => {
+    if (!user?.id) return [];
+    if (listingLookup.current?.userId === user.id) return listingLookup.current.promise;
+    const promise = (async () => {
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+      if (profileError || !profile) throw profileError ?? new Error('Cook profile not found.');
+      const { data: listings, error } = await supabase
+        .from('listings')
+        .select('id')
+        .eq('cook_id', profile.id);
+      if (error) throw error;
+      return (listings ?? []).map(listing => listing.id);
+    })();
+    listingLookup.current = { userId: user.id, promise };
+    try {
+      return await promise;
+    } catch (error) {
+      if (listingLookup.current?.promise === promise) listingLookup.current = null;
+      throw error;
+    }
+  }, [user?.id]);
 
   const fetchReviewStatuses = useCallback(
-    async (loadedOrders: OrderRow[]) => {
+    async (loadedOrders: OrderRow[], requestId: number) => {
       const completedIds = loadedOrders
         .filter(order => order.status === 'completed' && order.fulfillment_type === 'pickup')
         .map(order => order.id);
@@ -172,8 +242,10 @@ export default function Orders() {
           reviewedOrderIds?: string[];
         };
         if (!response.ok) throw new Error(body.error ?? 'Review status could not be loaded.');
-        setReviewedOrderIds(new Set(body.reviewedOrderIds ?? []));
+        if (requestId === requestSequence.current)
+          setReviewedOrderIds(new Set(body.reviewedOrderIds ?? []));
       } catch (error: unknown) {
+        if (requestId !== requestSequence.current) return;
         console.warn('Error fetching customer review status:', getErrorMessage(error, 'unknown'));
         setReviewedOrderIds(new Set());
       }
@@ -183,10 +255,19 @@ export default function Orders() {
 
   const fetchOrders = useCallback(
     async (showSpinner = true) => {
-      if (showSpinner) setLoading(true);
+      const requestId = ++requestSequence.current;
+      if (loadedUserId.current !== user?.id) {
+        setOrders([]);
+        setReviewedOrderIds(new Set());
+      }
+      if (showSpinner) setLoading(loadedUserId.current !== user?.id);
       try {
         const ids = await getCookListingIds();
-        if (!ids || ids.length === 0) {
+        if (requestId !== requestSequence.current) return;
+        if (ids.length === 0) {
+          loadedUserId.current = user?.id ?? null;
+          setListingIds([]);
+          setReviewedOrderIds(new Set());
           setOrders([]);
           return;
         }
@@ -213,15 +294,18 @@ export default function Orders() {
           ...((active.data ?? []) as unknown as OrderRow[]),
           ...((finished.data ?? []) as unknown as OrderRow[]),
         ];
+        if (requestId !== requestSequence.current) return;
+        loadedUserId.current = user?.id ?? null;
+        setListingIds(ids);
         setOrders(loaded);
-        fetchReviewStatuses(loaded);
+        fetchReviewStatuses(loaded, requestId);
       } catch (error: unknown) {
         console.error('Error fetching orders:', error);
       } finally {
-        if (showSpinner) setLoading(false);
+        if (requestId === requestSequence.current) setLoading(false);
       }
     },
-    [getCookListingIds, fetchReviewStatuses]
+    [getCookListingIds, fetchReviewStatuses, user?.id]
   );
 
   const fetchOpeningHours = useCallback(async () => {
@@ -264,9 +348,13 @@ export default function Orders() {
 
   useFocusEffect(
     useCallback(() => {
+      listingLookup.current = null;
       fetchOrders();
       fetchOpeningHours();
       fetchStoreStatus();
+      return () => {
+        requestSequence.current += 1;
+      };
     }, [fetchOrders, fetchOpeningHours, fetchStoreStatus])
   );
 
@@ -317,35 +405,15 @@ export default function Orders() {
     }
   };
 
-  // Tick every second while a countdown is on screen.
-  const hasCountdown = useMemo(
-    () =>
-      orders.some(
-        o => (o.status === 'confirmed' || o.status === 'ready') && o.pickup_time !== null
-      ),
-    [orders]
-  );
-  useEffect(() => {
-    if (!hasCountdown) return;
-    const interval = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(interval);
-  }, [hasCountdown]);
-
-  // Live order updates — a customer placing/cancelling an order, or another
-  // device advancing an order's status, should show up here without a manual
-  // refresh. Realtime payloads only carry raw `orders` columns (no joins), so
-  // on any relevant change we just quietly re-fetch the joined view.
-  useEffect(() => {
-    let cancelled = false;
-    let channel: ReturnType<typeof supabase.channel> | null = null;
-
-    (async () => {
-      const ids = await getCookListingIds();
-      if (cancelled || !ids || ids.length === 0) return;
-      const idSet = new Set(ids);
-
-      channel = supabase
-        .channel('cook-orders-today')
+  // Coalesce realtime bursts, and release the subscription when this tab is hidden.
+  const listingKey = listingIds.join(',');
+  useFocusEffect(
+    useCallback(() => {
+      if (!listingKey || loadedUserId.current !== user?.id) return;
+      const idSet = new Set(listingKey.split(','));
+      let refreshTimer: ReturnType<typeof setTimeout> | undefined;
+      const channel = supabase
+        .channel(`cook-orders-${user?.id}`)
         .on(
           'postgres_changes',
           { event: '*', schema: 'public', table: 'orders' },
@@ -353,22 +421,25 @@ export default function Orders() {
             new: { listing_id?: string } | null;
             old: { listing_id?: string } | null;
           }) => {
-            const row = payload.new ?? payload.old;
-            if (!row?.listing_id || !idSet.has(row.listing_id)) return;
-            fetchOrders(false);
+            const listingId = payload.new?.listing_id ?? payload.old?.listing_id;
+            if (!listingId || !idSet.has(listingId)) return;
+            if (refreshTimer) clearTimeout(refreshTimer);
+            refreshTimer = setTimeout(() => {
+              fetchOrders(false);
+            }, 200);
           }
         )
         .subscribe();
-    })();
-
-    return () => {
-      cancelled = true;
-      if (channel) supabase.removeChannel(channel);
-    };
-  }, [getCookListingIds, fetchOrders]);
+      return () => {
+        if (refreshTimer) clearTimeout(refreshTimer);
+        supabase.removeChannel(channel);
+      };
+    }, [listingKey, fetchOrders, user?.id])
+  );
 
   const onRefresh = async () => {
     setRefreshing(true);
+    listingLookup.current = null;
     await fetchOrders(false);
     setRefreshing(false);
   };
@@ -411,7 +482,17 @@ export default function Orders() {
     }
   };
 
-  const todayKey = localDateKey(new Date());
+  const [todayKey, setTodayKey] = useState(() => localDateKey(new Date()));
+  useFocusEffect(
+    useCallback(() => {
+      const updateDay = () => setTodayKey(localDateKey(new Date()));
+      updateDay();
+      // Only a date change rerenders the parent, keeping upcoming orders correct
+      // across midnight without restoring the per-second screen-wide clock.
+      const timer = setInterval(updateDay, 60_000);
+      return () => clearInterval(timer);
+    }, [])
+  );
 
   // Upcoming = awaiting acceptance (any date) or accepted for a future date.
   // Preparing/Ready = accepted work for today. Completed = finished orders.
@@ -484,31 +565,6 @@ export default function Orders() {
     router.push({ pathname: '/(cook)/order/[orderId]', params: { orderId: order.id } });
   };
 
-  const renderCardSubtitle = (order: OrderRow): string => {
-    if (order.status === 'cancelled') return 'Cancelled';
-    if (order.status === 'completed')
-      return `Completed · ${formatDateHeading(order.scheduled_date)}`;
-    if (order.status === 'pending') {
-      const when = order.pickup_time ? ` · ${formatTime(order.pickup_time)}` : '';
-      return `Needs acceptance · ${formatDateHeading(order.scheduled_date)}${when}`;
-    }
-    if (!order.pickup_time) {
-      return order.status === 'ready'
-        ? order.fulfillment_type === 'delivery'
-          ? 'Awaiting Lalamove pickup'
-          : 'Awaiting pickup'
-        : `Prepare for ${formatDateHeading(order.scheduled_date)}`;
-    }
-    const remaining = countdownTo(order.pickup_time, now);
-    if (order.status === 'confirmed') {
-      return remaining ? `Ready in: ${remaining}` : 'Pickup time reached';
-    }
-    if (order.fulfillment_type === 'delivery') {
-      return remaining ? `${remaining} until Lalamove pickup` : 'Awaiting Lalamove rider';
-    }
-    return remaining ? `${remaining} till pickup` : 'Customer due for pickup';
-  };
-
   const renderOrderCard = (order: OrderRow) => {
     const action =
       order.fulfillment_type === 'delivery' && order.status === 'ready'
@@ -525,12 +581,7 @@ export default function Orders() {
       >
         <View style={styles.orderCardBody}>
           <Text style={styles.orderCode}>{shortOrderCode(order.id)}</Text>
-          <Text
-            style={[styles.orderSubtitle, order.status === 'cancelled' && styles.orderCancelled]}
-            numberOfLines={1}
-          >
-            {renderCardSubtitle(order)}
-          </Text>
+          <OrderSubtitle order={order} />
           <Text style={styles.orderMeta}>
             {order.quantity} item{order.quantity === 1 ? '' : 's'}
             {order.customer_note ? '  ·  has note' : ''}
@@ -627,20 +678,23 @@ export default function Orders() {
       );
     }
     return (
-      <ScrollView
+      <SectionList
+        sections={groupedForTab.map(group => ({ date: group.date, data: group.orders }))}
+        keyExtractor={order => order.id}
+        renderItem={({ item }) => renderOrderCard(item)}
+        renderSectionHeader={({ section }) =>
+          activeTab === 'upcoming' ? (
+            <Text style={styles.dateHeading}>{formatDateHeading(section.date)}</Text>
+          ) : null
+        }
+        stickySectionHeadersEnabled={false}
+        initialNumToRender={6}
+        maxToRenderPerBatch={6}
+        windowSize={5}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.listContent}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-      >
-        {groupedForTab.map(group => (
-          <View key={group.date}>
-            {activeTab === 'upcoming' && (
-              <Text style={styles.dateHeading}>{formatDateHeading(group.date)}</Text>
-            )}
-            {group.orders.map(renderOrderCard)}
-          </View>
-        ))}
-      </ScrollView>
+      />
     );
   };
 

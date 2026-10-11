@@ -14,6 +14,20 @@
 
 ---
 
+## Presenting the POC
+
+Run `npm run start:poc` (or `npm run start:poc -- --web`) to use a minified,
+production-mode JavaScript bundle. Keep the backend running and open the main
+screens once before presenting so Metro compilation is finished. This command
+still uses the local Expo server; it is not an offline or standalone release.
+
+Discovery reads share concurrent requests and reuse results in memory for 30
+seconds. Home keeps content visible on refresh and renders only nearby feed
+cards. Availability, menus, authentication and checkout still use real services;
+no mock orders or payments are introduced. Restart the backend to load its query
+optimizations. Device/network latency still needs to be measured on the actual
+presentation device.
+
 ## 🧱 Tech Stack
 
 | Layer          | Tech                            |

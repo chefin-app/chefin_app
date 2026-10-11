@@ -15,6 +15,7 @@ import theme from '@/src/styles/theme';
 export interface MealCardProps extends Listing {
   layout?: 'rail' | 'feed';
   scheduledLabel?: string;
+  availabilityLoading?: boolean;
   cookName?: string;
   restaurantName?: string;
   isVerified?: boolean;
@@ -34,6 +35,7 @@ export function getAvailabilityLabel(availability?: AvailabilitySummary, now = n
 const MealCard: React.FC<MealCardProps> = ({
   layout = 'rail',
   scheduledLabel,
+  availabilityLoading = false,
   restaurantName,
   isVerified,
   title,
@@ -154,7 +156,10 @@ const MealCard: React.FC<MealCardProps> = ({
                 !scheduledLabel && availability?.state !== 'available' && styles.unavailable,
               ]}
             >
-              {scheduledLabel || getAvailabilityLabel(availability)}
+              {scheduledLabel ||
+                (availabilityLoading
+                  ? 'Checking availability…'
+                  : getAvailabilityLabel(availability))}
             </Text>
           </View>
           {distance_label ? (
@@ -229,7 +234,8 @@ const MealCard: React.FC<MealCardProps> = ({
             !scheduledLabel && availability?.state !== 'available' && styles.unavailable,
           ]}
         >
-          {scheduledLabel || getAvailabilityLabel(availability)}
+          {scheduledLabel ||
+            (availabilityLoading ? 'Checking availability…' : getAvailabilityLabel(availability))}
         </Text>
         {distance_label && (
           <View style={styles.distanceRow}>

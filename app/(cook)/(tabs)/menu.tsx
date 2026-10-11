@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -102,6 +102,8 @@ const relationArray = <T,>(value: T[] | null | undefined): T[] =>
 export default function CookMenuScreen() {
   const router = useRouter();
   const { user, session } = useAuth();
+  const loadSequence = useRef(0);
+  const loadedUserId = useRef<string | null>(null);
   const [tab, setTab] = useState<MenuTab>('items');
   const [dishes, setDishes] = useState<DishRow[]>([]);
   const [availability, setAvailability] = useState<Record<string, DishAvailability>>({});
@@ -109,6 +111,8 @@ export default function CookMenuScreen() {
   const [scheduleByDish, setScheduleByDish] = useState<Record<string, string | null>>({});
   const [openingHours, setOpeningHours] = useState<OpeningHour[]>([]);
   const [optionGroups, setOptionGroups] = useState<OptionGroup[]>([]);
+  const [optionsLoading, setOptionsLoading] = useState(false);
+  const [optionsError, setOptionsError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -161,54 +165,46 @@ export default function CookMenuScreen() {
         setLoading(false);
         return;
       }
+      const requestId = ++loadSequence.current;
+      if (loadedUserId.current !== user.id) {
+        setDishes([]);
+        setOptionGroups([]);
+        setAvailability({});
+      }
+      setOptionsLoading(true);
+      setOptionsError(null);
       if (refresh) setRefreshing(true);
-      else setLoading(true);
+      else setLoading(loadedUserId.current !== user.id);
       try {
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('id, free_delivery_threshold')
-          .eq('user_id', user.id)
-          .single();
+        // The availability endpoint already returns the complete dish list.
+        // Profile and option reads do not depend on its result.
+        const groupsRequest = fetch(`${apiUrl()}/api/cook-menu/option-groups`, {
+          headers: authHeaders(),
+        }).catch(() => null);
+        const [{ data: profile, error: profileError }, availabilityResponse] = await Promise.all([
+          supabase
+            .from('profiles')
+            .select('free_delivery_threshold')
+            .eq('user_id', user.id)
+            .single(),
+          fetch(`${apiUrl()}/api/availability/cook/menu`, { headers: authHeaders() }),
+        ]);
+        if (requestId !== loadSequence.current) return;
         if (profileError || !profile) throw profileError ?? new Error('Cook profile not found.');
-
-        const [{ data: listingRows, error: listingsError }, availabilityResponse, groupsResponse] =
-          await Promise.all([
-            supabase
-              .from('listings')
-              .select('id, title, price, image_url, status, menu_category')
-              .eq('cook_id', profile.id)
-              .order('created_at', { ascending: false }),
-            fetch(`${apiUrl()}/api/availability/cook/menu`, {
-              headers: authHeaders(),
-            }),
-            fetch(`${apiUrl()}/api/cook-menu/option-groups`, {
-              headers: authHeaders(),
-            }),
-          ]);
-        if (listingsError) throw listingsError;
-
-        const normalizedDishes = ((listingRows ?? []) as DishRow[]).map(dish => ({
-          ...dish,
-          price: Number(dish.price),
-          menu_category: dish.menu_category?.trim() || 'Uncategorised',
-        }));
-        setDishes(normalizedDishes);
-        setThreshold(
-          profile.free_delivery_threshold == null ? null : Number(profile.free_delivery_threshold)
-        );
-        setExpandedCategories(current =>
-          current.size
-            ? current
-            : new Set(normalizedDishes.map(dish => dish.menu_category || 'Uncategorised'))
-        );
+        if (!availabilityResponse.ok) throw new Error('Menu availability could not be loaded.');
 
         if (availabilityResponse.ok) {
           const payload = (await availabilityResponse.json()) as {
             openingHours?: OpeningHour[];
             sellingSchedules?: SellingSchedule[];
             dishes?: Array<{
-              id?: string;
+              id: string;
               listingId?: string;
+              title: string;
+              price: number;
+              imageUrl: string | null;
+              status: string;
+              menuCategory: string | null;
               configured?: boolean;
               enabled?: boolean;
               availableToday?: boolean;
@@ -230,6 +226,22 @@ export default function CookMenuScreen() {
               };
             }>;
           };
+          if (requestId !== loadSequence.current) return;
+          const normalizedDishes = (payload.dishes ?? []).map(dish => ({
+            id: dish.id,
+            title: dish.title,
+            price: Number(dish.price),
+            image_url: dish.imageUrl,
+            status: dish.status,
+            menu_category: dish.menuCategory?.trim() || 'Uncategorised',
+          }));
+          setDishes(normalizedDishes);
+          setThreshold(
+            profile.free_delivery_threshold == null ? null : Number(profile.free_delivery_threshold)
+          );
+          setExpandedCategories(current =>
+            current.size ? current : new Set(normalizedDishes.map(dish => dish.menu_category))
+          );
           setOpeningHours(payload.openingHours ?? []);
           setSellingSchedules(payload.sellingSchedules ?? []);
           setScheduleByDish(
@@ -273,8 +285,14 @@ export default function CookMenuScreen() {
           );
         }
 
-        if (groupsResponse.ok) {
+        loadedUserId.current = user.id;
+        setLoading(false);
+        // Dish browsing and stock controls can be used before option groups arrive.
+        const groupsResponse = await groupsRequest;
+        if (requestId !== loadSequence.current) return;
+        if (groupsResponse?.ok) {
           const payload = (await groupsResponse.json()) as { groups?: OptionGroup[] };
+          if (requestId !== loadSequence.current) return;
           const groups = relationArray(payload.groups).map(group => ({
             ...group,
             menu_options: relationArray(group.menu_options),
@@ -285,14 +303,20 @@ export default function CookMenuScreen() {
             current.size ? current : new Set(groups.slice(0, 1).map(group => group.id))
           );
         }
+        if (!groupsResponse?.ok)
+          setOptionsError('Menu options could not be loaded. Pull to refresh.');
       } catch (error: unknown) {
+        if (requestId !== loadSequence.current) return;
         Alert.alert(
           'Menu unavailable',
           error instanceof Error ? error.message : 'Your menu could not be loaded.'
         );
       } finally {
-        setLoading(false);
-        setRefreshing(false);
+        if (requestId === loadSequence.current) {
+          setLoading(false);
+          setRefreshing(false);
+          setOptionsLoading(false);
+        }
       }
     },
     [authHeaders, session?.access_token, user]
@@ -301,6 +325,9 @@ export default function CookMenuScreen() {
   useFocusEffect(
     useCallback(() => {
       loadMenu();
+      return () => {
+        loadSequence.current += 1;
+      };
     }, [loadMenu])
   );
 
@@ -1015,8 +1042,17 @@ export default function CookMenuScreen() {
           )}
         </>
       ) : (
-        <ScrollView contentContainerStyle={styles.optionContent}>
-          {optionGroups.length === 0 ? (
+        <ScrollView
+          contentContainerStyle={styles.optionContent}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={() => loadMenu(true)} />
+          }
+        >
+          {optionsLoading && optionGroups.length === 0 ? (
+            <ActivityIndicator color={theme.colors.primary} />
+          ) : optionsError ? (
+            <Text>{optionsError}</Text>
+          ) : optionGroups.length === 0 ? (
             <View style={styles.emptyState}>
               <Ionicons name="options-outline" size={42} color="#A5ADA8" />
               <Text style={styles.emptyTitle}>No option groups yet</Text>

@@ -54,19 +54,15 @@ router.get('/all-listings', async (req, res) => {
           .includes(normalizedQuery)
       );
     });
-    const scheduledRows = await filterListingsWithFutureAvailability(eligibleRows);
-    const pausedCookIds = await getPausedCookProfileIds(scheduledRows.map(row => row.cook_id));
+    const [scheduledRows, pausedCookIds] = await Promise.all([
+      filterListingsWithFutureAvailability(eligibleRows),
+      getPausedCookProfileIds(eligibleRows.map(row => row.cook_id)),
+    ]);
     const visibleRows = scheduledRows.filter(row => !pausedCookIds.has(row.cook_id));
-    const cookIds = [...new Set(visibleRows.map(row => row.cook_id))];
-    const { data: ratingRows, error: ratingError } = cookIds.length
-      ? await supabase
-          .from('listings')
-          .select('id, cook_id, reviews(rating)')
-          .in('cook_id', cookIds)
-          .eq('status', 'approved')
-          .eq('is_active', true)
-      : { data: [], error: null };
-    if (ratingError) throw ratingError;
+    const cookIds = new Set(visibleRows.map(row => row.cook_id));
+    // The original query already contains reviews for every approved, active
+    // dish, including siblings excluded by the search or schedule filter.
+    const ratingRows = rows.filter(row => cookIds.has(row.cook_id));
     const reviewsByCook = new Map<string, Array<{ rating: number }>>();
     const listingIdsByCook = new Map<string, string[]>();
     for (const row of ratingRows ?? []) {

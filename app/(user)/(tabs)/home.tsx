@@ -2,7 +2,6 @@ import React, { useCallback, useState, useEffect, useMemo, useRef } from 'react'
 import { useFocusEffect, useRouter } from 'expo-router';
 import {
   StyleSheet,
-  ScrollView,
   FlatList,
   View,
   Image,
@@ -117,18 +116,18 @@ export default function HomeScreen() {
   const scheduledNearest = useScheduledDiscovery(rawNearest);
   const popularChefins = scheduledPopular.listings;
   const nearestChefins = scheduledNearest.listings;
-  const [nearestLoading, setNearestLoading] = useState(false);
+  const [, setNearestLoading] = useState(false);
   const [nearestError, setNearestError] = useState<string | null>(null);
   const nearestRequestId = useRef(0);
   const [locationPromptVisible, setLocationPromptVisible] = useState(false);
   const [autoPromptedUserId, setAutoPromptedUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [availabilityLoading, setAvailabilityLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [selectedCuisine, setSelectedCuisine] = useState('all');
   const [activeFilters, setActiveFilters] = useState<Record<string, boolean>>({});
   const [selectedDietary, setSelectedDietary] = useState<string[]>([]);
-  const [filteredChefins, setFilteredChefins] = useState<ListingWithProfile[]>([]);
   const [availabilitySummaries, setAvailabilitySummaries] = useState<AvailabilitySummaryMap>({});
 
   const [today, setToday] = useState(getLocalDateKey);
@@ -182,8 +181,8 @@ export default function HomeScreen() {
     setSelectedDietary(dietaryOptions);
   };
 
-  useEffect(() => {
-    setFilteredChefins(
+  const filteredChefins = useMemo(
+    () =>
       scheduled
         ? popularChefins
         : filterDiscoveryListings(popularChefins, {
@@ -193,22 +192,29 @@ export default function HomeScreen() {
             dietary: selectedDietary,
             availabilitySummaries,
             today,
-          })
-    );
-  }, [
-    scheduled,
-    popularChefins,
-    selectedCuisine,
-    activeFilters,
-    selectedDietary,
-    availabilitySummaries,
-    today,
-  ]);
+          }),
+    [
+      scheduled,
+      popularChefins,
+      selectedCuisine,
+      activeFilters,
+      selectedDietary,
+      availabilitySummaries,
+      today,
+    ]
+  );
 
+  const feedRequestId = useRef(0);
+  const lastLoadedFeed = useRef<{ key: string; at: number } | null>(null);
+  const latitude = location?.latitude;
+  const longitude = location?.longitude;
   const fetchData = useCallback(async () => {
     const currentDate = getLocalDateKey();
     setToday(currentDate);
-
+    const key = JSON.stringify([latitude, longitude, currentDate]);
+    if (lastLoadedFeed.current?.key === key && Date.now() - lastLoadedFeed.current.at < 30_000)
+      return;
+    const requestId = ++feedRequestId.current;
     try {
       setLoading(true);
       setError(null);
@@ -216,28 +222,43 @@ export default function HomeScreen() {
       // Listings and availability must come from the same Supabase project;
       // otherwise a valid sibling-dish slot cannot be matched to this card.
       const chefins = (
-        location
+        latitude != null && longitude != null
           ? await fetchNearestCooks({
-              latitude: location.latitude,
-              longitude: location.longitude,
+              latitude,
+              longitude,
               limit: 50,
               radiusKm: 50,
             })
           : await fetchCooks({ query: '' })
       ) as ListingWithProfile[];
+      if (requestId !== feedRequestId.current) return;
       setPopularChefins(chefins);
-      setAvailabilitySummaries(await fetchAvailabilitySummaries(chefins, currentDate));
+      setAvailabilitySummaries({});
+      setAvailabilityLoading(true);
+      // Let customers browse while the availability check finishes.
+      setLoading(false);
+      const summaries = await fetchAvailabilitySummaries(chefins, currentDate);
+      if (requestId !== feedRequestId.current) return;
+      setAvailabilitySummaries(summaries);
+      lastLoadedFeed.current = { key, at: Date.now() };
     } catch (err) {
+      if (requestId !== feedRequestId.current) return;
       console.error('Error fetching listings:', err);
       setError('Failed to load listings. Please try again later.');
     } finally {
-      setLoading(false);
+      if (requestId === feedRequestId.current) {
+        setLoading(false);
+        setAvailabilityLoading(false);
+      }
     }
-  }, [location]);
+  }, [latitude, longitude]);
 
   useFocusEffect(
     useCallback(() => {
       fetchData();
+      return () => {
+        feedRequestId.current += 1;
+      };
     }, [fetchData])
   );
 
@@ -255,8 +276,8 @@ export default function HomeScreen() {
       const nearby = (await fetchNearestCooks({
         latitude: location.latitude,
         longitude: location.longitude,
-        limit: 20,
-        cuisine: scheduled || selectedCuisine === 'all' ? undefined : selectedCuisine,
+        limit: 50,
+        radiusKm: 50,
       })) as ListingWithProfile[];
       if (requestId === nearestRequestId.current) setNearestChefins(nearby);
     } catch (caught) {
@@ -269,11 +290,14 @@ export default function HomeScreen() {
     } finally {
       if (requestId === nearestRequestId.current) setNearestLoading(false);
     }
-  }, [location, selectedCuisine, scheduled]);
+  }, [location]);
 
   useFocusEffect(
     useCallback(() => {
       fetchNearest();
+      return () => {
+        nearestRequestId.current += 1;
+      };
     }, [fetchNearest])
   );
 
@@ -338,6 +362,7 @@ export default function HomeScreen() {
               reviews={item.reviews || []}
               listings={popularChefins}
               availability={availabilitySummaries[item.cook_id]}
+              availabilityLoading={availabilityLoading}
               scheduledLabel={
                 orderTimePreference.mode === 'scheduled'
                   ? formatScheduledOrderTime(orderTimePreference.scheduledAt)
@@ -349,7 +374,7 @@ export default function HomeScreen() {
       </View>
     ) : null;
 
-  if (loading) {
+  if (loading && rawPopular.length === 0) {
     return (
       <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
         <LoadingSpinner />
@@ -357,7 +382,7 @@ export default function HomeScreen() {
     );
   }
 
-  if (error) {
+  if (error && rawPopular.length === 0) {
     return (
       <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
         <View style={styles.centerContainer}>
@@ -399,72 +424,80 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right']}>
-      <ScrollView
+      <FlatList
         style={styles.scrollView}
-        showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
-      >
-        {/* Interactive availability spotlight */}
-        <TouchableOpacity
-          style={styles.promoBanner}
-          activeOpacity={0.9}
-          onPress={() => openDiscovery(promoDiscoveryMode, promoDiscoveryTitle)}
-          accessibilityRole="link"
-          accessibilityLabel={`${promoTitle}. ${promoDescription} ${promoCallToAction}.`}
-          accessibilityHint="Opens matching home restaurants"
-        >
-          <View style={styles.promoOrb} />
-          <View style={styles.promoContent}>
-            <View style={styles.promoBadge}>
-              <Ionicons
-                name={hasFeaturedAvailability ? 'flash' : 'sparkles'}
-                size={13}
-                color={theme.colors.primaryOnLight}
-              />
-              <Text style={styles.promoEyebrow}>
-                {hasFeaturedAvailability ? 'AVAILABLE NOW' : 'LOCAL PICKS'}
-              </Text>
-            </View>
-            <HeadingText level={5} style={styles.promoTitle} numberOfLines={2}>
-              {promoTitle}
-            </HeadingText>
-            <Text style={styles.promoDescription} numberOfLines={2}>
-              {promoDescription}
-            </Text>
-            <View style={styles.promoButton}>
-              <Text style={styles.promoButtonText}>{promoCallToAction}</Text>
-              <Ionicons name="arrow-forward" size={16} color={theme.colors.primaryOnLight} />
-            </View>
-          </View>
-          <View style={styles.promoVisual}>
-            <Image
-              source={
-                featuredPromoListing?.image_url
-                  ? { uri: featuredPromoListing.image_url }
-                  : PromoImage
-              }
-              style={styles.promoImage}
-              accessible={false}
-            />
-            <View style={styles.promoImagePill}>
-              <Ionicons name="time-outline" size={12} color={theme.colors.primaryOnLight} />
-              <Text style={styles.promoImagePillText}>
-                {hasFeaturedAvailability ? 'Today' : 'Fresh'}
-              </Text>
-            </View>
-          </View>
-        </TouchableOpacity>
-
-        {!scheduled && (
+        showsVerticalScrollIndicator={false}
+        data={
+          scheduled && (scheduledPopular.loading || scheduledNearest.loading) ? [] : restaurantFeed
+        }
+        keyExtractor={item => item.cook_id}
+        initialNumToRender={4}
+        maxToRenderPerBatch={4}
+        windowSize={5}
+        ListHeaderComponent={
           <>
-            <CuisineFilter onCuisineSelect={handleCuisineSelect} />
-            <MainFilter
-              onFilterToggle={handleMainFilterToggle}
-              onDietarySelect={handleDietarySelect}
-            />
-          </>
-        )}
-        {/* {scheduled && (
+            {/* Interactive availability spotlight */}
+            <TouchableOpacity
+              style={styles.promoBanner}
+              activeOpacity={0.9}
+              onPress={() => openDiscovery(promoDiscoveryMode, promoDiscoveryTitle)}
+              accessibilityRole="link"
+              accessibilityLabel={`${promoTitle}. ${promoDescription} ${promoCallToAction}.`}
+              accessibilityHint="Opens matching home restaurants"
+            >
+              <View style={styles.promoOrb} />
+              <View style={styles.promoContent}>
+                <View style={styles.promoBadge}>
+                  <Ionicons
+                    name={hasFeaturedAvailability ? 'flash' : 'sparkles'}
+                    size={13}
+                    color={theme.colors.primaryOnLight}
+                  />
+                  <Text style={styles.promoEyebrow}>
+                    {hasFeaturedAvailability ? 'AVAILABLE NOW' : 'LOCAL PICKS'}
+                  </Text>
+                </View>
+                <HeadingText level={5} style={styles.promoTitle} numberOfLines={2}>
+                  {promoTitle}
+                </HeadingText>
+                <Text style={styles.promoDescription} numberOfLines={2}>
+                  {promoDescription}
+                </Text>
+                <View style={styles.promoButton}>
+                  <Text style={styles.promoButtonText}>{promoCallToAction}</Text>
+                  <Ionicons name="arrow-forward" size={16} color={theme.colors.primaryOnLight} />
+                </View>
+              </View>
+              <View style={styles.promoVisual}>
+                <Image
+                  source={
+                    featuredPromoListing?.image_url
+                      ? { uri: featuredPromoListing.image_url }
+                      : PromoImage
+                  }
+                  style={styles.promoImage}
+                  accessible={false}
+                />
+                <View style={styles.promoImagePill}>
+                  <Ionicons name="time-outline" size={12} color={theme.colors.primaryOnLight} />
+                  <Text style={styles.promoImagePillText}>
+                    {hasFeaturedAvailability ? 'Today' : 'Fresh'}
+                  </Text>
+                </View>
+              </View>
+            </TouchableOpacity>
+
+            {!scheduled && (
+              <>
+                <CuisineFilter onCuisineSelect={handleCuisineSelect} />
+                <MainFilter
+                  onFilterToggle={handleMainFilterToggle}
+                  onDietarySelect={handleDietarySelect}
+                />
+              </>
+            )}
+            {/* {scheduled && (
           <Text style={styles.stateTitle}>
             {scheduledPopular.loading || scheduledNearest.loading
               ? 'Checking your selected time…'
@@ -474,53 +507,65 @@ export default function HomeScreen() {
           </Text>
         )} */}
 
-        {!filteringDiscovery && renderHorizontalSection('Order Again', orderAgain)}
-        <View style={styles.restaurantFeed}>
-          <View style={styles.feedHeader} />
-          {!location && (
-            <TouchableOpacity style={styles.nearestCta} onPress={openLocationPrompt}>
-              <Ionicons name="location-outline" size={22} color={theme.colors.primaryOnLight} />
-              <Text style={styles.nearestCtaText}>Choose your area to find nearby kitchens</Text>
-              <Ionicons name="chevron-forward" size={20} color={theme.colors.primaryOnLight} />
-            </TouchableOpacity>
-          )}
-          {!!nearestError && (
-            <TouchableOpacity style={styles.nearestStatusCard} onPress={fetchNearest}>
-              <Text style={styles.nearestStatusText}>
-                Nearby kitchens could not load. Tap to retry.
-              </Text>
-            </TouchableOpacity>
-          )}
-          {scheduled && (scheduledPopular.loading || scheduledNearest.loading) ? (
+            {!filteringDiscovery && renderHorizontalSection('Order Again', orderAgain)}
+            <View style={styles.restaurantFeed}>
+              <View style={styles.feedHeader} />
+              {!location && (
+                <TouchableOpacity style={styles.nearestCta} onPress={openLocationPrompt}>
+                  <Ionicons name="location-outline" size={22} color={theme.colors.primaryOnLight} />
+                  <Text style={styles.nearestCtaText}>
+                    Choose your area to find nearby kitchens
+                  </Text>
+                  <Ionicons name="chevron-forward" size={20} color={theme.colors.primaryOnLight} />
+                </TouchableOpacity>
+              )}
+              {!!nearestError && (
+                <TouchableOpacity style={styles.nearestStatusCard} onPress={fetchNearest}>
+                  <Text style={styles.nearestStatusText}>
+                    Nearby kitchens could not load. Tap to retry.
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+            {!!error && (
+              <TouchableOpacity style={styles.nearestStatusCard} onPress={fetchData}>
+                <Text style={styles.nearestStatusText}>
+                  Could not refresh kitchens. Tap to retry.
+                </Text>
+              </TouchableOpacity>
+            )}
+          </>
+        }
+        renderItem={({ item, index }) => (
+          <React.Fragment key={item.cook_id}>
+            <MealCard
+              key={item.cook_id}
+              {...item}
+              layout="feed"
+              restaurantName={item.profiles.restaurant_name}
+              isVerified={item.profiles.is_verified}
+              reviews={item.reviews || []}
+              listings={popularChefins}
+              availability={availabilitySummaries[item.cook_id]}
+              availabilityLoading={availabilityLoading}
+              scheduledLabel={
+                orderTimePreference.mode === 'scheduled'
+                  ? formatScheduledOrderTime(orderTimePreference.scheduledAt)
+                  : undefined
+              }
+            />
+            {(index === 3 || (restaurantFeed.length < 4 && index === restaurantFeed.length - 1)) &&
+              location &&
+              !filteringDiscovery &&
+              renderHorizontalSection('Popular Near You', nearestRestaurants)}
+          </React.Fragment>
+        )}
+        ListEmptyComponent={
+          scheduled && (scheduledPopular.loading || scheduledNearest.loading) ? (
             <View style={styles.nearestStatusCard}>
               <ActivityIndicator color={theme.colors.primaryOnLight} />
               <Text style={styles.nearestStatusText}>Checking your selected time…</Text>
             </View>
-          ) : restaurantFeed.length ? (
-            restaurantFeed.map((item, index) => (
-              <React.Fragment key={item.cook_id}>
-                <MealCard
-                  key={item.cook_id}
-                  {...item}
-                  layout="feed"
-                  restaurantName={item.profiles.restaurant_name}
-                  isVerified={item.profiles.is_verified}
-                  reviews={item.reviews || []}
-                  listings={popularChefins}
-                  availability={availabilitySummaries[item.cook_id]}
-                  scheduledLabel={
-                    orderTimePreference.mode === 'scheduled'
-                      ? formatScheduledOrderTime(orderTimePreference.scheduledAt)
-                      : undefined
-                  }
-                />
-                {(index === 3 ||
-                  (restaurantFeed.length < 4 && index === restaurantFeed.length - 1)) &&
-                  location &&
-                  !filteringDiscovery &&
-                  renderHorizontalSection('Popular Near You', nearestRestaurants)}
-              </React.Fragment>
-            ))
           ) : (
             <View style={styles.emptyState}>
               <Ionicons name="restaurant-outline" size={48} color="#94A39A" />
@@ -533,9 +578,9 @@ export default function HomeScreen() {
                   : 'Try another area or adjust your filters.'}
               </Text>
             </View>
-          )}
-        </View>
-      </ScrollView>
+          )
+        }
+      />
       <FloatingCartButton />
       <LocationPromptModal
         visible={locationPromptVisible}

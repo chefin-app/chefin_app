@@ -879,30 +879,25 @@ export async function releaseListingCapacityForOrder(
 
 export async function getCookMenu(cookId: string, now = new Date()) {
   const today = getDateKeyInTimeZone(now);
-  const { data: dishes, error: dishesError } = await supabase
-    .from('listings')
-    .select('id, title, price, image_url, status, menu_category, is_active, created_at')
-    .eq('cook_id', cookId)
-    .order('menu_category', { ascending: true })
-    .order('created_at', { ascending: false });
+  // Cook-scoped settings can load immediately; only dish-specific reads need
+  // to wait for the listing IDs.
+  const [{ data: dishes, error: dishesError }, hours, specialHours, scheduleContext] =
+    await Promise.all([
+      supabase
+        .from('listings')
+        .select('id, title, price, image_url, status, menu_category, is_active, created_at')
+        .eq('cook_id', cookId)
+        .order('menu_category', { ascending: true })
+        .order('created_at', { ascending: false }),
+      fetchOpeningHours([cookId]),
+      fetchSpecialHours([cookId], today, today),
+      fetchCookSellingScheduleContext(cookId),
+    ]);
   if (dishesError) throw dishesError;
 
   const listingIds = (dishes ?? []).map(dish => dish.id);
-  const [
-    hours,
-    specialHours,
-    settings,
-    scheduleContext,
-    allSellingSchedules,
-    overrides,
-    todayCapacity,
-    legacy,
-  ] = await Promise.all([
-    fetchOpeningHours([cookId]),
-    fetchSpecialHours([cookId], today, today),
+  const [settings, overrides, todayCapacity, legacy] = await Promise.all([
     fetchSettings(listingIds),
-    fetchSellingScheduleContext(listingIds),
-    getSellingSchedulesForCook(cookId),
     listingIds.length
       ? supabase
           .from('listing_availability_overrides')
@@ -965,7 +960,9 @@ export async function getCookMenu(cookId: string, now = new Date()) {
     date: today,
     openingHours: hours.map(mapOpeningHours),
     specialHours: specialHours.map(mapSpecialHours),
-    sellingSchedules: allSellingSchedules,
+    sellingSchedules: scheduleContext.schedules.map(schedule =>
+      mapSellingSchedule(schedule, scheduleContext.windows, scheduleContext.assignments)
+    ),
     dishes: (dishes ?? []).map(dish => {
       const setting = settingByListing.get(dish.id);
       const sellingScheduleId = scheduleIdByListing.get(dish.id) ?? null;
@@ -1234,17 +1231,21 @@ const mapSellingSchedule = (
     .map(assignment => assignment.listing_id),
 });
 
-export async function getSellingSchedulesForCook(cookId: string): Promise<SellingSchedule[]> {
+async function fetchCookSellingScheduleContext(cookId: string): Promise<{
+  schedules: SellingScheduleRow[];
+  windows: SellingScheduleWindowRow[];
+  assignments: ListingScheduleAssignmentRow[];
+}> {
   const { data: scheduleData, error: scheduleError } = await supabase
     .from('selling_schedules')
     .select('id, cook_id, name, specific_dates, starts_on, ends_on')
     .eq('cook_id', cookId)
     .order('name', { ascending: true });
-  if (missingRelation(scheduleError)) return [];
+  if (missingRelation(scheduleError)) return { schedules: [], windows: [], assignments: [] };
   if (scheduleError) throw scheduleError;
   const schedules = (scheduleData ?? []) as SellingScheduleRow[];
   const scheduleIds = schedules.map(schedule => schedule.id);
-  if (scheduleIds.length === 0) return [];
+  if (scheduleIds.length === 0) return { schedules, windows: [], assignments: [] };
 
   const [windowResult, assignmentResult] = await Promise.all([
     supabase
@@ -1260,6 +1261,11 @@ export async function getSellingSchedulesForCook(cookId: string): Promise<Sellin
   if (assignmentResult.error) throw assignmentResult.error;
   const windows = (windowResult.data ?? []) as SellingScheduleWindowRow[];
   const assignments = (assignmentResult.data ?? []) as ListingScheduleAssignmentRow[];
+  return { schedules, windows, assignments };
+}
+
+export async function getSellingSchedulesForCook(cookId: string): Promise<SellingSchedule[]> {
+  const { schedules, windows, assignments } = await fetchCookSellingScheduleContext(cookId);
   return schedules.map(schedule => mapSellingSchedule(schedule, windows, assignments));
 }
 
