@@ -16,10 +16,10 @@
 
 ## Presenting the POC
 
-Run `npm run start:poc` (or `npm run start:poc -- --web`) to use a minified,
-production-mode JavaScript bundle. Keep the backend running and open the main
-screens once before presenting so Metro compilation is finished. This command
-still uses the local Expo server; it is not an offline or standalone release.
+Run `npm start` to open the app on sample data, with no backend or database.
+`npm run start:poc` (or `npm run start:poc -- --web`) is the same sample data in a
+minified bundle. It still uses the local Expo server; it is not an installable
+release. Use `npm run start:live` when you want the real backend again.
 
 Discovery reads share concurrent requests and reuse results in memory for 30
 seconds. Home keeps content visible on refresh and renders only nearby feed
